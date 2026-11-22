@@ -28,6 +28,21 @@ static func ensure() -> void:
 	_add("switch_track", [_key(KEY_F2)])
 	_add("versus_mode", [_key(KEY_F3)])
 	_add("pause", [_key(KEY_ESCAPE), _button(JOY_BUTTON_START)])
+	# Camera view angle (45 degree steps round the car).
+	_add("camera_left", [_key(KEY_Z)])
+	_add("camera_right", [_key(KEY_X)])
+	_add("p1_camera_left", [_key(KEY_Z)])
+	_add("p1_camera_right", [_key(KEY_X)])
+	_add("p2_camera_left", [_key(KEY_KP_4)])
+	_add("p2_camera_right", [_key(KEY_KP_6)])
+	# Right stick: look at the car from the side it points to.
+	for prefix_device: Array in [["", -1], ["p1_", 0], ["p2_", 1]]:
+		var pre: String = prefix_device[0]
+		var dev: int = prefix_device[1]
+		_add(StringName(pre + "look_left"), [_axis(JOY_AXIS_RIGHT_X, -1.0, dev)], 0.2)
+		_add(StringName(pre + "look_right"), [_axis(JOY_AXIS_RIGHT_X, 1.0, dev)], 0.2)
+		_add(StringName(pre + "look_up"), [_axis(JOY_AXIS_RIGHT_Y, -1.0, dev)], 0.2)
+		_add(StringName(pre + "look_down"), [_axis(JOY_AXIS_RIGHT_Y, 1.0, dev)], 0.2)
 
 	# Two-player split screen: each player has their own keys and gamepad.
 	# Player 1 = left side of the keyboard + first gamepad.

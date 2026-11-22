@@ -15,6 +15,7 @@ const ROWS := [
 	["Shift down / up", "Q E  /  , .", "LB / RB"],
 	["Recover car", "R  /  Enter", "Y"],
 	["Camera", "C  /  '", "X"],
+	["Camera angle", "Z X  /  Num 4 6", "Right stick"],
 	["Pause menu", "Esc", "Start"],
 	["Visual style", "V", ""],
 	["Telemetry", "F1", ""],
