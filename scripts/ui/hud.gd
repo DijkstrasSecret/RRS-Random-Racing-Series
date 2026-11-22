@@ -3,6 +3,12 @@ extends Control
 ## Everything is drawn in _draw(), so there is no scene layout to maintain.
 
 @export var vehicle_path: NodePath
+## Leave empty to use the first LapTimer in the scene.
+@export var lap_timer_path: NodePath
+## Split screen: shows the player name instead of the car, hides help/telemetry.
+@export var player_name: String = ""
+@export var player_color: Color = Color(1.0, 0.78, 0.2)
+@export var split_screen: bool = false
 
 var show_telemetry: bool = false
 var show_help: bool = true
@@ -15,6 +21,7 @@ var _map_rect := Rect2()
 var _map_centre := Vector2.ZERO
 var _map_scale := 1.0
 var _best_flash_until := 0.0
+var _race: RaceDirector
 
 const PANEL := Color(0.0, 0.0, 0.0, 0.5)
 const TEXT := Color(1.0, 1.0, 1.0)
@@ -26,7 +33,7 @@ const HOT := Color(1.0, 0.3, 0.25)
 
 ## Help panel: keys and what they do. The first five rows are driving.
 const HELP_KEYS: PackedStringArray = [
-	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "V", "C", "F1", "F2", "R", "H",
+	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "V", "C", "F1", "F2", "F3", "R", "H",
 ]
 const HELP_ACTIONS: PackedStringArray = [
 	"Throttle",
@@ -39,6 +46,7 @@ const HELP_ACTIONS: PackedStringArray = [
 	"Camera view",
 	"Telemetry",
 	"Switch track  (circuit / test track)",
+	"Two-player split screen race",
 	"Recover car     Backspace  Back to start",
 	"Hide help     Esc  Quit",
 ]
@@ -48,9 +56,13 @@ func _ready() -> void:
 	_vehicle = get_node_or_null(vehicle_path) as Vehicle
 	_font = ThemeDB.fallback_font
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if split_screen:
+		show_help = false
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if split_screen:
+		return
 	if event.is_action_pressed("toggle_telemetry"):
 		show_telemetry = not show_telemetry
 	elif event.is_action_pressed("toggle_help"):
@@ -75,14 +87,19 @@ func _draw() -> void:
 	if _lap_timer:
 		_draw_laps(Vector2(s.x * 0.5 - 270.0, 18.0))
 	if _vehicle.off_track and fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4:
-		_text(Vector2(s.x * 0.5 - 80.0, 130.0), "OFF TRACK", 32, HOT)
+		_text(Vector2(s.x * 0.5 - 80.0, 160.0), "OFF TRACK", 32, HOT)
 	if _circuit:
 		_draw_minimap(Rect2(s.x - 254.0, s.y - 420.0, 230.0, 230.0))
 
 
 func _find_race_nodes() -> void:
+	if _race == null:
+		_race = get_tree().get_first_node_in_group("race_director") as RaceDirector
 	if _lap_timer == null:
-		_lap_timer = get_tree().get_first_node_in_group("lap_timer") as LapTimer
+		if not lap_timer_path.is_empty():
+			_lap_timer = get_node_or_null(lap_timer_path) as LapTimer
+		else:
+			_lap_timer = get_tree().get_first_node_in_group("lap_timer") as LapTimer
 		if _lap_timer:
 			_lap_timer.lap_completed.connect(_on_lap_completed)
 	if _circuit == null:
@@ -97,13 +114,20 @@ func _on_lap_completed(_time: float, is_best: bool) -> void:
 func _draw_laps(o: Vector2) -> void:
 	var lt := _lap_timer
 	draw_rect(Rect2(o, Vector2(540.0, 66.0)), PANEL)
-	_text(o + Vector2(18.0, 44.0), ("LAP %d" % lt.lap) if lt.running else "LAP -", 26, ACCENT)
+	var me := _race.index_of(_vehicle) if _race else -1
+	if me >= 0:
+		# Race: lap x of N, and a big position badge on the left.
+		_text(o + Vector2(18.0, 44.0), "LAP %d/%d" % [_race.current_lap(me), _race.laps], 22, ACCENT)
+		draw_rect(Rect2(o - Vector2(110.0, 0.0), Vector2(100.0, 66.0)), PANEL)
+		_text(o + Vector2(-100.0, 48.0), RaceDirector.ordinal(_race.position_of(me)), 38, player_color)
+	else:
+		_text(o + Vector2(18.0, 44.0), ("LAP %d" % lt.lap) if lt.running else "LAP -", 26, ACCENT)
 	_text(o + Vector2(130.0, 46.0), LapTimer.format_time(lt.lap_time if lt.running else -1.0), 34)
 	_text(o + Vector2(330.0, 28.0), "LAST   " + LapTimer.format_time(lt.last_lap), 17, DIM)
 	_text(o + Vector2(330.0, 54.0), "BEST   " + LapTimer.format_time(lt.best_lap), 17, GOOD)
 	if Time.get_ticks_msec() / 1000.0 < _best_flash_until:
 		_text(o + Vector2(190.0, 100.0), "NEW BEST LAP!", 28, GOOD)
-	elif not lt.running:
+	elif not lt.running and _race == null:
 		_text(o + Vector2(120.0, 96.0), "Cross the line to start the clock", 18, DIM)
 
 
@@ -114,11 +138,18 @@ func _draw_minimap(rect: Rect2) -> void:
 	draw_polyline(_map_points, Color(0.1, 0.1, 0.12, 0.9), 7.0, true)
 	draw_polyline(_map_points, Color(0.85, 0.86, 0.9), 3.0, true)
 	draw_circle(_map_points[0], 4.0, ACCENT)
+	if _race:
+		for i in _race.car_count():
+			var other := _race.vehicle_at(i)
+			if other != _vehicle:
+				var op := other.global_position
+				draw_circle(_to_map(Vector2(op.x, op.z)), 4.5, _race.player_colors[i])
 	var p := _vehicle.global_position
 	var dot := _to_map(Vector2(p.x, p.z))
 	var fwd := -_vehicle.global_basis.z
-	draw_line(dot, dot + Vector2(fwd.x, fwd.z).normalized() * 10.0, HOT, 2.0)
-	draw_circle(dot, 5.5, HOT)
+	var me_color := player_color if not player_name.is_empty() else HOT
+	draw_line(dot, dot + Vector2(fwd.x, fwd.z).normalized() * 10.0, me_color, 2.0)
+	draw_circle(dot, 5.5, me_color)
 
 
 func _build_map(rect: Rect2) -> void:
@@ -171,7 +202,10 @@ func _draw_speedo(o: Vector2) -> void:
 
 func _draw_status(o: Vector2) -> void:
 	draw_rect(Rect2(o, Vector2(470.0, 72.0)), PANEL)
-	_text(o + Vector2(16.0, 28.0), _vehicle.config.display_name, 18)
+	if player_name.is_empty():
+		_text(o + Vector2(16.0, 28.0), _vehicle.config.display_name, 18)
+	else:
+		_text(o + Vector2(16.0, 28.0), player_name, 20, player_color)
 	_text(o + Vector2(250.0, 28.0), "Look: %s" % RetroLook.level_name(), 18, ACCENT)
 	_text(o + Vector2(16.0, 56.0), "Profile: %s" % _vehicle.assists.profile_name(), 18, ACCENT)
 	var x := 200.0

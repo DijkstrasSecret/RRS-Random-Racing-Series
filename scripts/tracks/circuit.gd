@@ -58,10 +58,20 @@ func _ready() -> void:
 
 ## Starting position: on the grid just behind the start/finish line.
 func get_spawn_transform() -> Transform3D:
-	var off := length - 22.0
+	return get_grid_transform(-1)
+
+
+## Grid slot 0, 1, 2... in a staggered two-wide grid behind the line.
+## Slot -1 = alone in the middle of the road.
+func get_grid_transform(slot: int) -> Transform3D:
+	var row := maxi(slot, 0)
+	var off := length - 22.0 - row * 9.0
 	var pos := curve.sample_baked(off, true)
 	var ahead := curve.sample_baked(fposmod(off + 2.0, length), true)
-	var xf := Transform3D(Basis.looking_at(ahead - pos, Vector3.UP), pos + Vector3(0.0, 0.1, 0.0))
+	var dir := (ahead - pos).normalized()
+	var right := dir.cross(Vector3.UP).normalized()
+	var lateral := 0.0 if slot < 0 else (-3.0 if slot % 2 == 0 else 3.0)
+	var xf := Transform3D(Basis.looking_at(dir, Vector3.UP), pos + right * lateral + Vector3(0.0, 0.1, 0.0))
 	return global_transform * xf
 
 

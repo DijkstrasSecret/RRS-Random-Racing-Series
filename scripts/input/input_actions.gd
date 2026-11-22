@@ -21,6 +21,42 @@ static func ensure() -> void:
 	_add("toggle_help", [_key(KEY_H)])
 	_add("cycle_look", [_key(KEY_V)])
 	_add("switch_track", [_key(KEY_F2)])
+	_add("versus_mode", [_key(KEY_F3)])
+
+	# Two-player split screen: each player has their own keys and gamepad.
+	# Player 1 = left side of the keyboard + first gamepad.
+	_add_player(1, 0, {
+		"throttle": [KEY_W], "brake": [KEY_S], "steer_left": [KEY_A], "steer_right": [KEY_D],
+		"handbrake": [KEY_SPACE], "shift_up": [KEY_E], "shift_down": [KEY_Q], "recover": [KEY_R],
+		"cycle_camera": [KEY_C],
+	})
+	# Player 2 = arrow keys and the keys around them + second gamepad.
+	_add_player(2, 1, {
+		"throttle": [KEY_UP], "brake": [KEY_DOWN], "steer_left": [KEY_LEFT], "steer_right": [KEY_RIGHT],
+		"handbrake": [KEY_SLASH, KEY_KP_0], "shift_up": [KEY_PERIOD], "shift_down": [KEY_COMMA],
+		"recover": [KEY_ENTER, KEY_KP_ENTER], "cycle_camera": [KEY_APOSTROPHE],
+	})
+
+
+## Adds "p<player>_<action>" actions: the given keys plus that player's gamepad.
+static func _add_player(player: int, device: int, keys: Dictionary) -> void:
+	var pad := {
+		"throttle": [_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0, device)],
+		"brake": [_axis(JOY_AXIS_TRIGGER_LEFT, 1.0, device)],
+		"steer_left": [_axis(JOY_AXIS_LEFT_X, -1.0, device)],
+		"steer_right": [_axis(JOY_AXIS_LEFT_X, 1.0, device)],
+		"handbrake": [_button(JOY_BUTTON_A, device)],
+		"shift_up": [_button(JOY_BUTTON_RIGHT_SHOULDER, device)],
+		"shift_down": [_button(JOY_BUTTON_LEFT_SHOULDER, device)],
+		"recover": [_button(JOY_BUTTON_Y, device)],
+		"cycle_camera": [_button(JOY_BUTTON_X, device)],
+	}
+	for action: String in keys:
+		var events: Array = []
+		for code: Key in keys[action]:
+			events.append(_key(code))
+		events.append_array(pad.get(action, []))
+		_add(StringName("p%d_%s" % [player, action]), events)
 
 
 static func _add(action: StringName, events: Array) -> void:
@@ -37,14 +73,16 @@ static func _key(code: Key) -> InputEventKey:
 	return e
 
 
-static func _axis(axis: JoyAxis, value: float) -> InputEventJoypadMotion:
+static func _axis(axis: JoyAxis, value: float, device: int = -1) -> InputEventJoypadMotion:
 	var e := InputEventJoypadMotion.new()
+	e.device = device
 	e.axis = axis
 	e.axis_value = value
 	return e
 
 
-static func _button(button: JoyButton) -> InputEventJoypadButton:
+static func _button(button: JoyButton, device: int = -1) -> InputEventJoypadButton:
 	var e := InputEventJoypadButton.new()
+	e.device = device
 	e.button_index = button
 	return e

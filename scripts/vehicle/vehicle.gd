@@ -21,12 +21,14 @@ const FALL_RESET_Y := -30.0
 @export var body_model: PackedScene
 ## Move the Wheel nodes so their hubs line up with the model's wheels.
 @export var align_wheels_to_model: bool = true
+## Optional replacement texture for the model (e.g. another paint colour).
+@export var paint_texture: Texture2D
 
 @export_group("Body motion (visual only)")
 ## Extra body tilt per g of acceleration/braking (nose up / nose dive).
-@export var pitch_per_g_deg: float = 6.5
+@export var pitch_per_g_deg: float = 8.5
 ## Extra body lean per g of cornering.
-@export var roll_per_g_deg: float = 4.5
+@export var roll_per_g_deg: float = 5.0
 ## How quickly the body settles (Hz). Lower = slower, floatier.
 @export var body_motion_hz: float = 0.8
 ## 1 = no wobble, lower = the body overshoots a little and settles.
@@ -57,6 +59,8 @@ var stability_active: bool = false
 var airborne: bool = false
 ## True when two or more wheels are on a low-grip surface (grass, gravel).
 var off_track: bool = false
+## While true (race countdown) the car ignores its driver and holds still.
+var controls_locked: bool = false
 var spawn_transform: Transform3D
 
 var _reverse_timer: float = 0.0
@@ -160,6 +164,11 @@ func velocity_at_point(world_point: Vector3) -> Vector3:
 
 func _physics_process(delta: float) -> void:
 	input.poll(delta)
+	if controls_locked:
+		input.throttle = 0.0
+		input.brake = 0.0
+		input.steer = 0.0
+		input.handbrake = 1.0
 	if _handle_meta_inputs():
 		return
 	if global_position.y < FALL_RESET_Y:
@@ -471,6 +480,10 @@ func _collect_retro_surfaces(node: Node) -> void:
 		var mi := node as MeshInstance3D
 		for i in mi.mesh.get_surface_count():
 			var original := mi.get_active_material(i)
+			if paint_texture and original is BaseMaterial3D:
+				var painted := original.duplicate() as BaseMaterial3D
+				painted.albedo_texture = paint_texture
+				original = painted
 			var retro := ShaderMaterial.new()
 			retro.shader = PSX_SHADER
 			var ps2: Material = null
@@ -497,7 +510,7 @@ func set_retro_level(level: int) -> void:
 		var mi: MeshInstance3D = entry[0]
 		var retro: ShaderMaterial = entry[3]
 		retro.set_shader_parameter("snap_resolution", res)
-		var mat: Material = null
+		var mat: Material = entry[2]
 		if level == RetroLook.Level.PS1:
 			mat = retro
 		elif level == RetroLook.Level.PS2:

@@ -66,6 +66,7 @@ var _visual: Node3D
 ## Optional wheel mesh from an imported car model (origin at the hub,
 ## axle along X). Set before setup(); replaces the generated tyre.
 var custom_visual: Node3D
+var _dirt: WheelDirt
 
 
 func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
@@ -89,6 +90,10 @@ func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
 	add_exception(vehicle)
 	enabled = true
 	_build_visual()
+	if _dirt == null:
+		_dirt = WheelDirt.new()
+		_dirt.name = "Dirt"
+		add_child(_dirt)
 	reset()
 
 
@@ -209,6 +214,8 @@ func finish_tire(substeps: int) -> Vector3:
 
 func update_visual(dt: float) -> void:
 	spin_angle = wrapf(spin_angle + omega * dt, 0.0, TAU)
+	if _dirt:
+		_dirt.update_from(self)
 	if _visual:
 		_visual.position = Vector3(0.0, -spring_length, 0.0)
 		_visual.basis = Basis(Vector3.UP, -steer_angle) * Basis(Vector3.RIGHT, -spin_angle)

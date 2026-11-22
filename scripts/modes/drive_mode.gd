@@ -1,11 +1,12 @@
 extends Node3D
 ## A drivable scene: free roam on the test track, or laps on a circuit.
 ## If the track can give a spawn point (Circuit), the car starts there.
-## F2 switches to `other_scene`, Esc quits.
+## F2 switches to `other_scene`, F3 starts two-player split screen, Esc quits.
 
 @export_file("*.tscn") var other_scene: String
 @export var track_path: NodePath
 @export var vehicle_path: NodePath
+@export_file("*.tscn") var versus_scene: String = "res://scenes/modes/versus_race.tscn"
 
 
 func _enter_tree() -> void:
@@ -29,3 +30,5 @@ func _unhandled_input(event: InputEvent) -> void:
 		get_tree().quit()
 	elif event.is_action_pressed("switch_track") and not other_scene.is_empty():
 		get_tree().change_scene_to_file(other_scene)
+	elif event.is_action_pressed("versus_mode") and not versus_scene.is_empty():
+		get_tree().change_scene_to_file(versus_scene)

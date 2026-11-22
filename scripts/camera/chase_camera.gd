@@ -9,6 +9,8 @@ extends Camera3D
 enum Mode { CHASE, FAR, HOOD }
 
 @export var target_path: NodePath
+## Input action that switches view (split screen gives each player their own).
+@export var cycle_action: StringName = &"cycle_camera"
 @export var distance: float = 7.8
 @export var height: float = 3.0
 @export var look_height: float = 0.9
@@ -46,7 +48,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("cycle_camera"):
+	if event.is_action_pressed(cycle_action):
 		mode = (mode + 1) % Mode.size()
 		snap()
 

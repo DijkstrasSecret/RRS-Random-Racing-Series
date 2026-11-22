@@ -1,0 +1,147 @@
+[gd_scene load_steps=10 format=3]
+
+[ext_resource type="Script" path="res://scripts/modes/versus_mode.gd" id="1_mode"]
+[ext_resource type="PackedScene" path="res://scenes/tracks/circuit.tscn" id="2_track"]
+[ext_resource type="PackedScene" path="res://scenes/vehicle/psx_hatch.tscn" id="3_car"]
+[ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="4_camera"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/fx/retro_look.gd" id="6_retro"]
+[ext_resource type="Script" path="res://scripts/race/lap_timer.gd" id="7_laps"]
+[ext_resource type="Script" path="res://scripts/race/race_director.gd" id="8_race"]
+[ext_resource type="Texture2D" path="res://assets/cars/psx_hatch/psx_hatch_red.png" id="9_red"]
+
+[node name="VersusRace" type="Node3D"]
+script = ExtResource("1_mode")
+circuit_path = NodePath("Circuit")
+car_paths = Array[NodePath]([NodePath("Car1"), NodePath("Car2")])
+
+[node name="Circuit" parent="." instance=ExtResource("2_track")]
+
+[node name="Car1" parent="." instance=ExtResource("3_car")]
+
+[node name="PlayerInput" parent="Car1"]
+action_prefix = "p1_"
+
+[node name="Car2" parent="." instance=ExtResource("3_car")]
+paint_texture = ExtResource("9_red")
+
+[node name="PlayerInput" parent="Car2"]
+action_prefix = "p2_"
+
+[node name="LapTimer1" type="Node" parent="."]
+script = ExtResource("7_laps")
+circuit_path = NodePath("../Circuit")
+vehicle_path = NodePath("../Car1")
+
+[node name="LapTimer2" type="Node" parent="."]
+script = ExtResource("7_laps")
+circuit_path = NodePath("../Circuit")
+vehicle_path = NodePath("../Car2")
+
+[node name="ScreensLayer" type="CanvasLayer" parent="."]
+layer = 0
+
+[node name="Background" type="ColorRect" parent="ScreensLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 1)
+
+[node name="Screens" type="VBoxContainer" parent="ScreensLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="Top" type="SubViewportContainer" parent="ScreensLayer/Screens"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="ScreensLayer/Screens/Top"]
+handle_input_locally = false
+size = Vector2i(1920, 538)
+render_target_update_mode = 4
+
+[node name="Camera1" type="Camera3D" parent="ScreensLayer/Screens/Top/Viewport"]
+current = true
+script = ExtResource("4_camera")
+target_path = NodePath("../../../../../Car1")
+cycle_action = &"p1_cycle_camera"
+
+[node name="Bottom" type="SubViewportContainer" parent="ScreensLayer/Screens"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+stretch = true
+
+[node name="Viewport" type="SubViewport" parent="ScreensLayer/Screens/Bottom"]
+handle_input_locally = false
+size = Vector2i(1920, 538)
+render_target_update_mode = 4
+
+[node name="Camera2" type="Camera3D" parent="ScreensLayer/Screens/Bottom/Viewport"]
+current = true
+script = ExtResource("4_camera")
+target_path = NodePath("../../../../../Car2")
+cycle_action = &"p2_cycle_camera"
+
+[node name="RetroLook" type="CanvasLayer" parent="."]
+script = ExtResource("6_retro")
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="HUDs" type="VBoxContainer" parent="HUDLayer"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_constants/separation = 4
+
+[node name="HUD1" type="Control" parent="HUDLayer/HUDs"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("5_hud")
+vehicle_path = NodePath("../../../Car1")
+lap_timer_path = NodePath("../../../LapTimer1")
+player_name = "PLAYER 1"
+player_color = Color(0.35, 0.8, 1, 1)
+split_screen = true
+
+[node name="HUD2" type="Control" parent="HUDLayer/HUDs"]
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("5_hud")
+vehicle_path = NodePath("../../../Car2")
+lap_timer_path = NodePath("../../../LapTimer2")
+player_name = "PLAYER 2"
+player_color = Color(1, 0.4, 0.35, 1)
+split_screen = true
+
+[node name="RaceLayer" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="RaceDirector" type="Control" parent="RaceLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_race")
+circuit_path = NodePath("../../Circuit")
+vehicle_paths = Array[NodePath]([NodePath("../../Car1"), NodePath("../../Car2")])
+lap_timer_paths = Array[NodePath]([NodePath("../../LapTimer1"), NodePath("../../LapTimer2")])
