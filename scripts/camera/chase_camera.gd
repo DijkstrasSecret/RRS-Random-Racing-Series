@@ -5,9 +5,11 @@ extends Camera3D
 ## car speeds up, drifts closer under braking, swings round slowly in slides
 ## and bobs gently, but never falls far behind at a steady speed.
 ## C cycles chase / far / hood view.
-## Eight view angles round the car, 45 degrees apart: Z / X step left / right
-## (player 2: numpad 4 / 6), and the right stick looks from that side while
-## held (up = from the front). The camera swings round smoothly.
+## View angle: behind, or 45 degrees to the rear left / rear right. Z / X
+## (player 2: numpad 4 / 6) or the right stick left / right; the camera swings
+## round gently. Right stick forward or B (player 2: numpad 8) cuts to a
+## separate look-back camera ahead of the car, looking back over it, while
+## held; the normal camera stays where it is.
 
 enum Mode { CHASE, FAR, HOOD }
 
@@ -34,11 +36,14 @@ enum Mode { CHASE, FAR, HOOD }
 @export var max_fov: float = 80.0
 @export var fov_full_speed: float = 60.0
 
-const VIEW_NAMES: PackedStringArray = ["BEHIND", "REAR RIGHT", "RIGHT", "FRONT RIGHT", "FRONT", "FRONT LEFT",
-	"LEFT", "REAR LEFT"]
+## How quickly the camera swings to a new view angle (lower = gentler).
+@export var angle_swing_speed: float = 2.6
+
+const VIEW_NAMES: PackedStringArray = ["REAR LEFT", "BEHIND", "REAR RIGHT"]
+const LOOK_BACK := 2
 
 var mode: int = Mode.CHASE
-## Chosen view angle, 0..7 (0 = behind, 2 = right side, 4 = front, 6 = left).
+## Chosen view angle: -1 rear left, 0 behind, 1 rear right (45 degree steps).
 var view_angle: int = 0
 ## Seconds since the view angle last changed (the HUD shows its name).
 var view_changed_ago: float = 99.0
@@ -50,6 +55,8 @@ var _yaw_dir: Vector3 = Vector3.FORWARD
 var _velocity: Vector3 = Vector3.ZERO
 var _look_point: Vector3 = Vector3.ZERO
 var _time: float = 0.0
+var _back_cam: Camera3D
+var _looking_back := false
 
 
 func _ready() -> void:
@@ -63,7 +70,18 @@ func _ready() -> void:
 	var action := String(cycle_action)
 	if action.begins_with("p1_") or action.begins_with("p2_"):
 		_prefix = action.substr(0, 3)
+	_back_cam = Camera3D.new()
+	_back_cam.name = "LookBackCamera"
+	_back_cam.top_level = true
+	_back_cam.fov = 70.0
+	_back_cam.physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	add_child(_back_cam)
 	snap()
+
+
+## True while the look-back camera is showing.
+func is_looking_back() -> bool:
+	return _looking_back
 
 
 ## The car this camera follows.
@@ -73,7 +91,7 @@ func target() -> RigidBody3D:
 
 ## Name of the view currently shown (held stick or chosen angle).
 func view_name() -> String:
-	return VIEW_NAMES[_shown_angle]
+	return "LOOKING BACK" if _shown_angle == LOOK_BACK else VIEW_NAMES[_shown_angle + 1]
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -81,9 +99,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		mode = (mode + 1) % Mode.size()
 		snap()
 	elif event.is_action_pressed(StringName(_prefix + "camera_left")):
-		view_angle = wrapi(view_angle - 1, 0, 8)
+		view_angle = maxi(view_angle - 1, -1)
 	elif event.is_action_pressed(StringName(_prefix + "camera_right")):
-		view_angle = wrapi(view_angle + 1, 0, 8)
+		view_angle = mini(view_angle + 1, 1)
 
 
 ## Follow a different car.
@@ -111,6 +129,7 @@ func _process(delta: float) -> void:
 	_time += delta
 	var xf := _target.get_global_transform_interpolated()
 	_update_view_angle(delta)
+	_update_look_back(xf)
 
 	if mode == Mode.HOOD:
 		global_transform = Transform3D(xf.basis, xf * Vector3(0.0, 1.2, -0.3))
@@ -148,7 +167,7 @@ func _process(delta: float) -> void:
 
 	# Behind the car it aims a little ahead; from the sides / front it aims at the car.
 	var side_view := clampf(absf(_angle_now) / (PI * 0.25), 0.0, 1.0)
-	var look_target := xf.origin + Vector3.UP * look_height + _yaw_dir * look_ahead_distance * (1.0 - side_view)
+	var look_target := xf.origin + Vector3.UP * look_height + _yaw_dir * look_ahead_distance * (1.0 - 0.5 * side_view)
 	_look_point = _look_point.lerp(look_target, 1.0 - exp(-10.0 * delta))
 	look_at(_look_point, Vector3.UP)
 
@@ -165,21 +184,40 @@ func _anchor(xf: Transform3D) -> Vector3:
 	return xf.origin + away * dist + Vector3.UP * (lift + bob)
 
 
-## Picks the view angle (right stick held, else the chosen one) and swings
-## the camera towards it the short way round.
+## Picks the view (right stick held, else the chosen angle) and swings the
+## normal camera gently towards it. Stick forward / B = look back.
 func _update_view_angle(delta: float) -> void:
 	var wanted := view_angle
 	var stick := Vector2(Input.get_axis(StringName(_prefix + "look_left"), StringName(_prefix + "look_right")),
 			Input.get_axis(StringName(_prefix + "look_up"), StringName(_prefix + "look_down")))
-	if stick.length() > 0.55:
-		wanted = wrapi(roundi(atan2(stick.x, stick.y) / (PI * 0.25)), 0, 8)
-	if wanted != _shown_angle:
-		_shown_angle = wanted
+	var back := Input.is_action_pressed(StringName(_prefix + "look_back"))
+	if stick.y < -0.55 and absf(stick.y) >= absf(stick.x):
+		back = true
+	elif absf(stick.x) > 0.55 and absf(stick.x) > absf(stick.y):
+		wanted = 1 if stick.x > 0.0 else -1
+	var shown := LOOK_BACK if back else wanted
+	if shown != _shown_angle:
+		_shown_angle = shown
 		view_changed_ago = 0.0
 	view_changed_ago += delta
+	_looking_back = back
 	var goal := wanted * PI * 0.25
-	var diff := wrapf(goal - _angle_now, -PI, PI)
-	_angle_now = wrapf(_angle_now + diff * (1.0 - exp(-7.0 * delta)), -PI, PI)
+	_angle_now += (goal - _angle_now) * (1.0 - exp(-angle_swing_speed * delta))
+
+
+## The look-back camera: ahead of the car, looking back over it at whoever is
+## behind. Only current while looking back.
+func _update_look_back(xf: Transform3D) -> void:
+	if _back_cam == null:
+		return
+	if _looking_back:
+		var fwd := _flat_forward(xf)
+		_back_cam.global_position = xf.origin + fwd * 6.2 + Vector3.UP * 2.1
+		_back_cam.look_at(xf.origin + Vector3.UP * 0.8 - fwd * 4.0, Vector3.UP)
+		if not _back_cam.current:
+			_back_cam.make_current()
+	elif _back_cam.current:
+		make_current()
 
 
 

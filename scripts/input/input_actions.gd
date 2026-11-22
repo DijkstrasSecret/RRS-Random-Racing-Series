@@ -35,6 +35,9 @@ static func ensure() -> void:
 	_add("p1_camera_right", [_key(KEY_X)])
 	_add("p2_camera_left", [_key(KEY_KP_4)])
 	_add("p2_camera_right", [_key(KEY_KP_6)])
+	_add("look_back", [_key(KEY_B)])
+	_add("p1_look_back", [_key(KEY_B)])
+	_add("p2_look_back", [_key(KEY_KP_8)])
 	# Right stick: look at the car from the side it points to.
 	for prefix_device: Array in [["", -1], ["p1_", 0], ["p2_", 1]]:
 		var pre: String = prefix_device[0]
