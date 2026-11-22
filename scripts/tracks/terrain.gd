@@ -42,9 +42,14 @@ func height_at(x: float, z: float) -> float:
 	var iz := int(gz)
 	var fx := gx - ix
 	var fz := gz - iz
-	var a := lerpf(_heights[iz * _w + ix], _heights[iz * _w + ix + 1], fx)
-	var b := lerpf(_heights[(iz + 1) * _w + ix], _heights[(iz + 1) * _w + ix + 1], fx)
-	return lerpf(a, b, fz)
+	# The same two triangles per cell the mesh draws (split corner (1,0) to (0,1)).
+	var h00 := _heights[iz * _w + ix]
+	var h10 := _heights[iz * _w + ix + 1]
+	var h01 := _heights[(iz + 1) * _w + ix]
+	var h11 := _heights[(iz + 1) * _w + ix + 1]
+	if fx + fz <= 1.0:
+		return h00 + (h10 - h00) * fx + (h01 - h00) * fz
+	return h11 + (h01 - h11) * (1.0 - fx) + (h10 - h11) * (1.0 - fz)
 
 
 ## Distance from every grid point to the track centre line: exact near the
@@ -162,25 +167,46 @@ func _heightfield(circuit: Circuit) -> void:
 func _clear_road(circuit: Circuit) -> void:
 	var road := circuit.road_width * 0.5 + circuit.curb_width + 1.0
 	var reach := 14.0
-	for pass_i in 3:
-		var changed := false
-		for smp: Dictionary in circuit._samples:
-			var c: Vector3 = circuit.to_global(smp.pos)
-			var right: Vector3 = smp.right
-			var lat := -reach
-			while lat <= reach + 0.01:
-				var q := c + right * lat
-				var lq := circuit.to_local(q)
+	# Spots to check (world x, z, highest allowed ground). A spot only counts
+	# for the stretch of road it is really next to: in a hairpin a point 14 m
+	# from one leg can be right beside the other leg, at another height.
+	var spots: Array[Vector3] = []
+	for smp: Dictionary in circuit._samples:
+		var c: Vector3 = circuit.to_global(smp.pos)
+		var right: Vector3 = smp.right
+		var lat := -reach
+		while lat <= reach + 0.01:
+			var q := c + right * lat
+			var lq := circuit.to_local(q)
+			var owner := circuit.nearest_sample(lq.x, lq.z)
+			var gap := absf(float(circuit._samples[owner].off) - float(smp.off)) if owner >= 0 else 0.0
+			gap = minf(gap, circuit.length - gap)
+			if absf(lat) <= road or gap < 30.0:
 				var surf := circuit.surface_y(lq.x, lq.z, smp.pos.y)
-				var limit := surf + circuit.global_position.y + Circuit.ROAD_Y - (0.08 if absf(lat) <= road else 0.0)
-				var over := height_at(q.x, q.z) - limit
-				if over > 0.0:
-					var ix := clampi(int((q.x - _origin.x) / CELL), 0, _w - 2)
-					var iz := clampi(int((q.z - _origin.y) / CELL), 0, _h - 2)
-					for k: int in [iz * _w + ix, iz * _w + ix + 1, (iz + 1) * _w + ix, (iz + 1) * _w + ix + 1]:
-						_heights[k] -= over
-					changed = true
-				lat += 2.0
+				spots.append(Vector3(q.x, q.z, surf + circuit.global_position.y + Circuit.ROAD_Y - (0.08 if absf(lat) <= road else 0.0)))
+			lat += 2.0
+	for pass_i in 8:
+		var changed := false
+		for spot in spots:
+			var over := height_at(spot.x, spot.y) - spot.z
+			if over > 0.002:
+				# Lower the four corners by their share of the blend (the
+				# smallest change that fixes this spot), not all by the
+				# full amount: on a steep slope that would dig a pit uphill.
+				var gx := clampf((spot.x - _origin.x) / CELL, 0.0, _w - 1.001)
+				var gz := clampf((spot.y - _origin.y) / CELL, 0.0, _h - 1.001)
+				var ix := int(gx)
+				var iz := int(gz)
+				var fx := gx - ix
+				var fz := gz - iz
+				var ws := [(1.0 - fx) * (1.0 - fz), fx * (1.0 - fz), (1.0 - fx) * fz, fx * fz]
+				var ks := [iz * _w + ix, iz * _w + ix + 1, (iz + 1) * _w + ix, (iz + 1) * _w + ix + 1]
+				var w2 := 0.0
+				for w: float in ws:
+					w2 += w * w
+				for n in 4:
+					_heights[ks[n]] -= over * ws[n] / w2
+				changed = true
 		if not changed:
 			break
 

@@ -7,12 +7,12 @@ extends SceneTree
 const OUT := "user://screenshots"
 ## [track, time of day, weather, seconds of driving before each shot]
 const SHOTS := [
-	["greenhill", 2, 0, [3.5, 14.0]],
-	["greenhill", 0, 0, [3.5, 22.0]],
-	["greenhill", 1, 1, [3.5, 30.0]],
-	["greenhill", 3, 0, [3.5, 14.0]],
-	["kestrel", 2, 0, [3.5, 16.0]],
-	["kestrel", 1, 2, [3.5, 12.0]],
+	["monza", 2, 0, [3.5, 14.0]],
+	["silverstone", 0, 0, [3.5, 22.0]],
+	["istanbul", 1, 1, [3.5, 30.0]],
+	["monza", 3, 0, [3.5, 14.0]],
+	["spa", 2, 0, [3.5, 16.0]],
+	["spa", 1, 2, [3.5, 12.0]],
 ]
 
 

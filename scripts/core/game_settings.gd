@@ -32,7 +32,7 @@ static var p2_car: String = "quadra"
 ## Racing livery on the players' cars (cars that have one).
 static var p1_livery: bool = true
 static var p2_livery: bool = true
-static var track: String = "greenhill"
+static var track: String = "monza"
 ## Car classes the AI may drive: bit 0 = D ... bit 3 = A.
 static var ai_tiers: int = 15
 ## 0 morning, 1 noon, 2 sunset, 3 night.
@@ -67,6 +67,8 @@ static func ensure_loaded() -> void:
 	p1_livery = cfg.get_value("garage", "p1_livery", p1_livery)
 	p2_livery = cfg.get_value("garage", "p2_livery", p2_livery)
 	track = cfg.get_value("race", "track", track)
+	if TrackList.ids().find(track) == -1:
+		track = "monza"  # an old track that no longer exists
 	ai_tiers = cfg.get_value("race", "ai_tiers", ai_tiers)
 	if CarRoster.ids().find(p1_car) == -1:
 		p1_car = "bavaro"

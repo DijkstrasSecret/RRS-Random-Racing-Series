@@ -92,12 +92,9 @@ func _build_ui() -> void:
 	margin.add_child(column)
 
 	_title = VBoxContainer.new()
-	var big := MenuStyle.label("RRS", 150, MenuStyle.ACCENT)
-	big.add_theme_constant_override("outline_size", 14)
-	_title.add_child(big)
-	_title.add_child(MenuStyle.label(MenuStyle.spaced("RANDOM RACING SERIES"), 22, MenuStyle.TEXT))
+	_title.add_child(MenuStyle.logo(640.0))
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 46)
+	gap.custom_minimum_size = Vector2(0, 30)
 	_title.add_child(gap)
 	column.add_child(_title)
 
@@ -169,7 +166,7 @@ func _show_main() -> void:
 	_title.visible = true
 	_summary.visible = true
 	_summary.text = "%s  ·  %s  ·  %d laps  ·  %d AI opponents (%s)  ·  %s handling" % [
-		CarRoster.entry(GameSettings.p1_car).name.capitalize(), String(TrackList.get_track(GameSettings.track).name).capitalize(),
+		CarRoster.config(GameSettings.p1_car).display_name, TrackList.display_name(GameSettings.track),
 		GameSettings.laps, GameSettings.ai_count,
 		GameSettings.DIFFICULTY_NAMES[GameSettings.ai_difficulty].to_lower(),
 		HandlingAssists.PROFILE_NAMES[GameSettings.handling_profile]]

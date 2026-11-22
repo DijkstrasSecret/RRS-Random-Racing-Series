@@ -19,7 +19,7 @@ func _run() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--cars="):
 			cars = arg.get_slice("=", 1).split(",")
-	GameSettings.track = "greenhill"
+	GameSettings.track = "monza"
 	GameSettings.time_of_day = 1
 	GameSettings.weather = 0
 	GameSettings.damage = 2

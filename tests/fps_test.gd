@@ -4,7 +4,7 @@ extends SceneTree
 ## Run windowed with an override.cfg containing window/size/no_focus=true:
 ##   Godot.exe --path . -s res://tests/fps_test.gd
 
-const RUNS := [["greenhill", 2], ["greenhill", 3], ["kestrel", 1]]
+const RUNS := [["monza", 2], ["spa", 3], ["spa", 1]]
 
 
 func _init() -> void:

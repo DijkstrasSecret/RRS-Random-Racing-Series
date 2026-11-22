@@ -52,8 +52,12 @@ func _run() -> void:
 	# bit of road (on a slope the sliding car turns before it hits).
 	var off2 := _level_spot(circuit)
 	var r2 := circuit.right_at(off2)
+	# 3 m short of the right-hand barrier, so it hits side-on straight away.
+	var dressing := circuit.get_node("Dressing")
+	var i2 := int(off2 / circuit.length * circuit._samples.size()) % circuit._samples.size()
+	var lateral := maxf(float(dressing._barrier_dist[1][i2]) - 3.0, 0.0)
 	car.teleport(Transform3D(Basis.looking_at(circuit.direction_at(off2), Vector3.UP),
-			circuit.point_at(off2) + Vector3.UP * 0.4))
+			circuit.point_at(off2) + r2 * lateral + Vector3.UP * 0.6))
 	await _ticks(30)
 	car.linear_velocity = r2 * 70.0 / 3.6
 	await _ticks(120)

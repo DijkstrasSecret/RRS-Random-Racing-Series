@@ -1,6 +1,6 @@
 class_name TrackList
 extends RefCounted
-## Every circuit layout the player can pick. A Circuit with
+## Every circuit layout the player can pick (real F1 circuits, scaled down). A Circuit with
 ## `use_selected_track` builds the one in GameSettings.track.
 ## Each layout ends with a straight run into the start/finish line (the grid,
 ## grandstands and pits sit there).
@@ -9,42 +9,6 @@ extends RefCounted
 ## made-up rise and fall (the same at a spot whichever way the track runs).
 
 const TRACKS: Array[Dictionary] = [
-	{
-		"id": "greenhill", "name": "GREENHILL RING", "seed": 11, "theme": "hills", "hills": 20.0,
-		"tagline": "Fast and flowing. A long main straight into a tight hairpin.",
-		"points": [
-			Vector2(0, 250), Vector2(0, -330), Vector2(20, -405), Vector2(75, -425),
-			Vector2(112, -380), Vector2(108, -300), Vector2(115, -225), Vector2(170, -165),
-			Vector2(240, -170), Vector2(295, -215), Vector2(360, -195), Vector2(405, -110),
-			Vector2(400, 0), Vector2(345, 80), Vector2(305, 140), Vector2(330, 195),
-			Vector2(300, 255), Vector2(225, 290), Vector2(150, 370), Vector2(65, 400),
-			Vector2(10, 360), Vector2(0, 315),
-		],
-	},
-	{
-		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12, "theme": "hills", "hills": 20.0,
-		"tagline": "The Ring run backwards. New braking points everywhere.",
-		"points": [
-			Vector2(0, 0), Vector2(0, 250), Vector2(0, 315), Vector2(10, 360),
-			Vector2(65, 400), Vector2(150, 370), Vector2(225, 290), Vector2(300, 255),
-			Vector2(330, 195), Vector2(305, 140), Vector2(345, 80), Vector2(400, 0),
-			Vector2(405, -110), Vector2(360, -195), Vector2(295, -215), Vector2(240, -170),
-			Vector2(170, -165), Vector2(115, -225), Vector2(108, -300), Vector2(112, -380),
-			Vector2(75, -425), Vector2(20, -405), Vector2(0, -330),
-		],
-	},
-	{
-		"id": "kestrel", "name": "KESTREL PARK", "seed": 23, "theme": "mountains", "hills": 30.0,
-		"tagline": "Short and twisty. Hairpins, esses and very little rest.",
-		"points": [
-			Vector2(0, 0), Vector2(0, -260), Vector2(25, -320), Vector2(85, -335),
-			Vector2(140, -300), Vector2(150, -230), Vector2(200, -190), Vector2(270, -210),
-			Vector2(320, -260), Vector2(380, -250), Vector2(410, -190), Vector2(390, -120),
-			Vector2(330, -80), Vector2(300, -20), Vector2(320, 50), Vector2(300, 110),
-			Vector2(240, 130), Vector2(180, 100), Vector2(130, 130), Vector2(90, 190),
-			Vector2(30, 200), Vector2(0, 150), Vector2(0, 80),
-		],
-	},
 	{
 		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true, "hills": 5.0,
 		"tagline": "Temple of speed. Huge straights, tight chicanes, late braking.",
@@ -155,6 +119,17 @@ static func get_track(id: String) -> Dictionary:
 	return TRACKS[index_of(id)]
 
 
+## Name in normal case ("Spa-Francorchamps", "Istanbul Park").
+static func display_name(id: String) -> String:
+	var words: PackedStringArray = []
+	for w in String(get_track(id).name).split(" "):
+		var parts: PackedStringArray = []
+		for p in w.split("-"):
+			parts.append(p.substr(0, 1) + p.substr(1).to_lower())
+		words.append("-".join(parts))
+	return " ".join(words)
+
+
 static func points_of(id: String) -> PackedVector2Array:
 	return PackedVector2Array(get_track(id).points)
 
@@ -189,20 +164,25 @@ static func make_curve(points: PackedVector2Array, heights: PackedFloat32Array =
 static func track_curve(id: String) -> Curve3D:
 	var t := get_track(id)
 	var flat := make_curve(points_of(id))
-	if not (t.has("profile") or t.has("hills")):
-		return flat
 	var total := flat.get_baked_length()
 	var n := int(total / 6.0)
 	var pts := PackedVector2Array()
-	var hs := PackedFloat32Array()
-	var scale: float = t.get("height_scale", 1.0)
 	for k in n:
 		var p := flat.sample_baked(total * k / n, true)
 		pts.append(Vector2(p.x, p.z))
+	# The layouts are scaled down but the road is still 12 m wide: round off
+	# any turn tighter than MIN_RADIUS so the inside of the road, curbs and
+	# verge never fold over themselves.
+	pts = _ease_tight_turns(pts, MIN_RADIUS)
+	var hs := PackedFloat32Array()
+	var scale: float = t.get("height_scale", 1.0)
+	for k in n:
 		if t.has("profile"):
 			hs.append(profile_height(t.profile, float(k) / n) * scale)
+		elif t.has("hills"):
+			hs.append(rolling_height(pts[k].x, pts[k].y, t.hills))
 		else:
-			hs.append(rolling_height(p.x, p.z, t.hills))
+			hs.append(0.0)
 	hs = _blend_nearby(pts, hs, 30.0)
 	# Lowest point at 0 so the land never dips below the base.
 	var low := 1e9
@@ -211,6 +191,34 @@ static func track_curve(id: String) -> Curve3D:
 	for i in hs.size():
 		hs[i] -= low
 	return make_curve(pts, hs)
+
+
+## Tightest turn (m) a circuit may have.
+const MIN_RADIUS := 20.0
+
+
+## Nudges points (evenly spaced, a closed loop) towards their neighbours
+## wherever the turn is tighter than `rmin`, until none is.
+static func _ease_tight_turns(pts: PackedVector2Array, rmin: float) -> PackedVector2Array:
+	var n := pts.size()
+	for it in 400:
+		var out := pts.duplicate()
+		var moved := false
+		for i in n:
+			var a := pts[(i - 1 + n) % n]
+			var b := pts[i]
+			var c := pts[(i + 1) % n]
+			var cross := absf((b - a).cross(c - b))
+			if cross < 0.0001:
+				continue
+			var r := a.distance_to(b) * b.distance_to(c) * a.distance_to(c) / (2.0 * cross)
+			if r < rmin:
+				out[i] = b.lerp((a + c) * 0.5, 0.5)
+				moved = true
+		pts = out
+		if not moved:
+			break
+	return pts
 
 
 ## Averages each point's height with every road point within `radius` on the

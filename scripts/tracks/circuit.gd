@@ -14,7 +14,7 @@ const ROAD_Y := 0.03
 ## Radius (m) of the road-surface blend (and its lookup grid cell).
 const SURFACE_CELL := 9.0
 
-@export var track_name: String = "Greenhill Ring"
+@export var track_name: String = "Circuit"
 ## Control points (x, z) in metres. The road runs through them in order and
 ## loops back to the first. The first point is the start/finish line.
 @export var points: PackedVector2Array = PackedVector2Array([
@@ -62,8 +62,8 @@ func _ready() -> void:
 		GameSettings.ensure_loaded()
 		var track := TrackList.get_track(GameSettings.track)
 		points = PackedVector2Array(track.points)
-		_track_id = GameSettings.track
-		track_name = String(track.name).capitalize()
+		_track_id = String(track.id)
+		track_name = TrackList.display_name(String(track.id))
 		random_seed = int(track.seed)
 		theme = String(track.get("theme", "hills"))
 	_build_curve()
@@ -73,6 +73,7 @@ func _ready() -> void:
 	_build_ground()
 	_build_road()
 	_build_curbs()
+	_build_verge()
 	_build_start_line()
 	_build_brake_boards()
 	var dressing := TrackDressing.new()
@@ -270,6 +271,41 @@ func _build_ground() -> void:
 		add_child(wb)
 
 
+## Height of whatever you would stand on at a world position: the road (and
+## curbs) on the track, else the higher of the land and the grass verge.
+## Trackside objects are placed with this so they sit on the visible ground.
+func surface_height(x: float, z: float) -> float:
+	var local := to_local(Vector3(x, 0.0, z))
+	var nearest := curve.get_closest_point(local)
+	var dc := Vector2(local.x - nearest.x, local.z - nearest.z).length()
+	var road := surface_y(local.x, local.z, nearest.y) + ROAD_Y
+	var out := dc - road_width * 0.5
+	# On the inside of a tight corner the verge is squeezed narrower (see
+	# _build_verge), so it drops away faster.
+	var k := nearest_sample(local.x, local.z)
+	if k >= 0:
+		var smp: Dictionary = _samples[k]
+		var side := signf((Vector3(local.x, 0.0, local.z) - smp.pos).dot(smp.right))
+		if signf(smp.curv) == -side and absf(smp.curv) > 0.0001:
+			var limit := 0.85 / absf(smp.curv) - road_width * 0.5
+			if limit < 9.0:
+				out *= 9.0 / maxf(limit, 0.5)
+	var verge := road + _verge_drop(maxf(out, 0.0))
+	var land := ground_height(x, z) - global_position.y
+	var h := road if out <= curb_width else maxf(land, verge)
+	return h + global_position.y
+
+
+## How far the verge has dropped `out` metres beyond the road edge.
+func _verge_drop(out: float) -> float:
+	for i in VERGE.size() - 1:
+		var a: Array = VERGE[i]
+		var b: Array = VERGE[i + 1]
+		if out <= float(b[0]):
+			return lerpf(float(a[1]), float(b[1]), (out - float(a[0])) / (float(b[0]) - float(a[0])))
+	return float(VERGE[VERGE.size() - 1][1]) - (out - float(VERGE[VERGE.size() - 1][0])) * 0.5
+
+
 ## Ground height at a world position (about the road's height near the track).
 func ground_height(x: float, z: float) -> float:
 	return terrain.height_at(x, z) if terrain else 0.0
@@ -296,6 +332,24 @@ func surface_y(x: float, z: float, fallback: float = 0.0) -> float:
 					sum += p.y * w
 					wsum += w
 	return sum / wsum if wsum > 0.0 else fallback
+
+
+## Index of the centre-line sample nearest a map position (circuit space),
+## searched up to ~2 grid cells away; -1 if none that close.
+func nearest_sample(x: float, z: float) -> int:
+	var cx := int(floor(x / SURFACE_CELL))
+	var cz := int(floor(z / SURFACE_CELL))
+	var best := -1
+	var best_d := 1e18
+	for dz in range(-2, 3):
+		for dx in range(-2, 3):
+			for k: int in _surface_grid.get(Vector2i(cx + dx, cz + dz), []):
+				var p: Vector3 = _samples[k].pos
+				var d := (p.x - x) * (p.x - x) + (p.z - z) * (p.z - z)
+				if d < best_d:
+					best_d = d
+					best = k
+	return best
 
 
 ## `p` (circuit space) moved onto the road surface.
@@ -363,8 +417,12 @@ func _build_curbs() -> void:
 		for side: float in [-1.0, 1.0]:
 			var a_in := _on_surface(a.pos + a.right * side * half)
 			var b_in := _on_surface(b.pos + b.right * side * half)
-			var a_out := _on_surface(a.pos + a.right * side * (half + curb_width)) + Vector3.UP * 0.04
-			var b_out := _on_surface(b.pos + b.right * side * (half + curb_width)) + Vector3.UP * 0.04
+			# Level across with the road edge (on the inside of a hairpin the
+			# blend would otherwise pick up the other side's height).
+			var ao: Vector3 = a.pos + a.right * side * (half + curb_width)
+			var bo: Vector3 = b.pos + b.right * side * (half + curb_width)
+			var a_out := Vector3(ao.x, a_in.y + 0.04, ao.z)
+			var b_out := Vector3(bo.x, b_in.y + 0.04, bo.z)
 			# Lift the inner edge a hair so the curb draws over the road edge.
 			a_in.y += 0.005
 			b_in.y += 0.005
@@ -382,6 +440,78 @@ func _build_curbs() -> void:
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.surface_set_material(0, mat)
 	_add_static_mesh("Curbs", mesh, 0.85, 0.01)
+
+
+## Grass verge along both road edges, sloping from the road edge down into
+## the ground. The land is a 16 m grid that can't follow every crest and dip
+## of a hilly road exactly; the verge hides the step and gives a car leaving
+## the road a slope to run onto instead of an edge to drop off. Where the
+## land is higher it simply stays buried.
+const VERGE := [[0.0, -0.01], [1.5, -0.08], [4.0, -0.6], [9.0, -2.6]]  ## [metres out, metres down]
+
+func _build_verge() -> void:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half := road_width * 0.5
+	var n := _samples.size()
+	var rows: Array = []  # per sample, per side: points from road edge outwards
+	for k in n:
+		var smp: Dictionary = _samples[k]
+		var per_side: Array = []
+		for side: float in [-1.0, 1.0]:
+			# On the inside of a tight corner the verge is narrower so it can't fold over.
+			var inside := signf(smp.curv) == -side and absf(smp.curv) > 0.0001
+			var limit := 0.85 / absf(smp.curv) - half if inside else 999.0
+			var pts := PackedVector3Array()
+			var edge: Vector3 = smp.pos + smp.right * side * half
+			var edge_y := surface_y(edge.x, edge.z, smp.pos.y) + ROAD_Y
+			for v: Array in VERGE:
+				var out := minf(float(v[0]), maxf(limit, 0.5) * float(v[0]) / 9.0) if inside else float(v[0])
+				var p: Vector3 = smp.pos + smp.right * side * (half + out)
+				var y := edge_y + float(v[1])
+				# Nearer to some other bit of road than to its own (inside a
+				# hairpin, beside another stretch): tuck it well down, so it
+				# can't come up beside that road.
+				var owner := nearest_sample(p.x, p.z)
+				if owner >= 0:
+					var q: Vector3 = _samples[owner].pos
+					if Vector2(q.x - p.x, q.z - p.z).length() < half + out - 1.5:
+						y -= 3.0
+				pts.append(Vector3(p.x, y, p.z))
+			per_side.append(pts)
+		rows.append(per_side)
+	for k in n:
+		var a_rows: Array = rows[k]
+		var b_rows: Array = rows[(k + 1) % n]
+		for side in 2:
+			var a: PackedVector3Array = a_rows[side]
+			var b: PackedVector3Array = b_rows[side]
+			for r in VERGE.size() - 1:
+				# _quad wants the left edge first (left side: outer edge is left).
+				if side == 1:
+					_verge_quad(st, a[r], a[r + 1], b[r + 1], b[r])
+				else:
+					_verge_quad(st, a[r + 1], a[r], b[r], b[r + 1])
+	var mesh := st.commit()
+	if mesh == null or mesh.get_surface_count() == 0:
+		return
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.albedo_texture = terrain._detail_texture() if terrain else null
+	mat.roughness = 1.0
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.surface_set_material(0, mat)
+	_add_static_mesh("Verge", mesh, 0.55, 0.05)
+
+
+func _verge_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
+	var nrm := (b - a).cross(d - a)
+	st.set_normal(nrm.normalized() if nrm.y > 0.0001 else Vector3.UP)
+	for v: Vector3 in [a, c, b, a, d, c]:
+		var g := to_global(v)
+		st.set_color(terrain._ground_color(0.0, 0.0, g.x, g.z) if terrain else Color(0.3, 0.5, 0.22))
+		st.set_uv(Vector2(g.x, g.z) * 0.08)
+		st.add_vertex(v)
 
 
 func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3,

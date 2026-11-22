@@ -64,7 +64,9 @@ func _physics_process(delta: float) -> void:
 	if state == null:
 		return
 	var best := 0.0
-	var best_pos := Vector3.ZERO
+	var sum_imp := 0.0
+	var sum_pos := Vector3.ZERO
+	var sum_dir := Vector3.ZERO
 	var scrape := false
 	var scrape_pos := Vector3.ZERO
 	for c in state.get_contact_count():
@@ -78,23 +80,28 @@ func _physics_process(delta: float) -> void:
 		if tangential > 3.0:
 			scrape = true
 			scrape_pos = pos
-		var impulse := state.get_contact_impulse(c).length()
-		if impulse > best:
-			best = impulse
-			best_pos = pos
+		var imp_vec := state.get_contact_impulse(c)
+		var impulse := imp_vec.length()
+		best = maxf(best, impulse)
+		# A flat side against a flat wall is reported at the box's corners:
+		# average the points, and take the zone from the push's direction.
+		sum_imp += impulse
+		sum_pos += pos * impulse
+		sum_dir += imp_vec
 	_sparks.emitting = scrape
 	if scrape:
 		_sparks.global_position = scrape_pos
-	if best > 0.0:
-		_hit(_car.global_transform.affine_inverse() * best_pos, best / _car.mass)
+	if best > 0.0 and sum_imp > 0.0:
+		var inv := _car.global_transform.affine_inverse()
+		_hit(inv * (sum_pos / sum_imp), best / _car.mass, inv.basis * sum_dir)
 
 
 ## A hit at `local_pos` (car space) that changed the car's speed by `dv` m/s.
-func _hit(local_pos: Vector3, dv: float) -> void:
+func _hit(local_pos: Vector3, dv: float, push: Vector3 = Vector3.ZERO) -> void:
 	if dv < HIT_THRESHOLD:
 		return
 	var amount := clampf((dv - HIT_THRESHOLD) / 20.0, 0.0, 0.6)
-	var zone := _zone_of(local_pos)
+	var zone := _zone_of(local_pos, push)
 	# One crash shows up over several ticks: count only the strongest part.
 	var extra := amount - _recent[zone]
 	if extra <= 0.005:
@@ -110,7 +117,16 @@ func _hit(local_pos: Vector3, dv: float) -> void:
 	damaged.emit(zone, extra)
 
 
-func _zone_of(p: Vector3) -> int:
+## Zone from the direction the car was pushed (car space) when known, else
+## from where it was hit.
+func _zone_of(p: Vector3, push: Vector3 = Vector3.ZERO) -> int:
+	var a := push.abs()
+	if push.length() > 0.001:
+		if a.y > a.x and a.y > a.z and p.y > _roof_y:
+			return Zone.ROOF
+		if a.x >= a.z:
+			return Zone.LEFT if p.x < 0.0 else Zone.RIGHT
+		return Zone.FRONT if p.z < 0.0 else Zone.REAR
 	if p.z < -_half_length * 0.45:
 		return Zone.FRONT
 	if p.z > _half_length * 0.45:

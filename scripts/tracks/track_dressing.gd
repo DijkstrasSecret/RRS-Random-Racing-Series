@@ -233,9 +233,9 @@ func _side_point(i: int, side: int, dist: float) -> Vector3:
 	var s: Dictionary = _samples()[i]
 	var sign_ := 1.0 if side == 1 else -1.0
 	var p := circuit.to_global(s.pos + s.right * sign_ * dist)
-	# Close to the road: the road's height. Further out: on the ground (on
-	# hills another stretch of track nearby may be higher or lower).
-	p.y = lerpf(p.y, circuit.ground_height(p.x, p.z), smoothstep(20.0, 40.0, dist))
+	# On whatever ground is really there (road, verge or land): on hills the
+	# land beside the road dips and rises, and barriers must sit on it.
+	p.y = circuit.surface_height(p.x, p.z)
 	return p
 
 
@@ -319,19 +319,23 @@ func _build_gravel() -> void:
 			if _outside_corner[side][i] < 0.45 or di - half < 13.0:
 				continue
 			var inner := half + circuit.curb_width + 2.5
-			var a_in: Vector3 = s[i].pos + s[i].right * sign_ * inner
-			var b_in: Vector3 = s[j].pos + s[j].right * sign_ * inner
-			var a_out: Vector3 = s[i].pos + s[i].right * sign_ * (di - 1.5)
-			var b_out: Vector3 = s[j].pos + s[j].right * sign_ * (dj - 1.5)
-			if not _clear_of_track(circuit.to_global(a_out), di - 1.5):
+			if not _clear_of_track(circuit.to_global(s[i].pos + s[i].right * sign_ * (di - 1.5)), di - 1.5):
 				continue
-			var y := Vector3.UP * 0.02
-			st.set_normal(Vector3.UP)
-			# Keep every triangle facing up (clockwise from above) on both sides.
-			var tris := [a_in, a_out, b_out, a_in, b_out, b_in] if side == 0 else [a_in, b_out, a_out, a_in, b_in, b_out]
-			for v: Vector3 in tris:
-				st.set_uv(Vector2(v.x, v.z) * 0.25)
-				st.add_vertex(v + y)
+			# Strips about 3 m wide, every corner laid on the ground beneath.
+			var strips := maxi(1, int(ceil((maxf(di, dj) - 1.5 - inner) / 3.0)))
+			for k in strips:
+				var t0 := float(k) / strips
+				var t1 := float(k + 1) / strips
+				var a_in := _gravel_point(s[i], sign_, lerpf(inner, di - 1.5, t0))
+				var a_out := _gravel_point(s[i], sign_, lerpf(inner, di - 1.5, t1))
+				var b_in := _gravel_point(s[j], sign_, lerpf(inner, dj - 1.5, t0))
+				var b_out := _gravel_point(s[j], sign_, lerpf(inner, dj - 1.5, t1))
+				st.set_normal(Vector3.UP)
+				# Keep every triangle facing up (clockwise from above) on both sides.
+				var tris := [a_in, a_out, b_out, a_in, b_out, b_in] if side == 0 else [a_in, b_out, a_out, a_in, b_in, b_out]
+				for v: Vector3 in tris:
+					st.set_uv(Vector2(v.x, v.z) * 0.25)
+					st.add_vertex(v)
 			any = true
 	if not any:
 		return
@@ -357,6 +361,14 @@ func _build_gravel() -> void:
 	cs.shape = shape
 	body.add_child(cs)
 	add_child(body)
+
+
+## A gravel corner `dist` from the centre line, on the ground (circuit space).
+func _gravel_point(smp: Dictionary, sign_: float, dist: float) -> Vector3:
+	var p: Vector3 = smp.pos + smp.right * sign_ * dist
+	var g := circuit.to_global(p)
+	p.y = circuit.to_local(Vector3(g.x, circuit.surface_height(g.x, g.z), g.z)).y + 0.03
+	return p
 
 
 func _speckle_texture(a: Color, b: Color) -> ImageTexture:
@@ -413,10 +425,21 @@ func _place_segment(kind: String, a: Vector3, b: Vector3, side: int, seg_len: fl
 	# The piece's front (+Z) must face the road; on hills it tilts with the slope.
 	var x := chord / length * (-1.0 if side == 1 else 1.0)
 	var z := x.cross(Vector3.UP)
+	# Tilt with the slope. On a bank steeper than about 1 in 3 (inside a hairpin
+	# whose two legs are at different heights) leave the piece out: it would
+	# stand on end or sink into the bank.
+	if absf(b.y - a.y) > length * 0.35:
+		return
+	var mid := (a + b) * 0.5
+	# Ground dipping or bulging between the two ends (inside a hairpin): the
+	# rail would float or sink in the middle, so leave this piece out too.
+	for t: float in [0.25, 0.5, 0.75]:
+		var p := a.lerp(b, t)
+		if absf(p.y - circuit.surface_height(p.x, p.z)) > 0.3:
+			return
 	var x3 := (b - a).normalized() * (-1.0 if side == 1 else 1.0)
 	var rot := Basis(x3, z.cross(x3), z)
 	length = a.distance_to(b)
-	var mid := (a + b) * 0.5
 	var xf := Transform3D(rot.scaled_local(Vector3(length / seg_len, 1.0, 1.0)), mid)
 	_add(kind, xf)
 	if solid:

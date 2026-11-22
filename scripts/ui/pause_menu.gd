@@ -37,7 +37,8 @@ func _build() -> void:
 	_panel.add_child(stack)
 
 	_main = VBoxContainer.new()
-	_main.add_child(MenuStyle.label("PAUSED", 48, MenuStyle.ACCENT))
+	_main.add_child(MenuStyle.logo(420.0))
+	_main.add_child(MenuStyle.label("PAUSED", 40, MenuStyle.ACCENT))
 	_main.add_child(MenuStyle.button("RESUME", resume))
 	_main.add_child(MenuStyle.button("RESTART", _restart))
 	_main.add_child(MenuStyle.button("SETTINGS", _show_settings))

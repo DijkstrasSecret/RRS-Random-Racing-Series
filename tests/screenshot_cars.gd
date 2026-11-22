@@ -33,7 +33,7 @@ func _run() -> void:
 			chase_shot = false
 		elif arg.begins_with("--livery="):
 			GameSettings.p1_livery = arg.get_slice("=", 1) == "1"
-	GameSettings.track = "greenhill"
+	GameSettings.track = "monza"
 	GameSettings.time_of_day = time_of_day
 	GameSettings.weather = 0
 	for id in cars:
