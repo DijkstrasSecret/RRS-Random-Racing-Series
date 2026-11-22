@@ -39,6 +39,9 @@ static var ai_tiers: int = 15
 static var time_of_day: int = 2
 ## 0 clear, 1 hazy, 2 fog.
 static var weather: int = 0
+## Crash damage: 0 off, 1 visual only, 2 visual + handling.
+static var damage: int = 2
+const DAMAGE_NAMES: PackedStringArray = ["OFF", "VISUAL", "FULL"]
 
 static var _loaded: bool = false
 
@@ -74,6 +77,7 @@ static func ensure_loaded() -> void:
 		look = 2
 	time_of_day = clampi(cfg.get_value("race", "time_of_day", time_of_day), 0, 3)
 	weather = clampi(cfg.get_value("race", "weather", weather), 0, 2)
+	damage = clampi(cfg.get_value("race", "damage", damage), 0, 2)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	if fullscreen:
 		apply_window()
@@ -104,6 +108,7 @@ static func save() -> void:
 	cfg.set_value("race", "ai_tiers", ai_tiers)
 	cfg.set_value("race", "time_of_day", time_of_day)
 	cfg.set_value("race", "weather", weather)
+	cfg.set_value("race", "damage", damage)
 	cfg.save(PATH)
 
 

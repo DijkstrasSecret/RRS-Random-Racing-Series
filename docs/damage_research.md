@@ -52,3 +52,15 @@ Bavaro (1600 kg) driven straight into the trackside barrier, and into a parked c
 2. Dents + scuffs + broken lamps + cracked glass (VISUAL).
 3. Loose / falling parts (generator change).
 4. Mechanical effects + engine smoke (FULL).
+
+## Built (2026-11-22): "Visual + light mechanical"
+- `scripts/vehicle/car_damage.gd` (CarDamage, added by Vehicle unless DAMAGE is OFF or the scene is in group
+  `no_damage`, e.g. the main menu). Hits from Jolt contacts (ground = colliders with `surface_grip` meta are
+  ignored), speed change = impulse / mass, damage from 1.8 m/s up, max 0.6 per hit, five zones.
+- Dents every non-wheel mesh of the model (livery too) round the hit, at bumper / door height, with smooth
+  crumple, bent shading normals and darker paint (vertex colours; psx_lit `vertex_tint`).
+- Head lamps out at front > 0.5, brake lamps out at rear > 0.5; sparks while scraping; debris on big hits;
+  engine smoke from front > 0.45.
+- FULL: engine power down to 60 % with front damage, up to +15 % drag, steering pull towards a damaged side.
+- Race settings row DAMAGE (OFF / VISUAL / FULL, default FULL); HUD outline beside the dial.
+- Tests: `tests/damage_test.gd`, pictures: `tests/screenshot_damage.gd`.

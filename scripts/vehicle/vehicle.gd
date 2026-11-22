@@ -84,6 +84,14 @@ var _brake_lamps: Array = []
 var _head_lamps: Array = []
 var _brake_glow := -1.0
 var _night := false
+## Crash damage (CarDamage sets these; 1 / 1 / 0 = undamaged).
+var damage: CarDamage
+var power_scale: float = 1.0
+var drag_scale: float = 1.0
+var steer_pull: float = 0.0  ## radians, + = pulls right
+var _head_broken := false
+var _brake_broken := false
+var _head_energy := 2.2
 var _body_visual: Node3D
 var _body_pitch: float = 0.0
 var _body_pitch_vel: float = 0.0
@@ -139,6 +147,20 @@ func _ready() -> void:
 	GameSettings.ensure_loaded()
 	set_handling_profile(GameSettings.handling_profile)
 	spawn_transform = global_transform
+	_setup_damage.call_deferred()
+
+
+## Crash damage unless it is off in the race settings or the scene opts out
+## (the main menu's background cars join group "no_damage").
+func _setup_damage() -> void:
+	if not is_inside_tree() or GameSettings.damage <= 0 or _model == null:
+		return
+	if get_tree().get_first_node_in_group("no_damage") != null:
+		return
+	damage = CarDamage.new()
+	damage.name = "Damage"
+	add_child(damage)
+	damage.setup(self, GameSettings.damage)
 
 
 func _apply_config() -> void:
@@ -214,7 +236,7 @@ func _physics_process(delta: float) -> void:
 			deg_to_rad(config.max_steer_deg), _wheelbase, config.tire_grip)
 	steer_angle = move_toward(steer_angle, target, config.steer_rate * delta)
 	for w in front_wheels:
-		w.steer_angle = steer_angle
+		w.steer_angle = steer_angle + steer_pull
 
 	# --- Suspension ---
 	var grounded_count := 0
@@ -242,7 +264,7 @@ func _physics_process(delta: float) -> void:
 	var tc := assists.traction_factor(driven_wheels, config.tire_peak_slip_ratio, forward_speed)
 	throttle_out = thr * tc
 	tc_active = thr > 0.05 and tc < 0.95
-	var wheel_torque := drivetrain.update(_driven_mean_omega(), throttle_out, delta)
+	var wheel_torque := drivetrain.update(_driven_mean_omega(), throttle_out, delta) * power_scale
 
 	abs_active = false
 	brake_out = brk
@@ -391,7 +413,7 @@ func _apply_aero() -> void:
 	var v2 := v.length_squared()
 	if v2 < 0.01:
 		return
-	apply_central_force(-v.normalized() * 0.5 * AIR_DENSITY * v2 * config.drag_area)
+	apply_central_force(-v.normalized() * 0.5 * AIR_DENSITY * v2 * config.drag_area * drag_scale)
 	var down := 0.5 * AIR_DENSITY * forward_speed * forward_speed * config.downforce_area
 	var b := global_basis
 	apply_force(-b.y * down * config.aero_balance, b * Vector3(0.0, 0.3, _front_axle_z))
@@ -512,7 +534,8 @@ func _attach_model() -> void:
 func _setup_lamps() -> void:
 	GameSettings.ensure_loaded()
 	_night = GameSettings.time_of_day == 3 and get_tree().get_first_node_in_group("circuit") != null
-	_set_lamp_energy(_head_lamps, 5.0 if _night else 2.2)
+	_head_energy = 5.0 if _night else 2.2
+	_set_lamp_energy(_head_lamps, _head_energy)
 	_update_brake_lamps(true)
 	if not _night or DisplayServer.get_name() == "headless":
 		return
@@ -538,9 +561,33 @@ func _update_brake_lamps(force: bool = false) -> void:
 		return
 	var braking := input != null and (input.brake > 0.05 or input.handbrake > 0.5)
 	var glow := 7.0 if braking else (2.0 if _night else 1.2)
+	if _brake_broken:
+		glow = 0.0
 	if force or glow != _brake_glow:
 		_brake_glow = glow
 		_set_lamp_energy(_brake_lamps, glow)
+
+
+## Smashed lamps go dark (and the night beam with the headlights).
+func set_lamps_broken(head: bool, brake: bool) -> void:
+	if head != _head_broken:
+		_head_broken = head
+		_set_lamp_energy(_head_lamps, 0.0 if head else _head_energy)
+		var beam := get_node_or_null("HeadlightBeam") as Light3D
+		if beam:
+			beam.visible = not head
+	if brake != _brake_broken:
+		_brake_broken = brake
+		_update_brake_lamps(true)
+
+
+## Damage darkens these surfaces of `mi` through its vertex colours.
+func use_vertex_tint(mi: MeshInstance3D) -> void:
+	for entry: Array in _retro_surfaces:
+		if entry[0] == mi:
+			(entry[3] as ShaderMaterial).set_shader_parameter("vertex_tint", 1.0)
+			if entry[4] is BaseMaterial3D:
+				(entry[4] as BaseMaterial3D).vertex_color_use_as_albedo = true
 
 
 ## Paint, glass and chrome get glossy so they reflect the sky and sun.

@@ -57,6 +57,8 @@ func _draw() -> void:
 	_find_race_nodes()
 	var r := 150.0 * k
 	_draw_dial(Vector2(s.x - r - 36.0 * k, s.y - r - 30.0 * k), r, k)
+	if _vehicle.damage:
+		_draw_damage(Vector2(s.x - r * 2.0 - 96.0 * k, s.y - 150.0 * k), k)
 	_draw_top(k)
 	if _circuit:
 		var m := 200.0 * k
@@ -209,6 +211,31 @@ func _draw_dial(c: Vector2, r: float, k: float) -> void:
 	for flag: Array in [["TC", _vehicle.tc_active], ["ABS", _vehicle.abs_active], ["ESC", _vehicle.stability_active]]:
 		_label(Vector2(x, c.y - r - 12.0 * k), flag[0], int(17 * k), HOT if flag[1] else Color(1, 1, 1, 0.22))
 		x += 46.0 * k
+
+
+## Small top-down car (nose up): each area turns yellow, then red, as it
+## takes damage.
+func _draw_damage(o: Vector2, k: float) -> void:
+	var z := _vehicle.damage.zones
+	var w := 46.0 * k
+	var h := 92.0 * k
+	var e := 11.0 * k  # thickness of the front / rear / side strips
+	var areas := [
+		[Rect2(o.x + e, o.y, w - 2.0 * e, e * 1.6), CarDamage.Zone.FRONT],
+		[Rect2(o.x + e, o.y + h - e * 1.6, w - 2.0 * e, e * 1.6), CarDamage.Zone.REAR],
+		[Rect2(o.x, o.y + e, e, h - 2.0 * e), CarDamage.Zone.LEFT],
+		[Rect2(o.x + w - e, o.y + e, e, h - 2.0 * e), CarDamage.Zone.RIGHT],
+		[Rect2(o.x + e * 1.5, o.y + h * 0.3, w - 3.0 * e, h * 0.4), CarDamage.Zone.ROOF],
+	]
+	draw_rect(Rect2(o - Vector2(6, 6) * k, Vector2(w, h) + Vector2(12, 12) * k), PANEL)
+	for a: Array in areas:
+		var d: float = z[a[1]]
+		var col := Color(1, 1, 1, 0.28)
+		if d > 0.02:
+			col = WARN.lerp(HOT, clampf((d - 0.3) / 0.4, 0.0, 1.0))
+			col.a = 0.55 + 0.45 * clampf(d * 2.0, 0.0, 1.0)
+		draw_rect(a[0], col)
+	draw_rect(Rect2(o, Vector2(w, h)), Color(1, 1, 1, 0.55), false, 2.0 * k)
 
 
 ## Shows the camera view name for a moment after it changes.

@@ -32,6 +32,7 @@ func _enter_tree() -> void:
 
 
 func _ready() -> void:
+	add_to_group("no_damage")  # background cars stay clean
 	get_tree().paused = false
 	MusicPlayer.start_menu()
 	_camera = $ChaseCamera

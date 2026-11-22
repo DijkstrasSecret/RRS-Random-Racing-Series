@@ -16,6 +16,8 @@ uniform float specular_value : hint_range(0.0, 1.0) = 0.0;
 // Lamps (head / brake lights) glow; the car changes the energy live.
 uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;
+// Crash damage darkens the paint through the vertex colours (1 = use them).
+uniform float vertex_tint = 0.0;
 
 varying vec2 affine_uv;
 varying float affine_w;
@@ -34,7 +36,7 @@ void vertex() {
 void fragment() {
 	vec2 uv = mix(UV, affine_uv / affine_w, affine_amount);
 	vec4 tex = texture(albedo_tex, uv);
-	ALBEDO = tex.rgb * albedo_color.rgb;
+	ALBEDO = tex.rgb * albedo_color.rgb * mix(vec3(1.0), COLOR.rgb, vertex_tint);
 	ROUGHNESS = roughness_value;
 	SPECULAR = specular_value;
 	EMISSION = emission_color * emission_energy;
