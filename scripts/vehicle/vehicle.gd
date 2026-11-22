@@ -619,6 +619,11 @@ func _collect_retro_surfaces(node: Node) -> void:
 					var recolored := original.duplicate() as BaseMaterial3D
 					recolored.albedo_color = paint_color
 					original = recolored
+				elif paint_color.a > 0.0 and original.resource_name.contains("seam"):
+					# Door seams: a darker shade of the (new) paint.
+					var seam := original.duplicate() as BaseMaterial3D
+					seam.albedo_color = Color(paint_color.r * 0.7, paint_color.g * 0.7, paint_color.b * 0.7)
+					original = seam
 			var retro := ShaderMaterial.new()
 			retro.shader = PSX_SHADER
 			var ps2: Material = null

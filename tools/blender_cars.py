@@ -1017,13 +1017,14 @@ def add_details(cid, m, c, M, front_y):
     rear_y = front_y - L
     rk = c["rocker"]
     paint = M["paint"]
-    # Door seams (thin dark lines) and handles.
+    # Door seams: thin lines in a darker shade of the body colour, and handles.
+    seam_mat = material(f"{cid}_seam", tuple(ch * 0.7 for ch in c["paint"]), 0.45, 0.4)
     seam_bottom = rk + 0.06
     for s in c.get("door_seams", []):
         top = min(c["belt"] - 0.01, body_profile(c, s)[2])
         h = top - seam_bottom
         for side in (-1, 1):
-            m.box((0.012, 0.012, h), (side * side_x(c, s, 0), front_y - s, seam_bottom + h / 2), M["black"])
+            m.box((0.012, 0.012, h), (side * side_x(c, s, 0), front_y - s, seam_bottom + h / 2), seam_mat)
     for s in c.get("handles", []):
         z = c["belt"] - 0.09
         for side in (-1, 1):
