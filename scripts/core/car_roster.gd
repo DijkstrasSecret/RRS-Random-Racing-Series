@@ -9,7 +9,7 @@ const CARS: Array[Dictionary] = [
 	{"id": "kartal", "tier": 0, "name": "KARTAL 77 SL", "tagline": "1977 rear-drive classic. Light, slow, loves to slide."},
 	{"id": "mirelle", "tier": 0, "name": "MIRELLE 15D", "tagline": "French diesel supermini. Frugal, light and forgiving."},
 	{"id": "kerkenez", "tier": 0, "name": "KERKENEZ 98 SX", "tagline": "90s rear-drive saloon. Soft, simple, happy sideways."},
-	{"id": "atmaca", "tier": 0, "name": "ATMACA 90 STANCE", "tagline": "Slammed on air ride. Stiff, low and tail-happy."},
+	{"id": "atmaca", "tier": 0, "livery": true, "name": "ATMACA 90 STANCE", "tagline": "Slammed on air ride. Stiff, low and tail-happy."},
 	{"id": "quadra", "tier": 1, "name": "QUADRA 16D", "tagline": "Compact diesel sedan. Easy and composed."},
 	{"id": "romola", "tier": 1, "name": "ROMOLA STELLA 16D", "tagline": "Italian diesel hatch. Nimble and playful."},
 	{"id": "kaze", "tier": 1, "name": "KAZE SORA 16I", "tagline": "Rev-happy petrol sedan. Sharp and dependable."},
@@ -21,9 +21,9 @@ const CARS: Array[Dictionary] = [
 		"paint_reference": "res://assets/cars/psx_hatch/psx_hatch_red.png"},
 	{"id": "mammoth", "tier": 2, "name": "MAMMOTH 20TD", "tagline": "Twin-turbo diesel pickup. Heavy, tall, unstoppable."},
 	{"id": "orion", "tier": 2, "name": "ORION ARC 6", "tagline": "Electric streamliner. Rear-drive, slippery and silent."},
-	{"id": "bastion", "tier": 2, "name": "BASTION 350D", "tagline": "Off-road icon. A brick with a big diesel heart."},
+	{"id": "bastion", "tier": 2, "livery": true, "name": "BASTION 350D", "tagline": "Off-road icon. A brick with a big diesel heart."},
 	{"id": "bavaro", "tier": 2, "name": "BAVARO 4 GRAN", "tagline": "Rear-drive four-door coupe. Balanced and quick."},
-	{"id": "braxton", "tier": 2, "name": "BRAXTON BRAWLER V6", "tagline": "American muscle. Big, loud and loose at the rear."},
+	{"id": "braxton", "tier": 2, "livery": true, "name": "BRAXTON BRAWLER V6", "tagline": "American muscle. Big, loud and loose at the rear."},
 	{"id": "ashford", "tier": 3, "name": "ASHFORD GT12", "tagline": "V12 grand tourer. Rear-drive, handle with care."},
 	{"id": "bellmont", "tier": 3, "name": "BELLMONT WINGSPAN V8", "tagline": "Luxury express. All-wheel drive, V8, huge brakes."},
 	{"id": "hanlong", "tier": 3, "name": "HANLONG E9", "tagline": "Electric, all-wheel drive. Brutal launch, silent speed."},
@@ -34,6 +34,11 @@ const DRIVE_NAMES: PackedStringArray = ["FRONT", "REAR", "ALL-WHEEL"]
 const TIER_NAMES: PackedStringArray = ["D", "C", "B", "A"]
 const TIER_TITLES: PackedStringArray = ["CLASSIC", "STREET", "SPORT", "SUPER"]
 const TIER_COLORS: PackedColorArray = [Color(0.55, 0.8, 0.45), Color(0.35, 0.7, 1.0), Color(0.75, 0.5, 1.0), Color(1.0, 0.45, 0.3)]
+
+
+## True if the car has a racing livery that can be switched on and off.
+static func has_livery(id: String) -> bool:
+	return bool(entry(id).get("livery", false))
 
 
 static func tier(id: String) -> int:
@@ -90,13 +95,14 @@ static func config(id: String) -> VehicleConfig:
 
 
 ## Make `car` (not yet ready) into roster car `id`. Alpha 0 = factory paint.
-static func apply(car: Vehicle, id: String, paint: Color = Color(0, 0, 0, 0)) -> void:
+static func apply(car: Vehicle, id: String, paint: Color = Color(0, 0, 0, 0), livery: bool = true) -> void:
 	var e := entry(id)
 	car.config = config(id)
 	car.body_model = load(model_path(id)) as PackedScene
 	car.paint_reference = load(e.paint_reference) if e.has("paint_reference") else null
 	car.paint_color = paint
 	car.paint_texture = null
+	car.show_livery = livery
 	car.set_meta(&"car_id", id)
 
 

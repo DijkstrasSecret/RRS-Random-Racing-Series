@@ -14,6 +14,8 @@ var accent: Color = Color(0.35, 0.6, 1.0)
 var _viewport: SubViewport
 var _pivot: Node3D
 var _current: String = ""
+var _model: Node3D
+var _livery := true
 var _ps1 := true
 var _t := 0.0
 var _appear := 1.0
@@ -150,10 +152,13 @@ func _build_stage() -> void:
 	_viewport.add_child(_pivot)
 
 
-func show_car(id: String) -> void:
+func show_car(id: String, livery: bool = true) -> void:
 	if id == _current:
+		if livery != _livery:
+			_set_livery(livery)
 		return
 	_current = id
+	_livery = livery
 	for child in _pivot.get_children():
 		child.queue_free()
 	var model := (load(CarRoster.model_path(id)) as PackedScene).instantiate() as Node3D
@@ -161,10 +166,20 @@ func show_car(id: String) -> void:
 		var res := Vector2(maxi(_viewport.size.x, 160), maxi(_viewport.size.y, 90))
 		CarLook.apply_retro(model, res)
 	_pivot.add_child(model)
+	_model = model
+	_set_livery(livery)
 	# Long cars are scaled down a little so every car fits the frame.
 	var length := CarRoster.config(id).inertia_box_size.z
 	model.scale = Vector3.ONE * clampf(4.6 / length, 0.8, 1.15)
 	_appear = 0.0
+
+
+func _set_livery(on: bool) -> void:
+	_livery = on
+	if _model:
+		var liv := _model.find_child("livery*", true, false) as Node3D
+		if liv:
+			liv.visible = on
 
 
 func _process(delta: float) -> void:

@@ -48,9 +48,11 @@ static func ensure() -> void:
 	_add_event_if_missing("ui_cancel", _button(JOY_BUTTON_B))
 	# Menus where both players choose at once (car select).
 	_add_menu(1, 0, {"up": [KEY_W], "down": [KEY_S], "left": [KEY_A], "right": [KEY_D],
-		"accept": [KEY_SPACE, KEY_E], "back": [KEY_Q]})
+		"accept": [KEY_SPACE, KEY_E], "back": [KEY_Q], "alt": [KEY_R]})
 	_add_menu(2, 1, {"up": [KEY_UP], "down": [KEY_DOWN], "left": [KEY_LEFT], "right": [KEY_RIGHT],
-		"accept": [KEY_ENTER, KEY_KP_ENTER], "back": [KEY_BACKSPACE]})
+		"accept": [KEY_ENTER, KEY_KP_ENTER], "back": [KEY_BACKSPACE], "alt": [KEY_L]})
+	# Extra menu button (livery on / off): Y on any pad, R or L.
+	_add("menu_alt", [_key(KEY_R), _key(KEY_L), _button(JOY_BUTTON_Y)])
 
 
 ## Adds "p<player>_menu_<up/down/left/right/accept/back>": keys plus that player's gamepad.
@@ -62,6 +64,7 @@ static func _add_menu(player: int, device: int, keys: Dictionary) -> void:
 		"right": [_axis(JOY_AXIS_LEFT_X, 1.0, device), _button(JOY_BUTTON_DPAD_RIGHT, device)],
 		"accept": [_button(JOY_BUTTON_A, device)],
 		"back": [_button(JOY_BUTTON_B, device)],
+		"alt": [_button(JOY_BUTTON_Y, device)],
 	}
 	for action: String in keys:
 		var events: Array = []

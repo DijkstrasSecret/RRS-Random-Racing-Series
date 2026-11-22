@@ -5,10 +5,12 @@ extends VBoxContainer
 ## `car_shown(id)` tells the menu which car to display in the 3D preview.
 
 signal closed
-signal car_shown(id: String)
+signal car_shown(id: String, livery: bool)
 
 var _p1: OptionRow
 var _p2: OptionRow
+var _p1_livery: OptionRow
+var _p2_livery: OptionRow
 var _name: Label
 var _tagline: Label
 var _specs: Label
@@ -20,10 +22,20 @@ func _ready() -> void:
 	add_child(MenuStyle.label("GARAGE", 40, MenuStyle.ACCENT))
 	_p1 = OptionRow.create("PLAYER 1", CarRoster.names(), CarRoster.index_of(GameSettings.p1_car))
 	_p2 = OptionRow.create("PLAYER 2", CarRoster.names(), CarRoster.index_of(GameSettings.p2_car))
-	for row: OptionRow in [_p1, _p2]:
+	_p1_livery = OptionRow.create("P1 LIVERY", PackedStringArray(["OFF", "ON"]), int(GameSettings.p1_livery))
+	_p2_livery = OptionRow.create("P2 LIVERY", PackedStringArray(["OFF", "ON"]), int(GameSettings.p2_livery))
+	for row: OptionRow in [_p1, _p1_livery, _p2, _p2_livery]:
 		row.custom_minimum_size = Vector2(760, 0)
 		add_child(row)
 		row.focus_entered.connect(_refresh)
+	_p1_livery.value_changed.connect(func(i: int) -> void:
+		GameSettings.p1_livery = i == 1
+		GameSettings.save()
+		_refresh())
+	_p2_livery.value_changed.connect(func(i: int) -> void:
+		GameSettings.p2_livery = i == 1
+		GameSettings.save()
+		_refresh())
 	_p1.value_changed.connect(func(i: int) -> void:
 		GameSettings.p1_car = CarRoster.CARS[i].id
 		GameSettings.save()
@@ -56,7 +68,8 @@ func focus_first() -> void:
 
 
 func _refresh() -> void:
-	var row := _p2 if _p2.has_focus() else _p1
+	var second := _p2.has_focus() or _p2_livery.has_focus()
+	var row := _p2 if second else _p1
 	var e: Dictionary = CarRoster.CARS[row.index]
 	var s := CarRoster.stats(e.id)
 	_name.text = e.name
@@ -65,7 +78,7 @@ func _refresh() -> void:
 		CarRoster.TIER_NAMES[int(e.tier)], s.hp, s.kg, s.top_kmh, s.drive, "   ·   ELECTRIC" if s.electric else ""]
 	_bars.stats = s
 	_bars.queue_redraw()
-	car_shown.emit(e.id)
+	car_shown.emit(e.id, GameSettings.p2_livery if second else GameSettings.p1_livery)
 
 
 func _unhandled_input(event: InputEvent) -> void:

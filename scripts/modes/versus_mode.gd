@@ -18,7 +18,7 @@ func _enter_tree() -> void:
 		if car:
 			# Same car for both players: player 2 gets red paint.
 			var paint := Color(0.85, 0.12, 0.1) if i == 1 and picks[0] == picks[1] else Color(0, 0, 0, 0)
-			CarRoster.apply(car, picks[i], paint)
+			CarRoster.apply(car, picks[i], paint, GameSettings.p1_livery if i == 0 else GameSettings.p2_livery)
 
 
 func _ready() -> void:

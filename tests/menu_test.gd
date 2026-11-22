@@ -62,6 +62,14 @@ func _run() -> void:
 	await _frames(5)
 	var cs := _find(menu, "CarSelect") as CarSelect
 	_check("RACE opens the car select", cs != null and cs.is_visible_in_tree() and cs.players == 1)
+	# Livery on / off (Y / R) for a car that has one.
+	cs._cursor[0] = CarRoster.index_of("braxton")
+	cs._refresh()
+	var livery_before := GameSettings.p1_livery
+	await _action("menu_alt")
+	_check("Y / R switches the livery (%s -> %s)" % [livery_before, GameSettings.p1_livery], GameSettings.p1_livery != livery_before)
+	await _pad(JOY_BUTTON_Y, 1)
+	_check("gamepad Y switches it back", GameSettings.p1_livery == livery_before)
 	var start_car := cs.cursor_of(0)
 	await _action("ui_right")
 	_check("right arrow moves to the next car", cs.cursor_of(0) == wrapi(start_car + 1, 0, CarRoster.CARS.size()))

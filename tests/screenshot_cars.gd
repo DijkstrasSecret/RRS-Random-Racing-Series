@@ -25,6 +25,8 @@ func _run() -> void:
 			prefix = arg.get_slice("=", 1)
 		elif arg.begins_with("--time="):
 			time_of_day = int(arg.get_slice("=", 1))
+		elif arg.begins_with("--livery="):
+			GameSettings.p1_livery = arg.get_slice("=", 1) == "1"
 	GameSettings.track = "greenhill"
 	GameSettings.time_of_day = time_of_day
 	GameSettings.weather = 0

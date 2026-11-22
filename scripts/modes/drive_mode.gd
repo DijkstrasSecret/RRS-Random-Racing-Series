@@ -16,7 +16,7 @@ func _enter_tree() -> void:
 	# Before the car is ready: make it the car chosen in the garage.
 	var car := get_node_or_null(vehicle_path) as Vehicle
 	if car:
-		CarRoster.apply(car, GameSettings.p1_car)
+		CarRoster.apply(car, GameSettings.p1_car, Color(0, 0, 0, 0), GameSettings.p1_livery)
 
 
 func _ready() -> void:

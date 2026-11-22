@@ -100,12 +100,28 @@ func is_locked(player: int) -> bool:
 
 func _refresh() -> void:
 	for p in _cards.size():
-		_cards[p].show_car(CarRoster.CARS[_cursor[p]].id)
+		_cards[p].show_car(CarRoster.CARS[_cursor[p]].id, livery_of(p))
 		_cards[p].set_locked(_locked[p])
 	if players == 1:
-		_hint.text = "Arrows / D-pad: choose      Enter / A: select      Esc / B: back"
+		_hint.text = "Arrows / D-pad: choose      Enter / A: select      Y / R: livery on/off      Esc / B: back"
 	else:
-		_hint.text = "P1: WASD + Space or gamepad 1      P2: arrows + Enter or gamepad 2      Q / Backspace / B: change      Esc: back"
+		_hint.text = "P1: WASD + Space, R livery, or pad 1      P2: arrows + Enter, L livery, or pad 2      Q / Backspace / B: change      Esc: back"
+
+
+func livery_of(p: int) -> bool:
+	return GameSettings.p1_livery if p == 0 else GameSettings.p2_livery
+
+
+## Player `p` switches their car's livery on / off (cars that have one).
+func toggle_livery(p: int) -> void:
+	if not CarRoster.has_livery(CarRoster.CARS[_cursor[p]].id):
+		return
+	if p == 0:
+		GameSettings.p1_livery = not GameSettings.p1_livery
+	else:
+		GameSettings.p2_livery = not GameSettings.p2_livery
+	GameSettings.save()
+	_refresh()
 	if _grid:
 		_grid.queue_redraw()
 
@@ -156,6 +172,10 @@ func _handle_player(event: InputEvent, p: int) -> bool:
 		if not _locked[p]:
 			choose(p, _cursor[p])
 		return true
+	if _act(event, p, "alt"):
+		if not _locked[p]:
+			toggle_livery(p)
+		return true
 	if _locked[p]:
 		return _act(event, p, "left") or _act(event, p, "right") or _act(event, p, "up") or _act(event, p, "down")
 	var moved := true
@@ -201,10 +221,12 @@ func mouse_tile(index: int, clicked: bool) -> void:
 
 
 func _act(event: InputEvent, p: int, what: String) -> bool:
-	var echo := what != "accept" and what != "back"
+	var echo := what != "accept" and what != "back" and what != "alt"
 	if event.is_action_pressed("p%d_menu_%s" % [p + 1, what], echo):
 		return true
 	if players == 1:
+		if what == "alt":
+			return event.is_action_pressed("menu_alt")
 		var ui: String = {"up": "ui_up", "down": "ui_down", "left": "ui_left", "right": "ui_right",
 			"accept": "ui_accept", "back": "ui_cancel"}[what]
 		return event.is_action_pressed(ui, echo)
@@ -326,6 +348,7 @@ class PlayerCard extends Control:
 	var _class: Label
 	var _tagline: Label
 	var _specs: Label
+	var _livery: Label
 	var _bars: GaragePanel.StatBars
 	var _title: String
 	var _locked := false
@@ -349,6 +372,7 @@ class PlayerCard extends Control:
 		_class = MenuStyle.label("", 20, MenuStyle.ACCENT)
 		_tagline = MenuStyle.label("", 18, MenuStyle.DIM)
 		_specs = MenuStyle.label("", 19, MenuStyle.ACCENT)
+		_livery = MenuStyle.label("", 18, MenuStyle.TEXT)
 		_bars = GaragePanel.StatBars.new()
 		_bars.custom_minimum_size = Vector2(540, 6 * 30)
 		# Class badge: a coloured square with the class letter, before the name.
@@ -368,7 +392,7 @@ class PlayerCard extends Control:
 		var info := VBoxContainer.new()
 		info.add_theme_constant_override("separation", 4)
 		info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		for l: Control in [name_row, _class, _tagline, _specs]:
+		for l: Control in [name_row, _class, _tagline, _specs, _livery]:
 			info.add_child(l)
 		var gap := Control.new()
 		gap.custom_minimum_size = Vector2(0, 10)
@@ -399,11 +423,18 @@ class PlayerCard extends Control:
 		_overlay.draw.connect(_draw_overlay)
 		add_child(_overlay)
 
-	func show_car(id: String) -> void:
+	func show_car(id: String, livery: bool = true) -> void:
 		var e := CarRoster.entry(id)
 		var s := CarRoster.stats(id)
 		var tier := int(e.tier)
-		_preview.show_car(id)
+		_preview.show_car(id, livery)
+		if CarRoster.has_livery(id):
+			var key := "Y / R" if player == 0 else "Y / L"
+			_livery.text = "LIVERY  %s     (%s)" % ["ON" if livery else "OFF", key]
+			_livery.add_theme_color_override("font_color", MenuStyle.ACCENT if livery else MenuStyle.DIM)
+		else:
+			_livery.text = "NO LIVERY FOR THIS CAR YET"
+			_livery.add_theme_color_override("font_color", Color(1, 1, 1, 0.35))
 		_name.text = e.name
 		_badge.text = CarRoster.TIER_NAMES[tier]
 		_badge_bg.color = CarRoster.TIER_COLORS[tier]

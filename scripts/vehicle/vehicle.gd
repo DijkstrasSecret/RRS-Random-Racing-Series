@@ -27,6 +27,8 @@ const FALL_RESET_Y := -30.0
 @export var paint_color: Color = Color(0, 0, 0, 0)
 ## A second colour variant of the model's texture, used to find the paint area.
 @export var paint_reference: Texture2D
+## Show the racing livery (stripes, numbers, sponsors) if the model has one.
+@export var show_livery: bool = true
 ## Engine, tyre and surface sounds.
 @export var sounds_enabled: bool = true
 
@@ -480,6 +482,7 @@ func _mean_z(list: Array[Wheel]) -> float:
 
 func _attach_model() -> void:
 	_model = body_model.instantiate() as Node3D
+	set_livery(show_livery)
 	_model.name = "Model"
 	add_child(_model)
 	var greybox := get_node_or_null("Greybox") as Node3D
@@ -572,6 +575,15 @@ func _set_lamp_energy(lamps: Array, energy: float) -> void:
 		var soft := pair[1] as BaseMaterial3D
 		soft.emission_enabled = true
 		soft.emission_energy_multiplier = energy
+
+
+## Switches the model's livery (a separate "livery" mesh) on or off.
+func set_livery(on: bool) -> void:
+	show_livery = on
+	if _model:
+		var liv := _model.find_child("livery*", true, false) as Node3D
+		if liv:
+			liv.visible = on
 
 
 ## Size the collision boxes to the model's body (lower body + cabin).

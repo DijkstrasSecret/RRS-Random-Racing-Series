@@ -95,7 +95,10 @@ CARS = {
         taillight="racetrack", wheel="spokes_black", calipers=False, bumpers="body", exhaust=2,
         mirrors="body", scoops=2, spoiler="ducktail",
         detail=True, pillars=[2.95], door_seams=[1.95, 3.25], handles=[3.1], plate="34 BRX 06",
-        plate_front_z=0.47),
+        plate_front_z=0.47,
+        livery=dict(style="muscle", stripe="white", accent="orange", number="07", number_s=2.6,
+                    sponsor="VOLTA OIL", sponsor_bg=(1.0, 0.42, 0.03), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=3.45,
+                    banner="BRAXTON RACING")),
     "kaze": dict(  # Japanese compact sedan (Honda Civic sedan inspired)
         L=4.63, W=1.80, H=1.42, wb=2.70, r=0.33, tw=0.22, fo=0.92, rocker=0.20,
         belt=0.96, nose=0.72, cowl=0.98, deck=1.04, tail=1.02,
@@ -111,7 +114,10 @@ CARS = {
         paint=(0.90, 0.90, 0.88), grille="rect_black", headlight="rect_wide",
         taillight="ribbed", wheel="deep_dish", bumpers="black", exhaust=1, mirrors="black",
         detail=True, frame_mat="chrome", pillars=[2.45], door_seams=[1.62, 2.45, 3.02], handles=[2.35, 2.92],
-        plate="15 ATM 90", reverse_lights=[(-0.15, 0.65), (0.15, 0.65)], antenna=(0.25, -1), rub_strip=True),
+        plate="15 ATM 90", reverse_lights=[(-0.15, 0.65), (0.15, 0.65)], antenna=(0.25, -1), rub_strip=True,
+        livery=dict(style="rally", stripe="red", accent="blue", number="15", number_s=2.05, number_z=0.62,
+                    sponsor="NOVA TYRES", sponsor_bg=(0.05, 0.22, 0.75), sponsor_s=2.75, sponsor_z=0.62, sponsor_w=0.5,
+                    banner="ATMACA RALLY TEAM")),
     "mirelle": dict(  # French supermini (Renault Clio IV inspired)
         L=4.06, W=1.73, H=1.45, wb=2.59, r=0.31, tw=0.20, fo=0.82, rocker=0.20,
         belt=0.98, nose=0.72, cowl=1.0, deck=1.08, tail=1.0,
@@ -154,7 +160,10 @@ CARS = {
         exhaust=2, mirrors="black", flares="paint", steps="chrome", spare=True, rear_window=True,
         detail=True, pillars=[2.45, 3.25], door_seams=[1.6, 2.45, 3.2], handles=[2.35, 3.1], handle_mat="black",
         plate="06 G 350", plate_front_z=0.6, plate_rear_z=0.55, plate_rear_dy=0.07,
-        reverse_lights=[(-0.55, 0.62), (0.55, 0.62)]),
+        reverse_lights=[(-0.55, 0.62), (0.55, 0.62)],
+        livery=dict(style="raid", stripe="orange", accent="black", number="21", number_s=2.05,
+                    sponsor="RRS RAID", sponsor_bg=(1.0, 0.42, 0.03), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=0.95,
+                    sponsor_z=1.08, sponsor_w=0.46, banner="BASTION RAID TEAM")),
     "dingo": dict(  # compact boxy SUV (Jeep Renegade inspired)
         L=4.24, W=1.81, H=1.67, wb=2.57, r=0.34, tw=0.22, fo=0.85, rocker=0.36,
         belt=1.12, nose=0.98, cowl=1.10, deck=1.20, tail=1.20,
@@ -1123,11 +1132,7 @@ def car_specific_details(cid, m, c, M, front_y):
         for side in (-1, 1):
             m.box((0.3, math.hypot(s1 - s0, z1 - z0), 0.08), (side * (W / 2 - 0.16), front_y - (s0 + s1) / 2, (z0 + z1) / 2 + 0.035), paint, rx=-tilt)
             m.box((0.1, 0.13, 0.06), (side * (W / 2 - 0.12), front_y - 0.2, body_profile(c, 0.2)[3] + 0.09), M["indicator"])
-        # Exposed door hinges, roof drip rails, side exit exhausts, tow hooks.
-        for s in c.get("door_seams", [])[:-1]:
-            for z in (c["belt"] - 0.15, rk + 0.3):
-                for side in (-1, 1):
-                    m.box((0.035, 0.06, 0.09), (side * (side_x(c, s, z) + 0.012), front_y - s + 0.03, z), M["black"])
+        # Roof drip rails, side exit exhausts, tow hooks.
         for side in (-1, 1):
             m.box((0.03, c["roof_rear"] - c["roof_front"], 0.03), (side * (W / 2 * c["tumble"] - 0.02), front_y - (c["roof_front"] + c["roof_rear"]) / 2, c["H"] - 0.03), M["trim"])
             for dz in (0.0, 0.09):
@@ -1155,6 +1160,241 @@ def build_wheel_detail(m, c, M, side, rim):
         m.box((0.02, 0.022, 0.022), (out * 1.07, math.cos(a) * r * 0.11, math.sin(a) * r * 0.11), M["chrome"])
 
 
+# --- liveries ---------------------------------------------------------------------
+# A livery is its own mesh object ("livery") in the exported car, so the game
+# can switch it on and off. It's built from thin slabs that hug the body:
+# stripes over the bonnet / roof / boot, side bands, number panels, sponsor
+# panels and a windscreen banner, with pixel-font text textures.
+
+PIXEL_FONT.update({
+    "F": ["111", "100", "110", "100", "100"], "I": ["111", "010", "010", "010", "111"],
+    "L": ["100", "100", "100", "100", "111"], "O": ["111", "101", "101", "101", "111"],
+    "P": ["111", "101", "111", "100", "100"], "U": ["101", "101", "101", "101", "111"],
+    "V": ["101", "101", "101", "101", "010"], "Y": ["101", "101", "010", "010", "010"],
+    "W": ["101", "101", "111", "111", "101"], "-": ["000", "000", "111", "000", "000"],
+})
+
+
+def text_material(name, text, fg, bg, px_w=None, px_h=12, scale=2, border=None):
+    """A small pixel-font texture: `text` in `fg` on `bg`, centred."""
+    glyph_w = 4 * scale
+    w = px_w or max(len(text) * glyph_w + 4 * scale, 16)
+    h = px_h
+    img = bpy.data.images.get(name)
+    if img:
+        bpy.data.images.remove(img)
+    img = bpy.data.images.new(name, w, h, alpha=False)
+    px = [0.0] * (w * h * 4)
+
+    def put(x, y, col):
+        if 0 <= x < w and 0 <= y < h:
+            i = ((h - 1 - y) * w + x) * 4
+            px[i:i + 4] = [col[0], col[1], col[2], 1.0]
+
+    for y in range(h):
+        for x in range(w):
+            edge = border is not None and (x < 1 or y < 1 or x >= w - 1 or y >= h - 1)
+            put(x, y, border if edge else bg)
+    x0 = (w - len(text) * glyph_w + scale) // 2
+    y0 = (h - 5 * scale) // 2
+    for ci, ch in enumerate(text):
+        for gy, row in enumerate(PIXEL_FONT.get(ch, PIXEL_FONT[" "])):
+            for gx, bit in enumerate(row):
+                if bit == "1":
+                    for sx in range(scale):
+                        for sy in range(scale):
+                            put(x0 + ci * glyph_w + gx * scale + sx, y0 + gy * scale + sy, fg)
+    img.pixels = px
+    img.pack()
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    m.use_nodes = True
+    nodes = m.node_tree.nodes
+    bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
+    tex = next((n for n in nodes if n.type == "TEX_IMAGE"), None) or nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.interpolation = "Closest"
+    m.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.5
+    return m
+
+
+def top_z(c, s, x):
+    """Height of the top surface at s (from the front), x from the centre line."""
+    w, zb, zbelt, ztop, rh, zone = body_profile(c, s)
+    edge = rh * 0.55
+    if abs(x) <= edge:
+        return ztop - 0.012 * abs(x) / max(edge, 0.01)
+    t = min((abs(x) - edge) / max(rh - edge, 0.01), 1.0)
+    band = ztop - zbelt
+    return ztop - 0.012 - (min(0.04, band * 0.25) - 0.012) * t
+
+
+def slab(m, top_pts, mat, thick=0.006, uvs=None):
+    """Closed thin slab from a grid of top points [[row of (x,y,z)], ...]."""
+    bm = m.bm
+    rows = len(top_pts)
+    cols = len(top_pts[0])
+    up = [[bm.verts.new(p) for p in row] for row in top_pts]
+    dn = [[bm.verts.new((p[0], p[1], p[2] - thick)) for p in row] for row in top_pts]
+    idx = m.mi(mat)
+    uv_layer = bm.loops.layers.uv.verify()
+    faces = []
+    for r in range(rows - 1):
+        for k in range(cols - 1):
+            f = bm.faces.new((up[r][k], up[r][k + 1], up[r + 1][k + 1], up[r + 1][k]))
+            if uvs:
+                for loop, (rr, kk) in zip(f.loops, ((r, k), (r, k + 1), (r + 1, k + 1), (r + 1, k))):
+                    loop[uv_layer].uv = uvs(rr, kk, rows, cols)
+            faces.append(f)
+            faces.append(bm.faces.new((dn[r][k], dn[r + 1][k], dn[r + 1][k + 1], dn[r][k + 1])))
+    for r in range(rows - 1):
+        for k in (0, cols - 1):
+            faces.append(bm.faces.new((up[r][k], up[r + 1][k], dn[r + 1][k], dn[r][k])))
+    for k in range(cols - 1):
+        for r in (0, rows - 1):
+            faces.append(bm.faces.new((up[r][k], dn[r][k], dn[r][k + 1], up[r][k + 1])))
+    for f in faces:
+        f.material_index = idx
+
+
+def top_stripe(m, c, front_y, x0, x1, mat, zones=("hood", "roof", "deck"), s_from=0.12, s_to=None):
+    """A stripe from x0 to x1 running along the top of the car over the given zones."""
+    L = c["L"]
+    s_to = s_to if s_to is not None else L - 0.08
+    run = []
+    s = s_from
+    while s <= s_to + 1e-6:
+        zone = body_profile(c, s)[5]
+        if zone in zones:
+            run.append(s)
+        elif run:
+            _stripe_run(m, c, front_y, x0, x1, run, mat)
+            run = []
+        s += 0.06
+    if run:
+        _stripe_run(m, c, front_y, x0, x1, run, mat)
+
+
+def _stripe_run(m, c, front_y, x0, x1, run, mat):
+    if len(run) < 2:
+        return
+    pts = []
+    for s in run:
+        row = []
+        for x in (x0, (x0 + x1) / 2, x1):
+            row.append((x, front_y - s, top_z(c, s, x) + 0.006))
+        pts.append(row)
+    slab(m, pts, mat)
+
+
+def side_panel(m, c, front_y, side, s0, s1, z0, z1, mat, tilt=0.0, tex=False):
+    """A flat panel on the body side between s0..s1 and z0..z1 (optionally slanted)."""
+    sm = (s0 + s1) / 2
+    x = side * (side_x(c, sm, (z0 + z1) / 2) + (0.012 if tex else 0.007))
+    if tex:
+        bm = m.bm
+        verts = bmesh.ops.create_cube(bm, size=1.0)["verts"]
+        size = (0.012, s1 - s0, z1 - z0)
+        centre = (x, front_y - sm, (z0 + z1) / 2)
+        bmesh.ops.transform(bm, matrix=Matrix.Translation(Vector(centre)) @ Matrix.Rotation(tilt, 4, "X")
+                            @ Matrix.Diagonal((*size, 1.0)), verts=verts)
+        uv = bm.loops.layers.uv.verify()
+        for f in {f for v in verts for f in v.link_faces}:
+            f.normal_update()
+            if f.normal.x * side > 0.9:
+                f.material_index = m.mi(mat)
+                for loop in f.loops:
+                    p = loop.vert.co
+                    # Text reads left to right from either side of the car.
+                    u = (p.y - (front_y - s1)) / (s1 - s0)
+                    if side < 0:
+                        u = 1.0 - u
+                    loop[uv].uv = (u, (p.z - z0) / (z1 - z0))
+            else:
+                f.material_index = m.mi(M_LIVERY_BACK[0])
+        return
+    m.box((0.012, s1 - s0, z1 - z0), (x, front_y - sm, (z0 + z1) / 2), mat, rx=tilt)
+
+
+M_LIVERY_BACK = [None]
+
+
+def windscreen_banner(m, c, front_y, mat, depth=0.16):
+    """Dark banner with text across the top of the windscreen."""
+    rf = c["roof_front"]
+    ws = c["windshield"]
+    s1 = rf - 0.01
+    s0 = max(ws + 0.02, rf - depth * (rf - ws) / max(c["H"] - c["cowl"], 0.2) * 1.6)
+    half = body_profile(c, s1)[4] * 0.8
+    pts = []
+    for s in (s0, s1):
+        row = []
+        for x in (-half, 0.0, half):
+            row.append((x, front_y - s, top_z(c, s, x) + 0.006))
+        pts.append(row)
+    slab(m, pts, mat, uvs=lambda r, k, rows, cols: (1.0 - k / (cols - 1), r / (rows - 1)))
+
+
+def build_livery(cid, c, M, front_y, coll):
+    lv = c.get("livery")
+    if not lv:
+        return None
+    m = Mesh("livery")
+    M_LIVERY_BACK[0] = M["black"]
+    W, L = c["W"], c["L"]
+    rk = c["rocker"]
+    col = {k: material(f"livery_{k}", v, 0.2, 0.45) for k, v in LIVERY_COLORS.items()}
+    style = lv["style"]
+    num = text_material(f"{cid}_number", lv["number"], (0.04, 0.04, 0.04), (0.96, 0.96, 0.94), px_w=24, px_h=20, scale=3,
+                        border=(0.04, 0.04, 0.04))
+    sponsor = text_material(f"{cid}_sponsor", lv["sponsor"], lv.get("sponsor_fg", (1, 1, 1)), lv.get("sponsor_bg", (0.1, 0.1, 0.12)),
+                            px_h=12, scale=2)
+    banner = text_material(f"{cid}_banner", lv["banner"], (1, 1, 1), (0.05, 0.05, 0.07), px_h=10, scale=1)
+    door_s = lv.get("number_s", c["fo"] + c["wb"] * 0.45)
+    belt = c["belt"]
+    if style == "muscle":
+        # Twin stripes over bonnet, roof and boot with a thin gap.
+        for x0, x1 in ((-0.34, -0.1), (0.1, 0.34)):
+            top_stripe(m, c, front_y, x0, x1, col[lv["stripe"]])
+        for side in (-1, 1):
+            for a, b in gaps_between_arches(c, 0.6, L - 0.45):
+                side_panel(m, c, front_y, side, a, b, rk + 0.12, rk + 0.2, col[lv["accent"]])
+    elif style == "rally":
+        top_stripe(m, c, front_y, -0.2, 0.2, col[lv["stripe"]], zones=("hood", "deck"))
+        for side in (-1, 1):
+            for a, b in gaps_between_arches(c, 0.3, L - 0.3):
+                side_panel(m, c, front_y, side, a, b, rk + 0.07, rk + 0.15, col[lv["stripe"]])
+                side_panel(m, c, front_y, side, a, b, rk + 0.17, rk + 0.21, col[lv["accent"]])
+    elif style == "raid":
+        top_stripe(m, c, front_y, -0.45, 0.45, col[lv["accent"]], zones=("hood",))
+        for side in (-1, 1):
+            # Slanted bands sweeping up towards the back.
+            for k in range(3):
+                s0 = 2.55 + k * 0.5
+                side_panel(m, c, front_y, side, s0, s0 + 0.7, belt - 0.5 + k * 0.08, belt - 0.32 + k * 0.08,
+                           col[lv["stripe"] if k % 2 == 0 else lv["accent"]], tilt=0.25)
+        # Number board on the roof.
+        z = c["H"] + c["crown"]
+        textured_box(m, (0.6, 0.012, 0.36), (0, front_y - (c["roof_front"] + c["roof_rear"]) / 2, z + 0.02), 1, num, M["black"])
+    # Door number panels and sponsor panels on both sides, and the banner.
+    zn = lv.get("number_z", (rk + belt) / 2)
+    ss = lv.get("sponsor_s", L - 1.05)
+    sz = lv.get("sponsor_z", belt - 0.13)
+    sw = lv.get("sponsor_w", 0.76) / 2
+    for side in (-1, 1):
+        side_panel(m, c, front_y, side, door_s - 0.2, door_s + 0.2, zn - 0.17, zn + 0.17, num, tex=True)
+        side_panel(m, c, front_y, side, ss - sw, ss + sw, sz - 0.075, sz + 0.075, sponsor, tex=True)
+    windscreen_banner(m, c, front_y, banner)
+    return m.build(coll)
+
+
+LIVERY_COLORS = {
+    "white": (0.95, 0.95, 0.93), "red": (0.82, 0.06, 0.07), "orange": (1.0, 0.42, 0.03),
+    "yellow": (1.0, 0.78, 0.08), "blue": (0.05, 0.22, 0.75), "black": (0.03, 0.03, 0.035),
+    "teal": (0.0, 0.55, 0.55),
+}
+
+
 def build_car(cid, c):
     coll = bpy.data.collections.get("car_" + cid)
     if coll:
@@ -1175,6 +1415,7 @@ def build_car(cid, c):
     if c.get("detail"):
         add_details(cid, m, c, M, front_y)
     body = m.build(coll)
+    livery = build_livery(cid, c, M, front_y, coll)
     half = c["wb"] / 2
     tx = c["W"] / 2 - c["tw"] / 2 - 0.035
     wheels = []
@@ -1183,7 +1424,7 @@ def build_car(cid, c):
         wheels.append(build_wheel(name, c, M, coll, (x, y, c["r"]), side))
     root = bpy.data.objects.new("car_" + cid, None)
     coll.objects.link(root)
-    for o in [body] + wheels:
+    for o in [body] + wheels + ([livery] if livery else []):
         o.parent = root
     return coll, root
 
