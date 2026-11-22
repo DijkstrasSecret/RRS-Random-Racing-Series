@@ -31,8 +31,8 @@ static func apply_retro(model: Node, snap_resolution: Vector2) -> void:
 				rough = 0.3
 				metal = 0.35
 			elif mat_name.contains("glass"):
-				rough = 0.08
-				metal = 0.55
+				rough = 0.14
+				metal = 0.4
 			elif mat_name.contains("chrome") or mat_name.contains("silver"):
 				rough = 0.18
 				metal = 0.9

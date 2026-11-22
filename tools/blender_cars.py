@@ -93,7 +93,9 @@ CARS = {
         tumble=0.80, nose_round=0.04, tail_round=0.05, crown=0.02, tail_drop=0.06,
         paint=(0.02, 0.02, 0.025), grille="wide_slot", headlight="quad_halo",
         taillight="racetrack", wheel="spokes_black", calipers=False, bumpers="body", exhaust=2,
-        mirrors="body", scoops=2, spoiler="ducktail"),
+        mirrors="body", scoops=2, spoiler="ducktail",
+        detail=True, pillars=[2.95], door_seams=[1.95, 3.25], handles=[3.1], plate="34 BRX 06",
+        plate_front_z=0.47),
     "kaze": dict(  # Japanese compact sedan (Honda Civic sedan inspired)
         L=4.63, W=1.80, H=1.42, wb=2.70, r=0.33, tw=0.22, fo=0.92, rocker=0.20,
         belt=0.96, nose=0.72, cowl=0.98, deck=1.04, tail=1.02,
@@ -107,7 +109,9 @@ CARS = {
         windshield=1.55, roof_front=1.92, roof_rear=3.00, deck_start=3.28,
         tumble=0.86, nose_round=0.04, tail_round=0.04, crown=0.02, tail_drop=0.05,
         paint=(0.90, 0.90, 0.88), grille="rect_black", headlight="rect_wide",
-        taillight="ribbed", wheel="deep_dish", bumpers="black", exhaust=1, mirrors="black"),
+        taillight="ribbed", wheel="deep_dish", bumpers="black", exhaust=1, mirrors="black",
+        detail=True, frame_mat="chrome", pillars=[2.45], door_seams=[1.62, 2.45, 3.02], handles=[2.35, 2.92],
+        plate="15 ATM 90", reverse_lights=[(-0.15, 0.65), (0.15, 0.65)], antenna=(0.25, -1), rub_strip=True),
     "mirelle": dict(  # French supermini (Renault Clio IV inspired)
         L=4.06, W=1.73, H=1.45, wb=2.59, r=0.31, tw=0.20, fo=0.82, rocker=0.20,
         belt=0.98, nose=0.72, cowl=1.0, deck=1.08, tail=1.0,
@@ -142,13 +146,15 @@ CARS = {
         sports_bar=True, skid=True),
     "bastion": dict(  # boxy off-road icon (Mercedes G-Class inspired)
         L=4.56, W=1.86, H=1.95, wb=2.85, r=0.38, tw=0.28, fo=0.78, rocker=0.42,
-        belt=1.32, nose=1.10, cowl=1.18, deck=1.86, tail=1.86,
+        belt=1.38, nose=1.10, cowl=1.18, deck=1.86, tail=1.86,
         windshield=1.22, roof_front=1.60, roof_rear=4.44, deck_start=4.52,
         tumble=0.93, nose_round=0.03, tail_round=0.02, crown=0.0, tail_drop=0.03,
         paint=(0.42, 0.43, 0.45), grille="vertical_bars", headlight="round_big",
         taillight="square_corner", tail_z=0.95, wheel="spokes_black", calipers=True, bumpers="body",
         exhaust=2, mirrors="black", flares="paint", steps="chrome", spare=True, rear_window=True,
-        fender_indicators=True),
+        detail=True, pillars=[2.45, 3.25], door_seams=[1.6, 2.45, 3.2], handles=[2.35, 3.1], handle_mat="black",
+        plate="06 G 350", plate_front_z=0.6, plate_rear_z=0.55, plate_rear_dy=0.07,
+        reverse_lights=[(-0.55, 0.62), (0.55, 0.62)]),
     "dingo": dict(  # compact boxy SUV (Jeep Renegade inspired)
         L=4.24, W=1.81, H=1.67, wb=2.57, r=0.34, tw=0.22, fo=0.85, rocker=0.36,
         belt=1.12, nose=0.98, cowl=1.10, deck=1.20, tail=1.20,
@@ -805,7 +811,347 @@ def build_wheel(name, c, M, coll, location, side):
         m.cyl(r * 0.16, 0.03, (out * 1.04, 0, 0), rim, axis="X", segs=8)
         if c.get("calipers", style == "spokes_dark"):
             m.box((0.05, 0.12, 0.16), (side * (tw / 2 - 0.06), -0.05, 0.12), M["caliper"])
+    if c.get("detail"):
+        build_wheel_detail(m, c, M, side, rim)
     return m.build(coll, location)
+
+
+# --- detailed cars (detail=True) ----------------------------------------------------
+# A finer body section (rounder sills and shoulders, window frames, pillars),
+# door seams and handles, arch lips, number plates, wipers, reverse lights,
+# finer wheels, plus a few signature parts per car (car_specific_details).
+
+PIXEL_FONT = {
+    "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
+    "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
+    "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
+    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
+    "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
+    "A": ["010", "101", "111", "101", "101"], "B": ["110", "101", "110", "101", "110"],
+    "C": ["111", "100", "100", "100", "111"], "D": ["110", "101", "101", "101", "110"],
+    "E": ["111", "100", "110", "100", "111"], "G": ["111", "100", "101", "101", "111"],
+    "H": ["101", "101", "111", "101", "101"], "K": ["101", "110", "100", "110", "101"],
+    "M": ["101", "111", "111", "101", "101"], "N": ["111", "101", "101", "101", "101"],
+    "R": ["110", "101", "110", "101", "101"], "S": ["111", "100", "111", "001", "111"],
+    "T": ["111", "010", "010", "010", "010"], "X": ["101", "101", "010", "101", "101"],
+    "Z": ["111", "001", "010", "100", "111"], " ": ["000", "000", "000", "000", "000"],
+}
+
+
+def plate_material(cid, text):
+    """Turkish-style plate: white, blue band with TR on the left, black text."""
+    name = f"{cid}_plate"
+    w, h = 128, 32
+    img = bpy.data.images.get(name)
+    if img:
+        bpy.data.images.remove(img)
+    img = bpy.data.images.new(name, w, h, alpha=False)
+    px = [1.0] * (w * h * 4)
+
+    def put(x, y, col):
+        if 0 <= x < w and 0 <= y < h:
+            i = ((h - 1 - y) * w + x) * 4
+            px[i:i + 4] = [col[0], col[1], col[2], 1.0]
+
+    for y in range(h):
+        for x in range(w):
+            edge = x < 1 or y < 1 or x >= w - 1 or y >= h - 1
+            put(x, y, (0.05, 0.05, 0.05) if edge else (0.95, 0.95, 0.93))
+    for y in range(1, h - 1):
+        for x in range(1, 15):
+            put(x, y, (0.05, 0.2, 0.62))
+    for ci, ch in enumerate("TR"):
+        for gy, row in enumerate(PIXEL_FONT[ch]):
+            for gx, bit in enumerate(row):
+                if bit == "1":
+                    for sx in range(2):
+                        for sy in range(2):
+                            put(2 + ci * 6 + gx * 2 + sx, 19 + gy * 2 + sy, (1, 1, 1))
+    x0 = 20
+    for ci, ch in enumerate(text):
+        glyph = PIXEL_FONT.get(ch, PIXEL_FONT[" "])
+        for gy, row in enumerate(glyph):
+            for gx, bit in enumerate(row):
+                if bit == "1":
+                    for sx in range(3):
+                        for sy in range(4):
+                            put(x0 + ci * 12 + gx * 3 + sx, 6 + gy * 4 + sy, (0.04, 0.04, 0.04))
+    img.pixels = px
+    img.pack()
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    m.use_nodes = True
+    nodes = m.node_tree.nodes
+    bsdf = next(n for n in nodes if n.type == "BSDF_PRINCIPLED")
+    tex = next((n for n in nodes if n.type == "TEX_IMAGE"), None) or nodes.new("ShaderNodeTexImage")
+    tex.image = img
+    tex.interpolation = "Closest"
+    m.node_tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
+    bsdf.inputs["Roughness"].default_value = 0.6
+    return m
+
+
+def textured_box(m, size, center, face_dir, tex_mat, side_mat):
+    """Box whose face pointing along face_dir (+Y / -Y) shows tex_mat with UVs."""
+    bm = m.bm
+    verts = bmesh.ops.create_cube(bm, size=1.0)["verts"]
+    bmesh.ops.transform(bm, matrix=Matrix.Translation(Vector(center)) @ Matrix.Diagonal((*size, 1.0)), verts=verts)
+    faces = {f for v in verts for f in v.link_faces}
+    uv = bm.loops.layers.uv.verify()
+    for f in faces:
+        f.normal_update()
+        if f.normal.y * face_dir > 0.9:
+            f.material_index = m.mi(tex_mat)
+            for loop in f.loops:
+                p = loop.vert.co
+                # Seen from the front (+Y face) the car's +X is on the left.
+                u = (p.x - (center[0] - size[0] / 2)) / size[0]
+                if face_dir > 0:
+                    u = 1.0 - u
+                loop[uv].uv = (u, (p.z - (center[2] - size[2] / 2)) / size[2])
+        else:
+            f.material_index = m.mi(side_mat)
+
+
+def half_ring_detail(w, zb, zbelt, ztop, rh):
+    """13 points (bottom centre -> right side -> top centre) and 12 segment roles."""
+    zbelt = max(zbelt, zb + 0.08)
+    ztop = max(ztop, zbelt + 0.04)
+    band = ztop - zbelt
+    mid = zb + (zbelt - zb) * 0.5
+    wtop = w * 0.935
+    pts = [
+        (0.0, zb),
+        (w * 0.86, zb),
+        (w * 0.97, zb + min(0.035, (mid - zb) * 0.3)),
+        (w, zb + min(0.1, (mid - zb) * 0.6)),
+        (w, mid),
+        (w * 0.997, zbelt - min(0.06, (zbelt - mid) * 0.5)),
+        (w * 0.985, zbelt),
+        (w * 0.955, zbelt + min(0.025, band * 0.2)),
+        (wtop, zbelt + min(0.05, band * 0.35)),
+        (rh + (wtop - rh) * 0.12, ztop - min(0.08, band * 0.45)),
+        (rh, ztop - min(0.04, band * 0.25)),
+        (rh * 0.55, ztop - min(0.012, band * 0.08)),
+        (0.0, ztop),
+    ]
+    roles = ["body"] * 7 + ["frame", "window", "frame", "roof", "roof"]
+    return pts, roles
+
+
+def build_body_detail(cid, c, M, coll):
+    L = c["L"]
+    front_y = c["fo"] + c["wb"] / 2
+    stations = set()
+    s = 0.0
+    while s <= L + 1e-6:
+        stations.add(round(s, 3))
+        s += 0.08
+    for axle in (c["fo"], c["fo"] + c["wb"]):
+        for k in range(-9, 10):
+            stations.add(round(axle + k * (c["r"] + 0.07) / 9.0, 3))
+    for key in ("windshield", "roof_front", "roof_rear", "deck_start"):
+        stations.add(round(c[key], 3))
+    pw = c.get("pillar_width", 0.1)
+    for p in c.get("pillars", []):
+        stations.add(round(p - pw / 2, 3))
+        stations.add(round(p + pw / 2, 3))
+    stations = sorted(x for x in stations if 0.0 <= x <= L)
+
+    m = Mesh("body")
+    bm = m.bm
+    rings, zones = [], []
+    roles = None
+    for s in stations:
+        w, zb, zbelt, ztop, rh, zone = body_profile(c, s)
+        hp, roles = half_ring_detail(w, zb, zbelt, ztop, rh)
+        y = front_y - s
+        right = list(hp)
+        left = [(-x, z) for x, z in reversed(hp[1:-1])]
+        rings.append([bm.verts.new((x, y, z)) for x, z in right + left])
+        zones.append(zone)
+    n = len(rings[0])
+    nseg = len(roles)
+    paint = M["paint"]
+    roof_mat = M[c["roof_color"]] if c.get("roof_color") else paint
+    frame_mat = M[c.get("frame_mat", "black")] if c.get("frame_mat") != "paint" else paint
+    pillar_mat = M[c.get("pillar_mat", "black")] if c.get("pillar_mat") != "paint" else paint
+    deck_top = M[c["deck_top"]] if c.get("deck_top") else None
+    cabin_zones = ("windshield", "roof", "rear_glass")
+    for i in range(len(rings) - 1):
+        a, b = rings[i], rings[i + 1]
+        za, zb_ = zones[i], zones[i + 1]
+        cabin = za in cabin_zones and zb_ in cabin_zones
+        sm = (stations[i] + stations[i + 1]) / 2
+        in_pillar = any(abs(sm - p) < pw / 2 for p in c.get("pillars", []))
+        for k in range(n):
+            j = (k + 1) % n
+            f = bm.faces.new((a[k], a[j], b[j], b[k]))
+            seg = k if k < nseg else n - 1 - k
+            role = roles[seg]
+            mat = paint
+            if deck_top and za == "deck" and zb_ == "deck" and role == "roof":
+                mat = deck_top
+            if cabin:
+                if role == "window":
+                    mat = pillar_mat if in_pillar else M["glass"]
+                elif role == "frame":
+                    mat = frame_mat
+                elif role == "roof":
+                    mat = M["glass"] if za in ("windshield", "rear_glass") else roof_mat
+            f.material_index = m.mi(mat)
+    f = bm.faces.new(rings[0][::-1])
+    f.material_index = m.mi(paint)
+    f = bm.faces.new(rings[-1])
+    f.material_index = m.mi(paint)
+    return m, front_y
+
+
+def side_x(c, s, z):
+    """Outer surface x of the body side at s (from the front), roughly."""
+    w = body_profile(c, s)[0]
+    return w * 0.995 + 0.006
+
+
+def add_details(cid, m, c, M, front_y):
+    W, L = c["W"], c["L"]
+    rear_y = front_y - L
+    rk = c["rocker"]
+    paint = M["paint"]
+    # Door seams (thin dark lines) and handles.
+    seam_bottom = rk + 0.06
+    for s in c.get("door_seams", []):
+        top = min(c["belt"] - 0.01, body_profile(c, s)[2])
+        h = top - seam_bottom
+        for side in (-1, 1):
+            m.box((0.012, 0.012, h), (side * side_x(c, s, 0), front_y - s, seam_bottom + h / 2), M["black"])
+    for s in c.get("handles", []):
+        z = c["belt"] - 0.09
+        for side in (-1, 1):
+            m.box((0.025, 0.16, 0.035), (side * (side_x(c, s, z) + 0.01), front_y - s, z), M[c.get("handle_mat", "chrome")])
+    # Arch lips: a slim body-coloured edge round each wheel opening.
+    if c.get("arch_lips", True) and not c.get("flares"):
+        rad = c["r"] + 0.075
+        for axle in (c["fo"], c["fo"] + c["wb"]):
+            yc = front_y - axle
+            for side in (-1, 1):
+                for k in range(13):
+                    a = math.pi * k / 12
+                    zz = c["r"] + math.sin(a) * rad
+                    if zz < rk - 0.02:
+                        continue
+                    s = axle - math.cos(a) * rad
+                    m.box((0.03, 0.15, 0.045), (side * (side_x(c, s, zz) + 0.003), yc + math.cos(a) * rad, zz), paint, rx=a + math.pi / 2)
+    # Number plates.
+    if c.get("plate"):
+        pm = plate_material(cid, c["plate"])
+        fz = c.get("plate_front_z", rk + 0.2)
+        textured_box(m, (0.52, 0.03, 0.12), (0, front_y + c.get("plate_front_dy", 0.06), fz), 1, pm, M["black"])
+        textured_box(m, (0.52, 0.03, 0.12), (0, rear_y - c.get("plate_rear_dy", 0.025), c.get("plate_rear_z", rk + 0.32)), -1, pm, M["black"])
+    # Wipers resting at the bottom of the windshield.
+    ws = c["windshield"] + 0.06
+    z = body_profile(c, ws)[3] + 0.015
+    for x0, ang in ((-0.28, 0.08), (0.32, 0.08)):
+        m.box((0.55, 0.02, 0.015), (x0, front_y - ws, z), M["black"], rz=ang)
+    # Reverse lights.
+    for x, z in c.get("reverse_lights", []):
+        m.box((0.09, 0.05, 0.05), (x, rear_y - 0.008, z), M["headlight"])
+    # Antenna.
+    if c.get("antenna"):
+        s, side = c["antenna"]
+        zb = body_profile(c, s)[3]
+        m.box((0.012, 0.012, 0.55), (side * (body_profile(c, s)[0] - 0.12), front_y - s, zb + 0.27), M["black"], rx=0.25)
+    # Exhaust tips get a dark inside.
+    ex = c["exhaust"]
+    xs = {1: [W / 2 - 0.35], 2: [-(W / 2 - 0.35), W / 2 - 0.35],
+          4: [-(W / 2 - 0.3), -(W / 2 - 0.42), W / 2 - 0.42, W / 2 - 0.3]}.get(ex, [])
+    for x in xs:
+        m.cyl(0.032, 0.02, (x, rear_y - 0.035, rk + 0.04), M["black"], segs=8)
+    car_specific_details(cid, m, c, M, front_y)
+
+
+def car_specific_details(cid, m, c, M, front_y):
+    W, L = c["W"], c["L"]
+    rear_y = front_y - L
+    rk = c["rocker"]
+    paint = M["paint"]
+    if cid == "braxton":
+        # Twin-nostril hood scoops with dark mouths, a centre bulge.
+        hz = body_profile(c, 1.0)[3]
+        m.box((0.5, 0.9, 0.035), (0, front_y - 1.0, hz + 0.005), paint)
+        # Racetrack tail lamp split into segments, centre badge, rear valance.
+        tz = c.get("tail_z", body_profile(c, L - 0.03)[3] - 0.14)
+        for k in range(-4, 5):
+            m.box((0.012, 0.055, 0.09), (k * 0.19, rear_y - 0.012, tz), M["black"])
+        m.box((0.22, 0.055, 0.03), (0, rear_y - 0.014, tz), M["chrome"])
+        m.box((W * 0.86, 0.06, 0.1), (0, rear_y + 0.02, rk + 0.08), M["black"])
+        # Grille surround and badge, front splitter.
+        nose = body_profile(c, 0.04)[3]
+        m.box((W * 0.9, 0.04, 0.012), (0, front_y + 0.012, nose - 0.04), M["chrome"])
+        m.box((W * 0.9, 0.04, 0.012), (0, front_y + 0.012, nose - 0.26), M["chrome"])
+        m.box((0.16, 0.05, 0.03), (0, front_y + 0.016, nose - 0.15), M["chrome"])
+        m.box((W * 0.92, 0.22, 0.03), (0, front_y - 0.05, rk + 0.02), M["black"])
+        # The classic round fuel door on the rear quarter.
+        s = L - 1.0
+        m.cyl(0.075, 0.012, (-(side_x(c, s, 0.9) + 0.004), front_y - s, c["belt"] - 0.07), M["chrome"], axis="X", segs=10)
+        # Side character line.
+        for side in (-1, 1):
+            m.box((0.008, L * 0.7, 0.018), (side * (W / 2 + 0.003), front_y - L * 0.5, c["belt"] - 0.2), M["trim"])
+    elif cid == "atmaca":
+        # Chrome window surrounds come from frame_mat; sunroof wind deflector,
+        # mud flaps, chrome grille surround and a bumper stripe.
+        z = body_profile(c, c["roof_front"] + 0.1)[3]
+        m.box((0.8, 0.05, 0.04), (0, front_y - c["roof_front"] - 0.12, z + 0.035), M["black"], rx=-0.4)
+        m.box((0.85, 0.62, 0.012), (0, front_y - c["roof_front"] - 0.5, z + 0.008), M["glass"])
+        for axle in (c["fo"] + 0.42, c["fo"] + c["wb"] + 0.42):
+            for side in (-1, 1):
+                m.box((0.2, 0.02, 0.22), (side * (W / 2 - 0.18), front_y - axle, rk + 0.04), M["black"])
+        nose = body_profile(c, 0.04)[3]
+        m.box((W * 0.46, 0.04, 0.16), (0, front_y + 0.002, nose - 0.12 + c.get("hl_dz", 0.0)), M["chrome"])
+        for end in (front_y + 0.08, rear_y - 0.08):
+            m.box((W * 0.99, 0.02, 0.02), (0, end, rk + 0.2), M["silver"])
+        # Polished trim along the sill.
+        for side in (-1, 1):
+            m.box((0.01, c["wb"] - 0.75, 0.025), (side * (W / 2 + 0.005), front_y - c["fo"] - c["wb"] / 2, rk + 0.03), M["chrome"])
+    elif cid == "bastion":
+        # Raised front wings either side of a lower bonnet (the classic shape),
+        # with the indicator lamps sitting on top of them.
+        ws = c["windshield"]
+        s0, s1 = 0.1, ws - 0.02
+        z0, z1 = body_profile(c, s0)[3], body_profile(c, s1)[3]
+        tilt = math.atan2(z1 - z0, s1 - s0)
+        for side in (-1, 1):
+            m.box((0.3, math.hypot(s1 - s0, z1 - z0), 0.08), (side * (W / 2 - 0.16), front_y - (s0 + s1) / 2, (z0 + z1) / 2 + 0.035), paint, rx=-tilt)
+            m.box((0.1, 0.13, 0.06), (side * (W / 2 - 0.12), front_y - 0.2, body_profile(c, 0.2)[3] + 0.09), M["indicator"])
+        # Exposed door hinges, roof drip rails, side exit exhausts, tow hooks.
+        for s in c.get("door_seams", [])[:-1]:
+            for z in (c["belt"] - 0.15, rk + 0.3):
+                for side in (-1, 1):
+                    m.box((0.035, 0.06, 0.09), (side * (side_x(c, s, z) + 0.012), front_y - s + 0.03, z), M["black"])
+        for side in (-1, 1):
+            m.box((0.03, c["roof_rear"] - c["roof_front"], 0.03), (side * (W / 2 * c["tumble"] - 0.02), front_y - (c["roof_front"] + c["roof_rear"]) / 2, c["H"] - 0.03), M["trim"])
+            for dz in (0.0, 0.09):
+                m.cyl(0.04, 0.22, (side * (W / 2 + 0.02), front_y - (c["fo"] + c["wb"]) + c["r"] + 0.32, rk - 0.06 + dz), M["chrome"], axis="Y", segs=8)
+        for x in (-0.45, 0.45):
+            m.box((0.06, 0.08, 0.06), (x, front_y + 0.04, rk + 0.12), M["chrome"])
+        # LED ring round each round headlamp.
+        nose = body_profile(c, 0.04)[3]
+        for side in (-1, 1):
+            m.cyl(0.135, 0.03, (side * (W / 2 - 0.22), front_y - 0.03, nose - 0.12 + c.get("hl_dz", 0.0)), M["drl"], segs=16)
+        # Spare wheel cover with a chrome ring.
+        tz = c.get("tail_z", 1.0) + 0.2
+        m.cyl(0.36, 0.012, (0, rear_y - 0.265, tz), M["chrome"], axis="Y", segs=16, r2=0.36)
+
+
+def build_wheel_detail(m, c, M, side, rim):
+    """Extra wheel parts: rounded sidewalls, rim lip, brake disc, wheel nuts."""
+    r, tw = c["r"], c["tw"]
+    out = side * (tw / 2 + 0.002)
+    m.cyl(r * 0.98, 0.03, (out * 0.86, 0, 0), M["tire"], axis="X", segs=16, r2=r * 0.86)
+    m.cyl(r * 0.7, 0.012, (out * 1.015, 0, 0), rim, axis="X", segs=16, r2=r * 0.67)
+    m.cyl(r * 0.52, 0.02, (side * (tw / 2 - 0.07), 0, 0), M["rim_dark"], axis="X", segs=12)
+    for k in range(5):
+        a = k * math.tau / 5 + 0.3
+        m.box((0.02, 0.022, 0.022), (out * 1.07, math.cos(a) * r * 0.11, math.sin(a) * r * 0.11), M["chrome"])
 
 
 def build_car(cid, c):
@@ -818,10 +1164,15 @@ def build_car(cid, c):
         scn.collection.children.link(coll)
     M = dict(MATS)
     M["paint"] = material(f"{cid}_paint", c["paint"], 0.55, 0.3)
-    m, front_y = build_body(cid, c, M, coll)
+    if c.get("detail"):
+        m, front_y = build_body_detail(cid, c, M, coll)
+    else:
+        m, front_y = build_body(cid, c, M, coll)
     add_front(m, c, M, front_y)
     add_rear(m, c, M, front_y)
     add_extras(m, c, M, front_y)
+    if c.get("detail"):
+        add_details(cid, m, c, M, front_y)
     body = m.build(coll)
     half = c["wb"] / 2
     tx = c["W"] / 2 - c["tw"] / 2 - 0.035

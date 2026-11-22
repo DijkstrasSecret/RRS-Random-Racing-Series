@@ -551,8 +551,8 @@ func _set_shine(mat_name: String, retro: ShaderMaterial, soft: BaseMaterial3D) -
 		soft.clearcoat = 0.8
 		soft.clearcoat_roughness = 0.15
 	elif mat_name.contains("glass"):
-		rough = 0.08
-		metal = 0.55
+		rough = 0.14
+		metal = 0.4
 	elif mat_name.contains("chrome") or mat_name.contains("rim_silver") or mat_name.contains("silver"):
 		rough = 0.18
 		metal = 0.9
