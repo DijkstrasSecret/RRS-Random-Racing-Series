@@ -1,6 +1,6 @@
 class_name TrackAtmosphere
 extends Node3D
-## Sky, sun (or moon), fog, clouds and the full-screen atmosphere effect for
+## Sky (with its cloud layer), sun (or moon), fog and the full-screen atmosphere effect for
 ## a circuit, set by the time of day and weather from the race settings.
 ## The sun is placed relative to the main straight, so at sunset it sits
 ## low ahead of you as you come down the straight.
@@ -23,15 +23,15 @@ const TIMES := {
 	DayTime.MORNING: {"elev": 16.0, "yaw": 115.0, "light": Color(1.0, 0.86, 0.72), "energy": 1.05,
 		"top": Color(0.32, 0.52, 0.82), "horizon": Color(0.86, 0.82, 0.78), "ground": Color(0.32, 0.34, 0.3),
 		"sun": Color(1.0, 0.82, 0.6), "ambient": 0.55, "shadows": 0.32, "rays": 0.45, "flare": 0.35,
-		"cloud_lit": Color(1.0, 0.95, 0.9), "cloud_shade": Color(0.66, 0.68, 0.75)},
+		"cloud_lit": Color(1.0, 0.96, 0.9), "cloud_shade": Color(0.55, 0.58, 0.68)},
 	DayTime.NOON: {"elev": 58.0, "yaw": -50.0, "light": Color(1.0, 0.98, 0.94), "energy": 1.25,
 		"top": Color(0.2, 0.42, 0.84), "horizon": Color(0.72, 0.8, 0.9), "ground": Color(0.3, 0.33, 0.3),
 		"sun": Color(1.0, 0.96, 0.88), "ambient": 0.65, "shadows": 0.42, "rays": 0.25, "flare": 0.3,
-		"cloud_lit": Color(1.0, 1.0, 1.0), "cloud_shade": Color(0.72, 0.76, 0.84)},
+		"cloud_lit": Color(1.0, 1.0, 1.0), "cloud_shade": Color(0.6, 0.65, 0.76)},
 	DayTime.SUNSET: {"elev": 7.0, "yaw": 8.0, "light": Color(1.0, 0.58, 0.32), "energy": 1.1,
 		"top": Color(0.22, 0.24, 0.5), "horizon": Color(0.95, 0.6, 0.45), "ground": Color(0.28, 0.22, 0.24),
 		"sun": Color(1.0, 0.62, 0.32), "ambient": 0.35, "shadows": 0.22, "rays": 0.55, "flare": 0.4,
-		"cloud_lit": Color(1.0, 0.68, 0.5), "cloud_shade": Color(0.42, 0.32, 0.45)},
+		"cloud_lit": Color(1.0, 0.72, 0.52), "cloud_shade": Color(0.38, 0.28, 0.42)},
 	DayTime.NIGHT: {"elev": 38.0, "yaw": 150.0, "light": Color(0.55, 0.65, 0.95), "energy": 0.32,
 		"top": Color(0.012, 0.018, 0.05), "horizon": Color(0.06, 0.08, 0.14), "ground": Color(0.02, 0.025, 0.03),
 		"sun": Color(0.8, 0.85, 1.0), "ambient": 0.32, "shadows": 0.0, "rays": 0.0, "flare": 0.0,
@@ -56,7 +56,7 @@ func build(main_dir: Vector2, centre: Vector2) -> void:
 	var flat := Vector3(main_dir.x, 0.0, main_dir.y).normalized().rotated(Vector3.UP, -yaw)
 	var elev := deg_to_rad(t.elev)
 	sun_dir = (flat * cos(elev) + Vector3.UP * sin(elev)).normalized()
-	_cloud_threshold = [0.32, 0.12, -0.05][weather]
+	_cloud_threshold = [0.2, 0.06, -0.08][weather]
 	if time_of_day == DayTime.NIGHT:
 		_cloud_threshold += 0.15
 	var horizon: Color = t.horizon
@@ -85,9 +85,20 @@ func _build_environment(t: Dictionary, horizon: Color) -> void:
 	sky_mat.set_shader_parameter("sun_size", 0.0008 if time_of_day == DayTime.NIGHT else 0.0012)
 	sky_mat.set_shader_parameter("moon", 1.0 if time_of_day == DayTime.NIGHT else 0.0)
 	sky_mat.set_shader_parameter("stars", 0.9 if time_of_day == DayTime.NIGHT and weather != Weather.FOG else 0.0)
+	# Clouds live in the sky shader now (same field as the cloud shadows).
+	sky_mat.set_shader_parameter("cloud_height", CLOUD_HEIGHT)
+	sky_mat.set_shader_parameter("cloud_threshold", _cloud_threshold)
+	sky_mat.set_shader_parameter("field_size", FIELD_SIZE)
+	sky_mat.set_shader_parameter("wind", WIND)
+	sky_mat.set_shader_parameter("cloud_lit", t.cloud_lit)
+	sky_mat.set_shader_parameter("cloud_shade", t.cloud_shade)
+	# The sky layer is now just faint far-off cover behind the 3D cumulus.
+	sky_mat.set_shader_parameter("cloud_amount", [0.12, 0.3, 0.4][weather])
 	var sky := Sky.new()
 	sky.sky_material = sky_mat
 	sky.radiance_size = Sky.RADIANCE_SIZE_64
+	# The clouds drift, so the reflection map refreshes a bit at a time.
+	sky.process_mode = Sky.PROCESS_MODE_INCREMENTAL
 	environment = Environment.new()
 	environment.background_mode = Environment.BG_SKY
 	environment.sky = sky
@@ -130,13 +141,15 @@ func _build_sun(t: Dictionary) -> void:
 	sun.basis = Basis.looking_at(-light_dir, Vector3.UP if absf(light_dir.y) < 0.98 else Vector3.FORWARD)
 
 
+## Cumulus clouds: clusters of camera-facing puffs (cloud.gdshader) where the
+## cloud field is thick, so they sit right above their shadows. Each cluster
+## has a flat base and puffs heaped up towards a rounded top.
 func _build_clouds(t: Dictionary, horizon: Color, centre: Vector2) -> void:
+	if weather == Weather.FOG:
+		return  # hidden in the fog anyway (the sky layer gives the grey cover)
 	var origin := centre - Vector2.ONE * FIELD_SIZE * 0.5
-	var puff := SphereMesh.new()
-	puff.radius = 1.0
-	puff.height = 2.0
-	puff.radial_segments = 8
-	puff.rings = 4
+	var quad := QuadMesh.new()
+	quad.size = Vector2(2.0, 2.0)
 	var mat := ShaderMaterial.new()
 	mat.shader = load("res://assets/vfx/shaders/cloud.gdshader")
 	mat.set_shader_parameter("wind", WIND)
@@ -146,33 +159,40 @@ func _build_clouds(t: Dictionary, horizon: Color, centre: Vector2) -> void:
 	mat.set_shader_parameter("shade_color", t.cloud_shade)
 	mat.set_shader_parameter("horizon_color", horizon)
 	mat.set_shader_parameter("sun_dir", sun_dir)
-	if weather == Weather.FOG:
-		mat.set_shader_parameter("fade_start", 200.0)
-		mat.set_shader_parameter("fade_end", 900.0)
-	puff.material = mat
+	mat.set_shader_parameter("sun_color", t.sun)
+	mat.set_shader_parameter("rim", 0.0 if time_of_day == DayTime.NIGHT else 0.5)
+	quad.material = mat
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
 	var xforms: Array[Transform3D] = []
-	var cell := 70.0
+	var customs: Array[Color] = []
+	var cell := 150.0
 	var n := int(FIELD_SIZE / cell)
 	for i in n:
 		for j in n:
 			var p := origin + Vector2(i + rng.randf(), j + rng.randf()) * cell
 			var d := cloud_density(p)
-			if d < 0.3:
+			if d < 0.35:
 				continue
-			for k in (2 if d > 0.75 else 1):
-				var r := lerpf(22.0, 48.0, d) * rng.randf_range(0.8, 1.2)
-				var pos := Vector3(p.x + rng.randf_range(-25.0, 25.0), CLOUD_HEIGHT + rng.randf_range(-12.0, 18.0),
-						p.y + rng.randf_range(-25.0, 25.0))
-				var b := Basis(Vector3.UP, rng.randf() * TAU).scaled(Vector3(r * 1.3, r * 0.55, r))
-				xforms.append(Transform3D(b, pos))
+			# One cluster: wider and taller where the field is thicker.
+			var spread := lerpf(50.0, 110.0, d)
+			var height := lerpf(35.0, 85.0, d)
+			var puffs := int(lerpf(10.0, 22.0, d))
+			for k in puffs:
+				var h := pow(rng.randf(), 1.6)  # most puffs low, a few up top
+				var off := Vector2(rng.randf_range(-1.0, 1.0), rng.randf_range(-1.0, 1.0)) * spread * (1.0 - h * 0.55)
+				var size := lerpf(44.0, 24.0, h) * lerpf(0.85, 1.3, d) * rng.randf_range(0.85, 1.15)
+				var pos := Vector3(p.x + off.x, CLOUD_HEIGHT + size * 0.55 + h * height, p.y + off.y)
+				xforms.append(Transform3D(Basis.IDENTITY.scaled(Vector3.ONE * size), pos))
+				customs.append(Color(h, rng.randf(), 0.0, 0.0))
 	var mm := MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = puff
+	mm.use_custom_data = true
+	mm.mesh = quad
 	mm.instance_count = xforms.size()
 	for i in xforms.size():
 		mm.set_instance_transform(i, xforms[i])
+		mm.set_instance_custom_data(i, customs[i])
 	var mmi := MultiMeshInstance3D.new()
 	mmi.name = "Clouds"
 	mmi.multimesh = mm
