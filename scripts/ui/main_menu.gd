@@ -221,7 +221,7 @@ func _build_flow(root: Control) -> void:
 		_show_car_select())
 	_flow.add_child(_track_select)
 	_race_settings = RaceSettingsPanel.new()
-	_race_settings.position = Vector2(580, 200)
+	_race_settings.position = Vector2(560, 150)
 	_race_settings.start.connect(func() -> void:
 		GameSettings.save()
 		_go(GameSettings.VERSUS if _flow_players == 2 else GameSettings.RACE))

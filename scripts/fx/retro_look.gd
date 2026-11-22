@@ -1,6 +1,7 @@
 class_name RetroLook
 extends CanvasLayer
-## Switchable retro visual style. V cycles Modern -> PS2 -> PS1 (PS2 default).
+## Switchable retro visual style. V switches PS2 <-> PS1 (PS1 default).
+## (The old Modern level still exists in the code but is no longer offered.)
 ## The screen effect lives here; it also tweaks the scene's environment
 ## (glow, colour) and tells nodes in the "retro_aware" group to swap their
 ## materials via set_retro_level(level).
@@ -9,10 +10,10 @@ enum Level { MODERN, PS2, PS1 }
 const LEVEL_NAMES: PackedStringArray = ["Modern", "PS2", "PS1"]
 
 ## Current look, readable from anywhere (HUD). Kept when switching tracks.
-static var level: int = Level.PS2
+static var level: int = Level.PS1
 static var _initialised := false
 
-@export var start_level: Level = Level.PS2
+@export var start_level: Level = Level.PS1
 
 var _rect: ColorRect
 var _material: ShaderMaterial
@@ -42,7 +43,7 @@ func _ready() -> void:
 	add_child(_rect)
 	if not _initialised:
 		GameSettings.ensure_loaded()
-		level = GameSettings.look
+		level = GameSettings.look if GameSettings.look != Level.MODERN else Level.PS1
 		_initialised = true
 	# Wait one frame so the track and vehicles have finished setting up.
 	_apply.call_deferred()
@@ -50,7 +51,7 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("cycle_look"):
-		set_level((level + 1) % LEVEL_NAMES.size())
+		set_level(Level.PS1 if level == Level.PS2 else Level.PS2)
 		GameSettings.look = level
 		GameSettings.save()
 

@@ -7,7 +7,7 @@ extends RefCounted
 
 const TRACKS: Array[Dictionary] = [
 	{
-		"id": "greenhill", "name": "GREENHILL RING", "seed": 11,
+		"id": "greenhill", "name": "GREENHILL RING", "seed": 11, "theme": "hills",
 		"tagline": "Fast and flowing. A long main straight into a tight hairpin.",
 		"points": [
 			Vector2(0, 250), Vector2(0, -330), Vector2(20, -405), Vector2(75, -425),
@@ -19,7 +19,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12,
+		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12, "theme": "hills",
 		"tagline": "The Ring run backwards. New braking points everywhere.",
 		"points": [
 			Vector2(0, 0), Vector2(0, 250), Vector2(0, 315), Vector2(10, 360),
@@ -31,7 +31,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "kestrel", "name": "KESTREL PARK", "seed": 23,
+		"id": "kestrel", "name": "KESTREL PARK", "seed": 23, "theme": "mountains",
 		"tagline": "Short and twisty. Hairpins, esses and very little rest.",
 		"points": [
 			Vector2(0, 0), Vector2(0, -260), Vector2(25, -320), Vector2(85, -335),

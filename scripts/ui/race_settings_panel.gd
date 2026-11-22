@@ -27,6 +27,10 @@ func _ready() -> void:
 		laps.append(str(n))
 	_add_row("LAP COUNT", laps, maxi(GameSettings.LAP_CHOICES.find(GameSettings.laps), 0),
 			func(i: int) -> void: GameSettings.laps = GameSettings.LAP_CHOICES[i])
+	_add_row("TIME OF DAY", GameSettings.TIME_NAMES, GameSettings.time_of_day,
+			func(i: int) -> void: GameSettings.time_of_day = i)
+	_add_row("WEATHER", GameSettings.WEATHER_NAMES, GameSettings.weather,
+			func(i: int) -> void: GameSettings.weather = i)
 	_add_row("AI DIFFICULTY", GameSettings.DIFFICULTY_NAMES, GameSettings.ai_difficulty,
 			func(i: int) -> void: GameSettings.ai_difficulty = i)
 	var tiers := TierToggleRow.create("AI CAR CLASSES", GameSettings.ai_tiers)
@@ -87,8 +91,9 @@ func _update_summary() -> void:
 	for i in 4:
 		if GameSettings.ai_tiers & (1 << i):
 			allowed.append(CarRoster.TIER_NAMES[i])
-	_summary.text = "%s   ·   %s   ·   AI classes %s (%d cars)" % [
-		cars, TrackList.get_track(GameSettings.track).name, " ".join(allowed),
+	_summary.text = "%s   ·   %s, %s, %s   ·   AI classes %s (%d cars)" % [
+		cars, TrackList.get_track(GameSettings.track).name, GameSettings.TIME_NAMES[GameSettings.time_of_day],
+		GameSettings.WEATHER_NAMES[GameSettings.weather], " ".join(allowed),
 		CarRoster.ids_in_tiers(GameSettings.ai_tiers).size()]
 
 

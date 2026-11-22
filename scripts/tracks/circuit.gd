@@ -31,6 +31,8 @@ const ROAD_Y := 0.03
 @export var tree_count: int = 240
 @export var tree_clearance: float = 32.0
 @export var random_seed: int = 11
+## Scenery around the track: "hills" (farms, villages) or "mountains" (peaks, pines, chalets).
+@export var theme: String = "hills"
 ## Build the layout chosen in the menu (GameSettings.track) instead of `points`.
 @export var use_selected_track: bool = false
 
@@ -39,6 +41,10 @@ var length: float = 0.0
 ## Track centre line as (x, z) points, for the minimap.
 var outline := PackedVector2Array()
 
+## Sky, sun, fog and clouds (time of day and weather from the race settings).
+var atmosphere: TrackAtmosphere
+## Hills / mountains around the track.
+var terrain: TrackTerrain
 var _samples: Array[Dictionary] = []
 var _materials: Dictionary = {}
 var _bounds := Rect2()
@@ -52,6 +58,7 @@ func _ready() -> void:
 		points = PackedVector2Array(track.points)
 		track_name = String(track.name).capitalize()
 		random_seed = int(track.seed)
+		theme = String(track.get("theme", "hills"))
 	_build_curve()
 	_sample_curve()
 	_build_environment()
@@ -187,35 +194,13 @@ func _at(off: float) -> Vector3:
 # --- Environment & ground ----------------------------------------------------
 
 func _build_environment() -> void:
-	var sky_mat := ProceduralSkyMaterial.new()
-	sky_mat.sky_top_color = Color(0.25, 0.45, 0.8)
-	sky_mat.sky_horizon_color = Color(0.72, 0.8, 0.88)
-	sky_mat.ground_horizon_color = Color(0.72, 0.8, 0.88)
-	sky_mat.ground_bottom_color = Color(0.2, 0.3, 0.2)
-	var sky := Sky.new()
-	sky.sky_material = sky_mat
-	var env := Environment.new()
-	env.background_mode = Environment.BG_SKY
-	env.sky = sky
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
-	env.fog_enabled = true
-	env.fog_light_color = Color(0.72, 0.8, 0.88)
-	env.fog_density = 0.0015
-	env.fog_sky_affect = 0.0
-	var world_env := WorldEnvironment.new()
-	world_env.name = "WorldEnvironment"
-	world_env.environment = env
-	world_env.add_to_group("world_environment")
-	add_child(world_env)
-
-	var sun := DirectionalLight3D.new()
-	sun.name = "Sun"
-	sun.rotation_degrees = Vector3(-48.0, -30.0, 0.0)
-	sun.light_energy = 1.15
-	sun.shadow_enabled = true
-	sun.directional_shadow_max_distance = 140.0
-	add_child(sun)
+	GameSettings.ensure_loaded()
+	atmosphere = TrackAtmosphere.new()
+	atmosphere.name = "Atmosphere"
+	atmosphere.time_of_day = GameSettings.time_of_day
+	atmosphere.weather = GameSettings.weather
+	add_child(atmosphere)
+	atmosphere.build((points[1] - points[0]).normalized(), _bounds.get_center())
 
 
 func _build_ground() -> void:
@@ -224,6 +209,8 @@ func _build_ground() -> void:
 	var centre := Vector3(rect.get_center().x, 0.0, rect.get_center().y)
 	var size := rect.size
 
+	# Flat grass collision around the track; the terrain draws the ground
+	# and rises into hills / mountains further out.
 	var body := StaticBody3D.new()
 	body.name = "Grass"
 	body.collision_layer = LAYER_WORLD
@@ -236,22 +223,34 @@ func _build_ground() -> void:
 	cs.shape = shape
 	cs.position = centre + Vector3(0.0, -1.0, 0.0)
 	body.add_child(cs)
-	var plane := PlaneMesh.new()
-	plane.size = size
-	plane.material = _noise_material(Color(0.28, 0.48, 0.2), Color(0.22, 0.4, 0.16), 0.08)
-	var mi := MeshInstance3D.new()
-	mi.mesh = plane
-	mi.position = centre
-	body.add_child(mi)
 	add_child(body)
+	terrain = TrackTerrain.new()
+	terrain.name = "Terrain"
+	terrain.theme = theme
+	add_child(terrain)
+	terrain.build(self)
 
-	# Low walls at the edge of the map.
-	var wall_color := Color(0.6, 0.58, 0.55)
-	var h := 1.5
-	_static_box(Vector3(size.x, h, 1.0), centre + Vector3(0, h * 0.5, -size.y * 0.5), wall_color)
-	_static_box(Vector3(size.x, h, 1.0), centre + Vector3(0, h * 0.5, size.y * 0.5), wall_color)
-	_static_box(Vector3(1.0, h, size.y), centre + Vector3(-size.x * 0.5, h * 0.5, 0), wall_color)
-	_static_box(Vector3(1.0, h, size.y), centre + Vector3(size.x * 0.5, h * 0.5, 0), wall_color)
+	# Invisible walls at the edge of the drivable area.
+	var h := 40.0
+	for wall: Array in [[Vector3(size.x, h, 1.0), Vector3(0, h * 0.5, -size.y * 0.5)],
+			[Vector3(size.x, h, 1.0), Vector3(0, h * 0.5, size.y * 0.5)],
+			[Vector3(1.0, h, size.y), Vector3(-size.x * 0.5, h * 0.5, 0)],
+			[Vector3(1.0, h, size.y), Vector3(size.x * 0.5, h * 0.5, 0)]]:
+		var wb := StaticBody3D.new()
+		wb.collision_layer = LAYER_WORLD
+		wb.collision_mask = 0
+		var ws := BoxShape3D.new()
+		ws.size = wall[0]
+		var wc := CollisionShape3D.new()
+		wc.shape = ws
+		wc.position = centre + wall[1]
+		wb.add_child(wc)
+		add_child(wb)
+
+
+## Ground height at a world position (0 on and near the track).
+func ground_height(x: float, z: float) -> float:
+	return terrain.height_at(x, z) if terrain else 0.0
 
 
 # --- Road & curbs ------------------------------------------------------------
@@ -306,7 +305,11 @@ func _build_curbs() -> void:
 			# Lift the inner edge a hair so the curb draws over the road edge.
 			a_in.y += 0.005
 			b_in.y += 0.005
-			_quad(st, a_in, a_out, b_out, b_in, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			# _quad wants the left edge first.
+			if side > 0.0:
+				_quad(st, a_in, a_out, b_out, b_in, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
+			else:
+				_quad(st, a_out, a_in, b_in, b_out, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO, Vector2.ZERO)
 	var mesh := st.commit()
 	if mesh == null or mesh.get_surface_count() == 0:
 		return
@@ -321,7 +324,9 @@ func _build_curbs() -> void:
 func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3,
 		ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2) -> void:
 	st.set_normal(Vector3.UP)
-	for pair: Array in [[a, ua], [b, ub], [c, uc], [a, ua], [c, uc], [d, ud]]:
+	# Clockwise seen from above = facing up (Godot's front faces), so the
+	# sun, headlights and lamps light the surface.
+	for pair: Array in [[a, ua], [c, uc], [b, ub], [a, ua], [d, ud], [c, uc]]:
 		st.set_uv(pair[1])
 		st.add_vertex(pair[0])
 

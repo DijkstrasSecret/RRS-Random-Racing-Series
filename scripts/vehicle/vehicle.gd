@@ -77,6 +77,11 @@ var _wheelbase: float = 2.6
 var _model: Node3D
 ## [MeshInstance3D, surface index, original material, retro material]
 var _retro_surfaces: Array = []
+## [PS1 material, PS2 material] of the brake and head lamps, glowing live.
+var _brake_lamps: Array = []
+var _head_lamps: Array = []
+var _brake_glow := -1.0
+var _night := false
 var _body_visual: Node3D
 var _body_pitch: float = 0.0
 var _body_pitch_vel: float = 0.0
@@ -175,6 +180,7 @@ func velocity_at_point(world_point: Vector3) -> Vector3:
 
 
 func _physics_process(delta: float) -> void:
+	_update_brake_lamps()
 	input.poll(delta)
 	if controls_locked:
 		input.throttle = 0.0
@@ -495,6 +501,77 @@ func _attach_model() -> void:
 		w.custom_visual = src
 	_fit_collision_to_model()
 	_collect_retro_surfaces(_model)
+	_setup_lamps()
+
+
+## Headlights glow (brighter at night, with a real light beam), brake
+## lights flare up while braking.
+func _setup_lamps() -> void:
+	GameSettings.ensure_loaded()
+	_night = GameSettings.time_of_day == 3 and get_tree().get_first_node_in_group("circuit") != null
+	_set_lamp_energy(_head_lamps, 5.0 if _night else 2.2)
+	_update_brake_lamps(true)
+	if not _night or DisplayServer.get_name() == "headless":
+		return
+	var body := _model.find_child("body*", true, false) as MeshInstance3D
+	var front := -2.2
+	if body:
+		var box := body.mesh.get_aabb()
+		front = to_local(body.global_transform * box.position).z
+	var beam := SpotLight3D.new()
+	beam.name = "HeadlightBeam"
+	beam.position = Vector3(0.0, 0.75, front - 0.1)
+	beam.rotation_degrees = Vector3(-7.0, 0.0, 0.0)
+	beam.spot_range = 60.0
+	beam.spot_angle = 32.0
+	beam.spot_attenuation = 0.8
+	beam.light_energy = 9.0
+	beam.light_color = Color(1.0, 0.95, 0.85)
+	add_child(beam)
+
+
+func _update_brake_lamps(force: bool = false) -> void:
+	if _brake_lamps.is_empty():
+		return
+	var braking := input != null and (input.brake > 0.05 or input.handbrake > 0.5)
+	var glow := 7.0 if braking else (2.0 if _night else 1.2)
+	if force or glow != _brake_glow:
+		_brake_glow = glow
+		_set_lamp_energy(_brake_lamps, glow)
+
+
+## Paint, glass and chrome get glossy so they reflect the sky and sun.
+func _set_shine(mat_name: String, retro: ShaderMaterial, soft: BaseMaterial3D) -> void:
+	var rough := -1.0
+	var metal := 0.0
+	if mat_name.contains("paint"):
+		rough = 0.3
+		metal = 0.35
+		soft.clearcoat_enabled = true
+		soft.clearcoat = 0.8
+		soft.clearcoat_roughness = 0.15
+	elif mat_name.contains("glass"):
+		rough = 0.08
+		metal = 0.55
+	elif mat_name.contains("chrome") or mat_name.contains("rim_silver") or mat_name.contains("silver"):
+		rough = 0.18
+		metal = 0.9
+	if rough < 0.0:
+		return
+	retro.set_shader_parameter("roughness_value", rough)
+	retro.set_shader_parameter("metallic_value", metal)
+	retro.set_shader_parameter("specular_value", 0.6)
+	soft.roughness = rough
+	soft.metallic = metal
+	soft.metallic_specular = 0.7
+
+
+func _set_lamp_energy(lamps: Array, energy: float) -> void:
+	for pair: Array in lamps:
+		(pair[0] as ShaderMaterial).set_shader_parameter("emission_energy", energy)
+		var soft := pair[1] as BaseMaterial3D
+		soft.emission_enabled = true
+		soft.emission_energy_multiplier = energy
 
 
 ## Size the collision boxes to the model's body (lower body + cabin).
@@ -549,6 +626,9 @@ func _collect_retro_surfaces(node: Node) -> void:
 				var base := original as BaseMaterial3D
 				retro.set_shader_parameter("albedo_tex", base.albedo_texture)
 				retro.set_shader_parameter("albedo_color", base.albedo_color)
+				if base.emission_enabled:
+					retro.set_shader_parameter("emission_color", base.emission)
+					retro.set_shader_parameter("emission_energy", base.emission_energy_multiplier)
 				# PS2 style: smooth (bilinear) textures and per-vertex lighting.
 				var soft := base.duplicate() as BaseMaterial3D
 				soft.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
@@ -556,6 +636,12 @@ func _collect_retro_surfaces(node: Node) -> void:
 				soft.roughness = 0.55
 				soft.metallic_specular = 0.6
 				ps2 = soft
+				var mat_name := base.resource_name.to_lower()
+				_set_shine(mat_name, retro, soft)
+				if mat_name.contains("taillight"):
+					_brake_lamps.append([retro, soft])
+				elif mat_name.contains("headlight") and not mat_name.contains("amber"):
+					_head_lamps.append([retro, soft])
 			_retro_surfaces.append([mi, i, original, retro, ps2])
 	for child in node.get_children():
 		_collect_retro_surfaces(child)

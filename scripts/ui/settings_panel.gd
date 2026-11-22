@@ -26,8 +26,8 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.ai_difficulty = i)
 	_add_row("HANDLING", PackedStringArray(["ARCADE", "SPORT", "SIM"]), GameSettings.handling_profile,
 			func(i: int) -> void: GameSettings.handling_profile = i)
-	_add_row("VISUAL STYLE", PackedStringArray(["MODERN", "PS2", "PS1"]), GameSettings.look,
-			func(i: int) -> void: GameSettings.look = i)
+	_add_row("VISUAL STYLE", PackedStringArray(["PS2", "PS1"]), clampi(GameSettings.look - 1, 0, 1),
+			func(i: int) -> void: GameSettings.look = i + 1)
 	_add_row("FULLSCREEN", PackedStringArray(["OFF", "ON"]), int(GameSettings.fullscreen),
 			func(i: int) -> void: GameSettings.fullscreen = i == 1)
 	var volumes := PackedStringArray()

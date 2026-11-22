@@ -12,6 +12,8 @@ const PRACTICE := "res://scenes/modes/circuit_practice.tscn"
 const TEST_TRACK := "res://scenes/modes/free_roam.tscn"
 
 const LAP_CHOICES: PackedInt32Array = [1, 2, 3, 5, 10]
+const TIME_NAMES: PackedStringArray = ["MORNING", "NOON", "SUNSET", "NIGHT"]
+const WEATHER_NAMES: PackedStringArray = ["CLEAR", "HAZY", "FOG"]
 const DIFFICULTY_NAMES: PackedStringArray = ["EASY", "NORMAL", "HARD"]
 ## AI skill range (min, max) for each difficulty.
 const DIFFICULTY_SKILLS: Array[Vector2] = [Vector2(0.3, 0.6), Vector2(0.5, 0.82), Vector2(0.68, 0.95)]
@@ -20,7 +22,7 @@ static var laps: int = 3
 static var ai_count: int = 5
 static var ai_difficulty: int = 1
 static var handling_profile: int = 1  ## 0 Arcade, 1 Sport, 2 Sim
-static var look: int = 1  ## 0 Modern, 1 PS2, 2 PS1
+static var look: int = 2  ## 1 PS2, 2 PS1 (0 = old Modern look, no longer offered)
 static var fullscreen: bool = false
 static var vibration: bool = true
 static var sound_volume: int = 8  ## 0..10, engines and effects
@@ -30,6 +32,10 @@ static var p2_car: String = "quadra"
 static var track: String = "greenhill"
 ## Car classes the AI may drive: bit 0 = D ... bit 3 = A.
 static var ai_tiers: int = 15
+## 0 morning, 1 noon, 2 sunset, 3 night.
+static var time_of_day: int = 2
+## 0 clear, 1 hazy, 2 fog.
+static var weather: int = 0
 
 static var _loaded: bool = false
 
@@ -59,6 +65,10 @@ static func ensure_loaded() -> void:
 	if CarRoster.ids().find(p2_car) == -1:
 		p2_car = "quadra"
 	look = cfg.get_value("video", "look", look)
+	if look < 1 or look > 2:
+		look = 2
+	time_of_day = clampi(cfg.get_value("race", "time_of_day", time_of_day), 0, 3)
+	weather = clampi(cfg.get_value("race", "weather", weather), 0, 2)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	if fullscreen:
 		apply_window()
@@ -85,6 +95,8 @@ static func save() -> void:
 	cfg.set_value("garage", "p2_car", p2_car)
 	cfg.set_value("race", "track", track)
 	cfg.set_value("race", "ai_tiers", ai_tiers)
+	cfg.set_value("race", "time_of_day", time_of_day)
+	cfg.set_value("race", "weather", weather)
 	cfg.save(PATH)
 
 

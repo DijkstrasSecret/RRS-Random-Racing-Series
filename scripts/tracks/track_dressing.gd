@@ -50,8 +50,14 @@ func _ready() -> void:
 	_build_billboards()
 	_build_marshal_posts()
 	_build_farm()
+	_build_paddock()
+	_build_car_park()
+	_build_camping()
+	_build_hamlets()
 	_build_forest()
 	_flush_batches()
+	if circuit.atmosphere and circuit.atmosphere.time_of_day == TrackAtmosphere.DayTime.NIGHT:
+		_build_night_lamps()
 
 
 # --- kit --------------------------------------------------------------------------
@@ -184,7 +190,7 @@ func _plan_runoff() -> void:
 		_outside_corner.append(out_w)
 
 
-## Spectators stand on the outside of the three tightest corners and along
+## Spectators stand on the outside of the six tightest corners and along
 ## the grandstand side of the start straight.
 func _plan_spectator_zones() -> void:
 	var s := _samples()
@@ -201,7 +207,7 @@ func _plan_spectator_zones() -> void:
 				near = true
 		if not near:
 			corners.append(i)
-		if corners.size() >= 3:
+		if corners.size() >= 6:
 			break
 	for c in corners:
 		var off: float = s[c].off
@@ -234,6 +240,63 @@ func _clear_of_track(p: Vector3, dist: float) -> bool:
 	return circuit.distance_from_centre(p) >= dist - 1.0
 
 
+# --- night lighting ----------------------------------------------------------------
+
+## Lamp posts just behind the barriers every ~45 m, alternating sides, each
+## with a warm light pool on the road.
+func _build_night_lamps() -> void:
+	var s := _samples()
+	var n := s.size()
+	var step := maxi(int(45.0 / circuit.sample_step), 1)
+	var post := BoxMesh.new()
+	post.size = Vector3(0.18, 7.0, 0.18)
+	var post_mat := StandardMaterial3D.new()
+	post_mat.albedo_color = Color(0.25, 0.26, 0.28)
+	post.material = post_mat
+	var head := BoxMesh.new()
+	head.size = Vector3(0.5, 0.18, 1.4)
+	var head_mat := StandardMaterial3D.new()
+	head_mat.albedo_color = Color(1.0, 0.88, 0.65)
+	head_mat.emission_enabled = true
+	head_mat.emission = Color(1.0, 0.85, 0.6)
+	head_mat.emission_energy_multiplier = 6.0
+	head.material = head_mat
+	var posts: Array[Transform3D] = []
+	var heads: Array[Transform3D] = []
+	var k := 0
+	for i in range(0, n, step):
+		var side := k % 2
+		k += 1
+		var dist := minf(_barrier_dist[side][i] + 1.5, circuit.road_width * 0.5 + 9.0)
+		var base := _side_point(i, side, dist)
+		if not _clear_of_track(base, dist):
+			continue
+		var towards: Vector3 = s[i].right * (-1.0 if side == 1 else 1.0)
+		var yaw := atan2(towards.x, towards.z)
+		posts.append(Transform3D(Basis.IDENTITY, base + Vector3(0, 3.5, 0)))
+		var lamp_pos := base + towards * 0.6 + Vector3(0, 7.0, 0)
+		heads.append(Transform3D(Basis(Vector3.UP, yaw), lamp_pos))
+		var light := OmniLight3D.new()
+		light.position = to_local(lamp_pos + towards * 2.5 - Vector3(0, 0.5, 0))
+		light.omni_range = 30.0
+		light.omni_attenuation = 1.2
+		light.light_energy = 3.6
+		light.light_color = Color(1.0, 0.82, 0.58)
+		add_child(light)
+	for pair: Array in [[post, posts], [head, heads]]:
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = pair[0]
+		var list: Array[Transform3D] = pair[1]
+		mm.instance_count = list.size()
+		for i in list.size():
+			mm.set_instance_transform(i, list[i])
+		var mmi := MultiMeshInstance3D.new()
+		mmi.multimesh = mm
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mmi)
+
+
 # --- run-off surfaces --------------------------------------------------------------
 
 func _build_gravel() -> void:
@@ -260,7 +323,9 @@ func _build_gravel() -> void:
 				continue
 			var y := Vector3.UP * 0.02
 			st.set_normal(Vector3.UP)
-			for v: Vector3 in [a_in, a_out, b_out, a_in, b_out, b_in]:
+			# Keep every triangle facing up (clockwise from above) on both sides.
+			var tris := [a_in, a_out, b_out, a_in, b_out, b_in] if side == 0 else [a_in, b_out, a_out, a_in, b_in, b_out]
+			for v: Vector3 in tris:
 				st.set_uv(Vector2(v.x, v.z) * 0.25)
 				st.add_vertex(v + y)
 			any = true
@@ -379,21 +444,49 @@ func _build_spectators() -> void:
 				_add("spectator", xf, SHIRTS[_rng.randi() % SHIRTS.size()])
 
 
-## Places a kit building beside the track facing the road.
-func _place_building(kind: String, off: float, side: int, extra: float) -> void:
+## A frame beside the track, `extra` metres behind the barrier, whose +Z
+## faces the road. Its basis is all zero if that spot would be on the track.
+func _frame(off: float, side: int, extra: float) -> Transform3D:
 	var s := _samples()
 	var i := int(fposmod(off, circuit.length) / circuit.length * s.size()) % s.size()
 	var dist := _barrier_dist[side][i] + extra
 	var p := _side_point(i, side, dist)
 	if not _clear_of_track(p, dist - 4.0):
-		return
+		return Transform3D(Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO), p)
 	var to_road := _side_point(i, side, 0.0) - p
 	to_road.y = 0.0
 	var z := to_road.normalized()
 	var x := Vector3.UP.cross(z)
-	var xf := Transform3D(Basis(x, Vector3.UP, z), p)
+	return Transform3D(Basis(x, Vector3.UP, z), p)
+
+
+## Places a kit building beside the track facing the road.
+func _place_building(kind: String, off: float, side: int, extra: float) -> void:
+	var xf := _frame(off, side, extra)
+	if xf.basis.x == Vector3.ZERO:
+		return
+	for r in _keep_clear:
+		if r.has_point(Vector2(xf.origin.x, xf.origin.z)):
+			return  # already something here
 	_add(kind, xf)
 	_solid(kind, xf)
+	if kind == "grandstand":
+		_fill_grandstand(xf)
+
+
+## Fans in the stand: every step of the stand gets a scattering of people.
+func _fill_grandstand(xf: Transform3D) -> void:
+	for row in 8:
+		var h := 0.6 + row * 0.55
+		var z := 4.0 - row * 1.1 - 0.3
+		var x := -19.3
+		while x < 19.3:
+			if _rng.randf() < 0.45:
+				var sc := _rng.randf_range(0.9, 1.05)
+				var local := Transform3D(Basis(Vector3.UP, _rng.randf_range(-0.25, 0.25)).scaled(Vector3.ONE * sc),
+						Vector3(x + _rng.randf_range(-0.15, 0.15), h, z))
+				_add("spectator", xf * local, SHIRTS[_rng.randi() % SHIRTS.size()])
+			x += 0.85
 
 
 func _solid(kind: String, xf: Transform3D) -> void:
@@ -416,12 +509,233 @@ func _build_buildings() -> void:
 	_place_building("grandstand", length - 75.0, 0, 9.5)
 	_place_building("grandstand", length - 125.0, 0, 9.5)
 	_place_building("grandstand", length - 175.0, 0, 9.5)
+	_place_building("grandstand", length - 225.0, 0, 9.5)
 	_place_building("pit_building", length - 120.0, 1, 12.0)
 	_place_building("control_tower", length - 35.0, 1, 10.0)
-	# A stand behind each spectator corner.
-	for zi in mini(3, _spectator_zones.size() - 1):
+	_place_building("grandstand", length - 200.0, 1, 9.5)
+	_place_building("grandstand", length + 30.0, 0, 9.5)
+	# Stands behind each spectator corner (two along the tightest ones).
+	for zi in _spectator_zones.size() - 1:
 		var z := _spectator_zones[zi]
-		_place_building("grandstand", (z.x + z.y) * 0.5, int(z.z), 9.0)
+		var mid := (z.x + z.y) * 0.5
+		_place_building("grandstand", mid, int(z.z), 9.0)
+		if zi < 3:
+			_place_building("grandstand", mid + 46.0, int(z.z), 9.0)
+
+
+# --- paddock, car park, camping, hamlets ---------------------------------------------
+
+## Low-poly coloured boxes merged into one mesh: [[size, centre, colour], ...].
+func _box_mesh(boxes: Array) -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	for b: Array in boxes:
+		var size: Vector3 = b[0]
+		var c: Vector3 = b[1]
+		var col: Color = b[2]
+		var h := size * 0.5
+		var faces := [
+			[Vector3(-1, -1, 1), Vector3(1, -1, 1), Vector3(1, 1, 1), Vector3(-1, 1, 1)],
+			[Vector3(1, -1, -1), Vector3(-1, -1, -1), Vector3(-1, 1, -1), Vector3(1, 1, -1)],
+			[Vector3(1, -1, 1), Vector3(1, -1, -1), Vector3(1, 1, -1), Vector3(1, 1, 1)],
+			[Vector3(-1, -1, -1), Vector3(-1, -1, 1), Vector3(-1, 1, 1), Vector3(-1, 1, -1)],
+			[Vector3(-1, 1, 1), Vector3(1, 1, 1), Vector3(1, 1, -1), Vector3(-1, 1, -1)],
+		]
+		for f: Array in faces:
+			var q: Array[Vector3] = []
+			for v: Vector3 in f:
+				q.append(c + v * h)
+			for idx: int in [0, 2, 1, 0, 3, 2]:
+				st.set_color(col)
+				st.add_vertex(q[idx])
+	st.generate_normals()
+	var mesh := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.8
+	mesh.surface_set_material(0, mat)
+	return mesh
+
+
+func _scatter(node_name: String, mesh: Mesh, xforms: Array[Transform3D], tints: Array[Color]) -> void:
+	if xforms.is_empty():
+		return
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.mesh = mesh
+	mm.instance_count = xforms.size()
+	for i in xforms.size():
+		mm.set_instance_transform(i, xforms[i])
+		mm.set_instance_color(i, tints[i])
+	var mmi := MultiMeshInstance3D.new()
+	mmi.name = node_name
+	mmi.multimesh = mm
+	add_child(mmi)
+
+
+func _free_spot(p: Vector3, min_dist: float) -> bool:
+	if not _clear_of_track(p, min_dist):
+		return false
+	for r in _keep_clear:
+		if r.has_point(Vector2(p.x, p.z)):
+			return false
+	return true
+
+
+## Keep trees and other things out of a rectangle (half size in the frame).
+func _claim(xf: Transform3D, half: Vector2) -> void:
+	var r := Rect2(Vector2(xf.origin.x, xf.origin.z), Vector2.ZERO)
+	for c: Vector3 in [Vector3(-half.x, 0, -half.y), Vector3(half.x, 0, -half.y), Vector3(half.x, 0, half.y), Vector3(-half.x, 0, half.y)]:
+		var w := xf * c
+		r = r.expand(Vector2(w.x, w.z))
+	_keep_clear.append(r.grow(3.0))
+
+
+## Team trucks and motorhomes parked behind the pit building.
+func _build_paddock() -> void:
+	var frame := _frame(circuit.length - 120.0, 1, 34.0)
+	if frame.basis.x == Vector3.ZERO:
+		return
+	var white := Color(0.95, 0.95, 0.95)
+	var truck := _box_mesh([
+		[Vector3(2.5, 3.4, 12.0), Vector3(0, 2.1, -1.5), white],
+		[Vector3(2.5, 2.6, 2.6), Vector3(0, 1.7, 5.9), white],
+		[Vector3(2.3, 0.9, 0.1), Vector3(0, 2.5, 7.21), Color(0.1, 0.12, 0.16)],
+		[Vector3(2.6, 0.5, 14.8), Vector3(0, 0.45, 0.0), Color(0.12, 0.12, 0.13)]])
+	var home := _box_mesh([
+		[Vector3(2.5, 3.0, 9.0), Vector3(0, 1.9, 0), white],
+		[Vector3(2.52, 0.7, 7.0), Vector3(0, 2.3, 0), Color(0.1, 0.12, 0.16)],
+		[Vector3(2.6, 0.45, 9.2), Vector3(0, 0.4, 0), Color(0.12, 0.12, 0.13)]])
+	var team_colors := [Color(0.85, 0.15, 0.12), Color(0.15, 0.3, 0.8), Color(0.95, 0.75, 0.1), Color(0.15, 0.55, 0.3),
+		Color(0.2, 0.2, 0.22), Color(0.95, 0.45, 0.1), Color(0.55, 0.2, 0.7), Color(0.9, 0.9, 0.9)]
+	var trucks: Array[Transform3D] = []
+	var truck_tints: Array[Color] = []
+	var homes: Array[Transform3D] = []
+	var home_tints: Array[Color] = []
+	for k in 8:
+		var col: Color = team_colors[k]
+		var xf := frame * Transform3D(Basis.IDENTITY, Vector3(-26.0 + k * 7.5, 0, 0))
+		if _free_spot(xf.origin, 20.0):
+			trucks.append(xf)
+			truck_tints.append(col)
+		var hxf := frame * Transform3D(Basis.IDENTITY, Vector3(-26.0 + k * 7.5, 0, -16.0))
+		if _free_spot(hxf.origin, 20.0):
+			homes.append(hxf)
+			home_tints.append(col.lerp(Color.WHITE, 0.6))
+	_scatter("PaddockTrucks", truck, trucks, truck_tints)
+	_scatter("Motorhomes", home, homes, home_tints)
+	_claim(frame * Transform3D(Basis.IDENTITY, Vector3(0, 0, -8.0)), Vector2(34.0, 16.0))
+
+
+## Rows of parked cars behind the main grandstands.
+func _build_car_park() -> void:
+	var frame := _frame(circuit.length - 140.0, 0, 34.0)
+	if frame.basis.x == Vector3.ZERO:
+		return
+	var car := _box_mesh([
+		[Vector3(1.75, 0.7, 4.3), Vector3(0, 0.6, 0), Color(1, 1, 1)],
+		[Vector3(1.55, 0.55, 2.2), Vector3(0, 1.22, -0.2), Color(0.55, 0.6, 0.66)],
+		[Vector3(1.8, 0.3, 4.32), Vector3(0, 0.25, 0), Color(0.08, 0.08, 0.09)]])
+	var colors := [Color(0.85, 0.85, 0.85), Color(0.15, 0.15, 0.17), Color(0.7, 0.12, 0.1), Color(0.15, 0.3, 0.7),
+		Color(0.55, 0.57, 0.6), Color(0.9, 0.9, 0.88), Color(0.2, 0.45, 0.25), Color(0.8, 0.6, 0.15)]
+	var xforms: Array[Transform3D] = []
+	var tints: Array[Color] = []
+	for row in 5:
+		for k in 22:
+			if _rng.randf() < 0.22:
+				continue
+			var yaw := (0.0 if row % 2 == 0 else PI) + _rng.randf_range(-0.06, 0.06)
+			var xf := frame * Transform3D(Basis(Vector3.UP, yaw), Vector3(-38.0 + k * 3.6, 0, -row * 7.0 - 3.0))
+			if _free_spot(xf.origin, 16.0):
+				xforms.append(xf)
+				tints.append(colors[_rng.randi() % colors.size()])
+	if xforms.is_empty():
+		return
+	_scatter("CarPark", car, xforms, tints)
+	var lot := MeshInstance3D.new()
+	var plane := PlaneMesh.new()
+	plane.size = Vector2(84.0, 36.0)
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.42, 0.4, 0.37)
+	mat.roughness = 1.0
+	plane.material = mat
+	lot.mesh = plane
+	lot.transform = frame * Transform3D(Basis.IDENTITY, Vector3(0, 0.015, -15.0))
+	add_child(lot)
+	_claim(frame * Transform3D(Basis.IDENTITY, Vector3(0, 0, -15.0)), Vector2(42.0, 18.0))
+
+
+## Fans camping in colourful tents behind two of the spectator corners.
+func _build_camping() -> void:
+	var tent := _tent_mesh()
+	var xforms: Array[Transform3D] = []
+	var tints: Array[Color] = []
+	var colors := [Color(0.9, 0.3, 0.15), Color(0.2, 0.5, 0.85), Color(0.95, 0.8, 0.2), Color(0.3, 0.7, 0.35), Color(0.9, 0.9, 0.9)]
+	for zi in mini(2, _spectator_zones.size() - 1):
+		var z := _spectator_zones[zi]
+		var frame := _frame((z.x + z.y) * 0.5 - 30.0, int(z.z), 26.0)
+		if frame.basis.x == Vector3.ZERO:
+			continue
+		for k in 18:
+			var b := Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * _rng.randf_range(0.8, 1.3))
+			var xf := frame * Transform3D(b, Vector3(_rng.randf_range(-28.0, 28.0), 0, -_rng.randf_range(0.0, 18.0)))
+			if _free_spot(xf.origin, 18.0):
+				xforms.append(xf)
+				tints.append(colors[_rng.randi() % colors.size()])
+	_scatter("Tents", tent, xforms, tints)
+
+
+func _tent_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var w := 1.2
+	var l := 1.6
+	var top := 1.3
+	var pts := [Vector3(-w, 0, -l), Vector3(w, 0, -l), Vector3(w, 0, l), Vector3(-w, 0, l), Vector3(0, top, -l), Vector3(0, top, l)]
+	for tri: Array in [[0, 4, 5], [0, 5, 3], [1, 2, 5], [1, 5, 4], [0, 1, 4], [3, 5, 2]]:
+		for idx: int in tri:
+			st.set_color(Color.WHITE)
+			st.add_vertex(pts[idx])
+	st.generate_normals()
+	var mesh := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 0.9
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.surface_set_material(0, mat)
+	return mesh
+
+
+## A few small groups of houses (and a barn) around the circuit.
+func _build_hamlets() -> void:
+	var area := circuit._bounds.grow(260.0)
+	var made := 0
+	for attempt in 400:
+		if made >= 5:
+			break
+		var p := Vector3(_rng.randf_range(area.position.x, area.end.x), 0.0, _rng.randf_range(area.position.y, area.end.y))
+		var d := circuit.distance_from_centre(p)
+		if d < 90.0 or d > 260.0:
+			continue
+		var h := circuit.ground_height(p.x, p.z)
+		if absf(circuit.ground_height(p.x + 25.0, p.z) - h) > 3.0 or absf(circuit.ground_height(p.x, p.z + 25.0) - h) > 3.0:
+			continue
+		var blocked := false
+		for r in _keep_clear:
+			if r.has_point(Vector2(p.x, p.z)):
+				blocked = true
+		if blocked:
+			continue
+		made += 1
+		var yaw := _rng.randf() * TAU
+		for k in _rng.randi_range(3, 5):
+			var q := p + Vector3(_rng.randf_range(-22.0, 22.0), 0, _rng.randf_range(-22.0, 22.0)).rotated(Vector3.UP, yaw)
+			q.y = circuit.ground_height(q.x, q.z)
+			var kind := "barn" if k == 0 and circuit.theme == "hills" else "house"
+			var xf := Transform3D(Basis(Vector3.UP, yaw + _rng.randf_range(-0.4, 0.4)), q)
+			_add(kind, xf)
+			_solid(kind, xf)
 
 
 func _build_billboards() -> void:
@@ -429,7 +743,7 @@ func _build_billboards() -> void:
 	var n := s.size()
 	var placed := 0
 	var i := 40
-	while i < n and placed < 12:
+	while i < n and placed < 20:
 		if absf(s[i].curv) < 1.0 / 400.0:
 			var side := placed % 2
 			var dist := _barrier_dist[side][i] + 4.0
@@ -498,6 +812,9 @@ func _build_farm() -> void:
 				_rng.randf_range(area.position.y, area.end.y))
 		if circuit.distance_from_centre(p) < 110.0:
 			continue
+		p.y = circuit.ground_height(p.x, p.z)
+		if absf(circuit.ground_height(p.x + 20.0, p.z) - p.y) > 2.0 or absf(circuit.ground_height(p.x, p.z + 20.0) - p.y) > 2.0:
+			continue  # farms want flat ground
 		var yaw := _rng.randf() * TAU
 		var layout := [["barn", Vector3.ZERO], ["house", Vector3(18, 0, 6)], ["house", Vector3(-6, 0, 20)]]
 		for item: Array in layout:
@@ -512,11 +829,15 @@ func _build_forest() -> void:
 	var noise := FastNoiseLite.new()
 	noise.seed = circuit.random_seed
 	noise.frequency = 0.008
-	var area := circuit._bounds.grow(220.0)
+	var mountains := circuit.theme == "mountains"
+	var area := circuit._bounds.grow(700.0 if mountains else 600.0)
 	var kinds := ["tree_pine", "tree_pine", "tree_pine_tall", "tree_round", "tree_round", "bush"]
+	if mountains:
+		kinds = ["tree_pine", "tree_pine", "tree_pine_tall", "tree_pine_tall", "bush"]
 	var placed := 0
-	for attempt in 5000:
-		if placed >= 520:
+	var target := 1300 if mountains else 1100
+	for attempt in 12000:
+		if placed >= target:
 			break
 		var p := Vector3(_rng.randf_range(area.position.x, area.end.x), 0.0,
 				_rng.randf_range(area.position.y, area.end.y))
@@ -534,6 +855,9 @@ func _build_forest() -> void:
 				break
 		if blocked:
 			continue
+		p.y = circuit.ground_height(p.x, p.z)
+		if mountains and p.y > 175.0 + density * 40.0:
+			continue  # tree line
 		var kind: String = kinds[_rng.randi() % kinds.size()]
 		var sc := _rng.randf_range(0.8, 1.35)
 		_add(kind, Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * sc), p))
