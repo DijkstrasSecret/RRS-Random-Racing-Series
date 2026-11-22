@@ -1,0 +1,34 @@
+# Godot 4 generated files
+.godot/
+/android/
+*.translation
+
+# Godot export output and credentials
+export_presets.cfg
+export_credentials.cfg
+/build/
+/exports/
+
+# Mono / C# (in case it's ever used)
+.mono/
+data_*/
+mono_crash.*.json
+*.csproj.user
+
+# Blender backup files
+*.blend1
+*.blend2
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Claude Code local settings
+.claude/settings.local.json
