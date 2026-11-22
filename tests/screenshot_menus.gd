@@ -26,6 +26,9 @@ func _run() -> void:
 	GameSettings.p1_car = "braxton"
 	GameSettings.p2_car = "atmaca"
 	GameSettings.track = "spa"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--track="):
+			GameSettings.track = arg.get_slice("=", 1)
 	menu._start_flow(1)
 	await _frames(90)
 	await _save("select_1p")
