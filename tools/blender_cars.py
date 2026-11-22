@@ -20,6 +20,7 @@ import os
 import bmesh
 import bpy
 from mathutils import Matrix, Vector
+from mathutils.bvhtree import BVHTree
 
 PROJECT = r"C:\Projects\Claude Code Projects\RRS - Random Racing Series"
 
@@ -1543,6 +1544,46 @@ LIVERY_COLORS = {
 }
 
 
+def lift_livery(liv, body, gap=0.008, max_edge=0.06):
+    """Keep every bit of the livery at least `gap` m outside the body.
+
+    The stripes are laid on a simplified formula of the car's top surface and
+    the panels are flat boxes, but the detailed body bulges above / through
+    them in places (the PS1 vertex snapping then makes it flicker through).
+    Split the livery into pieces about `max_edge` across, then push any point
+    that sits inside or too close to the body out along the body's surface.
+    """
+    bm = bmesh.new()
+    bm.from_mesh(liv.data)
+    for _ in range(5):
+        long_edges = [e for e in bm.edges if e.calc_length() > max_edge]
+        if not long_edges:
+            break
+        bmesh.ops.subdivide_edges(bm, edges=long_edges, cuts=1, use_grid_fill=True)
+    rel = liv.matrix_world.inverted() @ body.matrix_world
+    verts = [rel @ v.co for v in body.data.vertices]
+    polys = [tuple(p.vertices) for p in body.data.polygons]
+    bvh = BVHTree.FromPolygons(verts, polys)
+    moved = 0
+    for _ in range(6):  # pushing off one face can land near another (corners)
+        changed = 0
+        for v in bm.verts:
+            loc, nrm, _idx, _dist = bvh.find_nearest(v.co)
+            if loc is None:
+                continue
+            d = (v.co - loc).dot(nrm)
+            if d < gap - 0.0005:
+                v.co = v.co + nrm * (gap - d)
+                changed += 1
+        moved += changed
+        if changed == 0:
+            break
+    bm.to_mesh(liv.data)
+    bm.free()
+    liv.data.update()
+    return moved
+
+
 def build_car(cid, c):
     coll = bpy.data.collections.get("car_" + cid)
     if coll:
@@ -1564,6 +1605,8 @@ def build_car(cid, c):
         add_details(cid, m, c, M, front_y)
     body = m.build(coll)
     livery = build_livery(cid, c, M, front_y, coll)
+    if livery:
+        lift_livery(livery, body)
     half = c["wb"] / 2
     tx = c["W"] / 2 - c["tw"] / 2 - 0.035
     wheels = []

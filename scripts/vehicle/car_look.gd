@@ -6,6 +6,19 @@ extends RefCounted
 ## car portraits, so they match how the cars look in a race.
 
 const PSX_SHADER := preload("res://assets/vfx/shaders/psx_lit.gdshader")
+## How far (m) livery decals are pulled towards the camera so the PS1 vertex
+## snapping can't push the body through them.
+const LIVERY_PULL := 0.04
+
+
+const PSX_DECAL_SHADER := preload("res://assets/vfx/shaders/psx_decal.gdshader")
+
+
+## Turns a PS1 material into the decal version (for liveries): it keeps its
+## settings, and gets the depth offset so the body can't poke through.
+static func make_decal(mat: ShaderMaterial) -> void:
+	mat.shader = PSX_DECAL_SHADER
+	mat.set_shader_parameter("depth_pull", LIVERY_PULL)
 
 
 ## Swaps every surface of `model` to the PS1 material. `snap_resolution`
@@ -17,10 +30,12 @@ static func apply_retro(model: Node, snap_resolution: Vector2) -> void:
 			if base == null:
 				continue
 			var mat := ShaderMaterial.new()
-			mat.shader = PSX_SHADER
+			mat.shader = PSX_DECAL_SHADER if (String(mi.name).begins_with("livery") or String(mi.get_parent().name).begins_with("livery")) else PSX_SHADER
 			mat.set_shader_parameter("albedo_tex", base.albedo_texture)
 			mat.set_shader_parameter("albedo_color", base.albedo_color)
 			mat.set_shader_parameter("snap_resolution", snap_resolution)
+			if String(mi.name).begins_with("livery") or String(mi.get_parent().name).begins_with("livery"):
+				make_decal(mat)
 			var mat_name := base.resource_name.to_lower()
 			if base.emission_enabled:
 				mat.set_shader_parameter("emission_color", base.emission)

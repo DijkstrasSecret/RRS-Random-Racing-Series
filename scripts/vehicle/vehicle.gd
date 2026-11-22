@@ -684,7 +684,7 @@ func _collect_retro_surfaces(node: Node) -> void:
 					seam.albedo_color = Color(paint_color.r * 0.7, paint_color.g * 0.7, paint_color.b * 0.7)
 					original = seam
 			var retro := ShaderMaterial.new()
-			retro.shader = PSX_SHADER
+			retro.shader = CarLook.PSX_DECAL_SHADER if _is_livery(mi) else PSX_SHADER
 			var ps2: Material = null
 			if original is BaseMaterial3D:
 				var base := original as BaseMaterial3D
@@ -706,9 +706,19 @@ func _collect_retro_surfaces(node: Node) -> void:
 					_brake_lamps.append([retro, soft])
 				elif mat_name.contains("headlight") and not mat_name.contains("amber"):
 					_head_lamps.append([retro, soft])
+			if _is_livery(mi):
+				CarLook.make_decal(retro)
 			_retro_surfaces.append([mi, i, original, retro, ps2])
 	for child in node.get_children():
 		_collect_retro_surfaces(child)
+
+
+func _is_livery(node: Node) -> bool:
+	while node != null and node != _model:
+		if String(node.name).begins_with("livery"):
+			return true
+		node = node.get_parent()
+	return false
 
 
 ## Called by RetroLook: 0 = modern, 1 = PS2, 2 = PS1.
