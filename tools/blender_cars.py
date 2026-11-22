@@ -151,7 +151,7 @@ CARS = {
         detail=True, shark_fin=True, pillars=[2.5, 3.2], door_seams=[1.5, 2.5, 3.25], handles=[2.4, 3.15],
         plate="16 KZE 19", reverse_lights=[(-0.4, 0.68), (0.4, 0.68)],
         livery=dict(style="rally", stripe="red", accent="white", number="19", number_s=2.0, number_z=0.58,
-                    sponsor="KAZE SPORT", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.88, sponsor_z=0.58, sponsor_w=0.5,
+                    sponsor="NOVA SPORT", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.88, sponsor_z=0.58, sponsor_w=0.5,
                     banner="HONDA RACING")),
     "atmaca": dict(  # slammed 1990 Turkish saloon (Tofas Sahin inspired)
         L=4.26, W=1.65, H=1.30, wb=2.49, r=0.30, tw=0.21, fo=0.82, rocker=0.13,
