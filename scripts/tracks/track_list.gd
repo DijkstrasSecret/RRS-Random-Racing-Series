@@ -4,6 +4,9 @@ extends RefCounted
 ## `use_selected_track` builds the one in GameSettings.track.
 ## Each layout ends with a straight run into the start/finish line (the grid,
 ## grandstands and pits sit there).
+## "stands" = lap fractions of the famous corners with grandstands;
+## "runoff" = "gravel" (old-school traps) or "asphalt" (modern painted run-off).
+## "sectors" = lap fractions where the real F1 sector 1 and 2 lines are.
 ## Elevation: "profile" = [lap fraction, height m] key points of the real
 ## circuit (times "height_scale"), or "hills" = how many metres of gentle
 ## made-up rise and fall (the same at a spot whichever way the track runs).
@@ -11,6 +14,9 @@ extends RefCounted
 const TRACKS: Array[Dictionary] = [
 	{
 		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true, "hills": 5.0,
+		"sectors": [0.34, 0.69],  # after the Roggia chicane / after Ascari
+		# Grandstands: Rettifilo, Roggia, Lesmo, Ascari, Parabolica. Gravel run-off.
+		"stands": [0.11, 0.31, 0.42, 0.62, 0.88], "runoff": "gravel",
 		"tagline": "Temple of speed. Huge straights, tight chicanes, late braking.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -27,6 +33,9 @@ const TRACKS: Array[Dictionary] = [
 	},
 	{
 		"id": "spa", "name": "SPA-FRANCORCHAMPS", "seed": 37, "theme": "mountains", "real": true,
+		"sectors": [0.31, 0.72],  # before Les Combes / after Stavelot
+		# La Source, Eau Rouge, Les Combes, Pouhon, Stavelot, Bus Stop.
+		"stands": [0.03, 0.1, 0.32, 0.5, 0.64, 0.95], "runoff": "gravel",
 		# Real rise and fall (Stavelot = 0, Les Combes ~100 m), exaggerated a
 		# little: the layout is halved but the hills only lose a fifth.
 		"height_scale": 0.8, "profile": [
@@ -54,6 +63,9 @@ const TRACKS: Array[Dictionary] = [
 	},
 	{
 		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "real": true, "hills": 6.0,
+		"sectors": [0.31, 0.70],  # after Aintree / after Chapel
+		# Abbey, Maggotts-Becketts, Stowe, Vale-Club, Brooklands-Luffield. Painted asphalt run-off.
+		"stands": [0.06, 0.2, 0.46, 0.7, 0.88], "runoff": "asphalt",
 		"tagline": "Old airfield. Fast sweepers through Maggotts, Becketts and Chapel.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -75,6 +87,9 @@ const TRACKS: Array[Dictionary] = [
 	},
 	{
 		"id": "istanbul", "name": "ISTANBUL PARK", "seed": 47, "theme": "hills", "real": true,
+		"sectors": [0.30, 0.67],  # after Turn 6 / after Turn 11
+		# Turn 1, Turns 3-4, Turn 8, Turn 9, Turns 12-14.
+		"stands": [0.05, 0.21, 0.42, 0.62, 0.9], "runoff": "asphalt",
 		# Downhill plunge into Turn 1, Turn 8 on the side of the hill.
 		"height_scale": 1.0, "profile": [
 			[0.0, 20.0], [0.06, 10.0], [0.1, 4.0], [0.16, 10.0], [0.22, 16.0], [0.3, 14.0],

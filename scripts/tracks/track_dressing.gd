@@ -200,21 +200,32 @@ func _plan_spectator_zones() -> void:
 	for i in n:
 		order.append(i)
 	order.sort_custom(func(a: int, b: int) -> bool: return absf(s[a].curv) > absf(s[b].curv))
-	for i in order:
-		var near := false
-		for c in corners:
-			if absi(c - i) < 60 or absi(c - i) > n - 60:
-				near = true
-		if not near:
-			corners.append(i)
-		if corners.size() >= 6:
-			break
+	if not circuit.stand_corners.is_empty():
+		# The circuit's famous corners: the sharpest bit within 50 m of each.
+		for f in circuit.stand_corners:
+			var at := int(f * n) % n
+			var best := at
+			for j in range(-25, 26):
+				var q := (at + j + n) % n
+				if absf(s[q].curv) > absf(s[best].curv):
+					best = q
+			corners.append(best)
+	else:
+		for i in order:
+			var near := false
+			for c in corners:
+				if absi(c - i) < 60 or absi(c - i) > n - 60:
+					near = true
+			if not near:
+				corners.append(i)
+			if corners.size() >= 6:
+				break
 	for c in corners:
 		var off: float = s[c].off
 		var side := 1 if s[c].curv > 0.0 else 0  # outside of the turn
 		_spectator_zones.append(Vector3(off - 50.0, off + 50.0, side))
-	# Start straight, left side (grandstands).
-	_spectator_zones.append(Vector3(circuit.length - 230.0, circuit.length - 25.0, 0))
+	# Start straight, grandstand side (opposite the pits, which face the infield).
+	_spectator_zones.append(Vector3(circuit.length - 230.0, circuit.length - 25.0, 1 - circuit.infield_side()))
 
 
 func _in_spectator_zone(off: float, side: int) -> bool:
@@ -304,6 +315,7 @@ func _build_night_lamps() -> void:
 # --- run-off surfaces --------------------------------------------------------------
 
 func _build_gravel() -> void:
+	var asphalt := circuit.runoff == "asphalt"
 	var s := _samples()
 	var n := s.size()
 	var half := circuit.road_width * 0.5
@@ -331,6 +343,8 @@ func _build_gravel() -> void:
 				var b_in := _gravel_point(s[j], sign_, lerpf(inner, dj - 1.5, t0))
 				var b_out := _gravel_point(s[j], sign_, lerpf(inner, dj - 1.5, t1))
 				st.set_normal(Vector3.UP)
+				# Painted asphalt run-off: a green strip by the kerb, then grey.
+				st.set_color(Color(0.16, 0.5, 0.26) if asphalt and k == 0 else Color.WHITE)
 				# Keep every triangle facing up (clockwise from above) on both sides.
 				var tris := [a_in, a_out, b_out, a_in, b_out, b_in] if side == 0 else [a_in, b_out, a_out, a_in, b_in, b_out]
 				for v: Vector3 in tris:
@@ -341,16 +355,21 @@ func _build_gravel() -> void:
 		return
 	var mesh := st.commit()
 	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = _speckle_texture(Color(0.72, 0.64, 0.5), Color(0.58, 0.5, 0.4))
+	if asphalt:
+		mat.albedo_texture = _speckle_texture(Color(0.4, 0.41, 0.44), Color(0.33, 0.34, 0.37))
+		mat.vertex_color_use_as_albedo = true
+	else:
+		mat.albedo_texture = _speckle_texture(Color(0.72, 0.64, 0.5), Color(0.58, 0.5, 0.4))
 	mat.roughness = 1.0
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.surface_set_material(0, mat)
 	var body := StaticBody3D.new()
-	body.name = "Gravel"
+	body.name = "Runoff" if asphalt else "Gravel"
 	body.collision_layer = LAYER_WORLD
 	body.collision_mask = 0
-	body.set_meta(&"surface_grip", 0.45)
-	body.set_meta(&"surface_drag", 0.25)
+	# Gravel slows a car hard; painted asphalt grips nearly like the road.
+	body.set_meta(&"surface_grip", 0.92 if asphalt else 0.45)
+	body.set_meta(&"surface_drag", 0.01 if asphalt else 0.25)
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
@@ -535,15 +554,18 @@ func _solid(kind: String, xf: Transform3D) -> void:
 
 func _build_buildings() -> void:
 	var length := circuit.length
-	# Start straight: grandstands on the left, pits and tower on the right.
-	_place_building("grandstand", length - 75.0, 0, 9.5)
-	_place_building("grandstand", length - 125.0, 0, 9.5)
-	_place_building("grandstand", length - 175.0, 0, 9.5)
-	_place_building("grandstand", length - 225.0, 0, 9.5)
-	_place_building("pit_building", length - 120.0, 1, 12.0)
-	_place_building("control_tower", length - 35.0, 1, 10.0)
-	_place_building("grandstand", length - 200.0, 1, 9.5)
-	_place_building("grandstand", length + 30.0, 0, 9.5)
+	# Start straight: pits and tower on the infield side (as at real circuits),
+	# the main grandstands facing them.
+	var pits := circuit.infield_side()
+	var stands := 1 - pits
+	_place_building("grandstand", length - 75.0, stands, 9.5)
+	_place_building("grandstand", length - 125.0, stands, 9.5)
+	_place_building("grandstand", length - 175.0, stands, 9.5)
+	_place_building("grandstand", length - 225.0, stands, 9.5)
+	_place_building("pit_building", length - 120.0, pits, 12.0)
+	_place_building("control_tower", length - 35.0, pits, 10.0)
+	_place_building("grandstand", length - 200.0, pits, 9.5)
+	_place_building("grandstand", length + 30.0, stands, 9.5)
 	# Stands behind each spectator corner (two along the tightest ones).
 	for zi in _spectator_zones.size() - 1:
 		var z := _spectator_zones[zi]
@@ -624,7 +646,7 @@ func _claim(xf: Transform3D, half: Vector2) -> void:
 
 ## Team trucks and motorhomes parked behind the pit building.
 func _build_paddock() -> void:
-	var frame := _frame(circuit.length - 120.0, 1, 34.0)
+	var frame := _frame(circuit.length - 120.0, circuit.infield_side(), 34.0)
 	if frame.basis.x == Vector3.ZERO:
 		return
 	var white := Color(0.95, 0.95, 0.95)
@@ -660,7 +682,7 @@ func _build_paddock() -> void:
 
 ## Rows of parked cars behind the main grandstands.
 func _build_car_park() -> void:
-	var frame := _frame(circuit.length - 140.0, 0, 34.0)
+	var frame := _frame(circuit.length - 140.0, 1 - circuit.infield_side(), 34.0)
 	if frame.basis.x == Vector3.ZERO:
 		return
 	var car := _box_mesh([

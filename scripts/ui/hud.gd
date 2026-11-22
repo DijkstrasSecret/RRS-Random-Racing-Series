@@ -13,6 +13,7 @@ extends Control
 var show_telemetry: bool = false
 var _vehicle: Vehicle
 var _font: Font
+var _bold: FontVariation
 var _lap_timer: LapTimer
 var _circuit: Circuit
 var _map_points := PackedVector2Array()
@@ -34,6 +35,9 @@ const HOT := Color(1.0, 0.3, 0.25)
 func _ready() -> void:
 	_vehicle = get_node_or_null(vehicle_path) as Vehicle
 	_font = ThemeDB.fallback_font
+	_bold = FontVariation.new()
+	_bold.base_font = _font
+	_bold.variation_embolden = 0.7
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
@@ -89,33 +93,133 @@ func _on_lap_completed(_time: float, is_best: bool) -> void:
 		_best_flash_until = Time.get_ticks_msec() / 1000.0 + 3.0
 
 
-## Position and lap on the left, lap times on the right.
+## F1-style timing: the position tower on the left (race) and the lap timer
+## with sector times on the right.
 func _draw_top(k: float) -> void:
 	if _lap_timer == null:
 		return
 	var lt := _lap_timer
 	var s := size
 	var me := _race.index_of(_vehicle) if _race else -1
-	var left := Vector2(34.0 * k, 34.0 * k)
 	if me >= 0:
-		var pos_text := RaceDirector.ordinal(_race.position_of(me))
-		var big := int(70 * k)
-		_label(left + Vector2(0, big * 0.8), pos_text, big, player_color)
-		var w := _font.get_string_size(pos_text, HORIZONTAL_ALIGNMENT_LEFT, -1, big).x
-		_label(left + Vector2(w + 8.0 * k, big * 0.8), "/ %d" % _race.car_count(), int(30 * k), TEXT)
-		_label(left + Vector2(0, big * 0.8 + 44.0 * k), "LAP  %d / %d" % [_race.current_lap(me), _race.laps], int(30 * k), ACCENT)
+		_draw_tower(Vector2(24.0 * k, 24.0 * k), k, me)
 	else:
-		_label(left + Vector2(0, 56.0 * k), ("LAP  %d" % lt.lap) if lt.running else "LAP  -", int(40 * k), ACCENT)
-	var right := Vector2(s.x - 34.0 * k, 34.0 * k)
-	_label_right(right + Vector2(0, 44.0 * k), LapTimer.format_time(lt.lap_time if lt.running else -1.0), int(46 * k), TEXT)
-	_label_right(right + Vector2(0, 78.0 * k), "LAST  " + LapTimer.format_time(lt.last_lap), int(22 * k), DIM)
-	_label_right(right + Vector2(0, 106.0 * k), "BEST  " + LapTimer.format_time(lt.best_lap), int(22 * k), GOOD)
-	if not player_name.is_empty():
-		_label_right(right + Vector2(0, 136.0 * k), player_name, int(22 * k), player_color)
+		var box := Rect2(24.0 * k, 24.0 * k, 150.0 * k, 40.0 * k)
+		draw_rect(box, F1_DARK)
+		draw_rect(Rect2(box.position, Vector2(box.size.x, 3.0 * k)), F1_RED)
+		_bold_text(box.position + Vector2(12.0 * k, 28.0 * k), ("LAP %d" % lt.lap) if lt.running else "LAP -", int(21 * k), TEXT)
+	_draw_timer(Vector2(s.x - 24.0 * k - 340.0 * k, 24.0 * k), k, lt)
 	if Time.get_ticks_msec() / 1000.0 < _best_flash_until:
-		_label(Vector2(s.x * 0.5, 120.0 * k), "NEW BEST LAP!", int(34 * k), GOOD, true)
+		_label(Vector2(s.x * 0.5, 120.0 * k), "NEW BEST LAP!", int(34 * k), F1_PURPLE if _is_session_best(lt) else F1_GREEN, true)
 	elif not lt.running and _race == null:
 		_label(Vector2(s.x * 0.5, 120.0 * k), "Cross the line to start the clock", int(22 * k), DIM, true)
+
+
+const F1_DARK := Color(0.05, 0.05, 0.07, 0.88)
+const F1_ROW := Color(0.09, 0.09, 0.11, 0.84)
+const F1_ROW_ALT := Color(0.12, 0.12, 0.14, 0.84)
+const F1_RED := Color(0.9, 0.08, 0.08)
+const F1_PURPLE := Color(0.66, 0.24, 0.95)
+const F1_GREEN := Color(0.1, 0.84, 0.32)
+const F1_YELLOW := Color(1.0, 0.82, 0.1)
+const F1_GREY := Color(0.35, 0.35, 0.4)
+
+
+## Position tower: lap counter, then every car in order with its colour,
+## three-letter code and gap to the car ahead. Your row is highlighted.
+func _draw_tower(o: Vector2, k: float, me: int) -> void:
+	var w := 262.0 * k
+	var row := 31.0 * k
+	var head := Rect2(o, Vector2(w, 42.0 * k))
+	draw_rect(head, F1_DARK)
+	draw_rect(Rect2(o, Vector2(w, 3.0 * k)), F1_RED)
+	_bold_text(o + Vector2(12.0 * k, 29.0 * k), "LAP", int(19 * k), DIM)
+	_bold_text(o + Vector2(58.0 * k, 29.0 * k), "%d/%d" % [_race.current_lap(me), _race.laps], int(22 * k), TEXT)
+	var y := o.y + head.size.y
+	var order := _race.standings()
+	for n in order.size():
+		var i: int = order[n]
+		var mine := i == me
+		var r := Rect2(o.x, y, w, row)
+		draw_rect(r, Color(0.95, 0.95, 0.96, 0.95) if mine else (F1_ROW if n % 2 == 0 else F1_ROW_ALT))
+		var ink := Color(0.05, 0.05, 0.07) if mine else TEXT
+		_bold_text_centered(Vector2(o.x + 18.0 * k, y + row * 0.72), str(n + 1), int(18 * k), ink)
+		draw_rect(Rect2(o.x + 38.0 * k, y + 6.0 * k, 4.0 * k, row - 12.0 * k), _race.color_at(i))
+		_bold_text(Vector2(o.x + 52.0 * k, y + row * 0.72), _code(_race.name_at(i)), int(19 * k), ink)
+		var gap := _race.interval(i)
+		if i in _race.finish_order and n == 0:
+			gap = "FINISH"
+		draw_string(_font, Vector2(o.x + w - 10.0 * k - 110.0 * k, y + row * 0.72), gap, HORIZONTAL_ALIGNMENT_RIGHT,
+				110.0 * k, int(16 * k), Color(0.2, 0.2, 0.25) if mine else Color(0.82, 0.83, 0.86))
+		y += row
+
+
+## Lap timer: current lap time, three sector boxes coloured F1 style, last and best lap.
+func _draw_timer(o: Vector2, k: float, lt: LapTimer) -> void:
+	var w := 340.0 * k
+	var top := Rect2(o, Vector2(w, 54.0 * k))
+	draw_rect(top, F1_DARK)
+	draw_rect(Rect2(o, Vector2(w, 3.0 * k)), F1_RED)
+	var tag := player_name if not player_name.is_empty() else ("LAP %d" % lt.lap if lt.running else "LAP -")
+	_bold_text(o + Vector2(12.0 * k, 35.0 * k), tag, int(17 * k), player_color if not player_name.is_empty() else DIM)
+	draw_string(_bold, o + Vector2(0, 40.0 * k), LapTimer.format_time(lt.lap_time if lt.running else -1.0),
+			HORIZONTAL_ALIGNMENT_RIGHT, w - 12.0 * k, int(32 * k), TEXT)
+	# Sectors: this lap's as they come in; until then last lap's, faded (as on F1 TV).
+	var cell := w / 3.0
+	var sy := o.y + top.size.y
+	for n in 3:
+		var t := lt.sectors[n]
+		var c := _sector_color(lt.sector_colors[n])
+		var fade := 1.0
+		if t < 0.0 and lt.last_sectors[n] >= 0.0:
+			t = lt.last_sectors[n]
+			c = _sector_color(lt.last_sector_colors[n])
+			fade = 0.4
+		var r := Rect2(o.x + n * cell, sy, cell - (2.0 * k if n < 2 else 0.0), 42.0 * k)
+		draw_rect(r, F1_ROW)
+		draw_rect(Rect2(r.position, Vector2(r.size.x, 5.0 * k)), Color(c, c.a * fade))
+		_bold_text(r.position + Vector2(8.0 * k, 31.0 * k), "S%d" % (n + 1), int(14 * k), DIM)
+		draw_string(_bold, r.position + Vector2(0, 31.0 * k), LapTimer.format_sector(t), HORIZONTAL_ALIGNMENT_RIGHT,
+				r.size.x - 8.0 * k, int(18 * k), Color(TEXT, fade) if t >= 0.0 else F1_GREY)
+	var by := sy + 42.0 * k
+	var bottom := Rect2(o.x, by, w, 30.0 * k)
+	draw_rect(bottom, F1_DARK)
+	_text(Vector2(o.x + 10.0 * k, by + 21.0 * k), "LAST", int(14 * k), DIM)
+	_bold_text(Vector2(o.x + 50.0 * k, by + 21.0 * k), LapTimer.format_time(lt.last_lap), int(16 * k), TEXT)
+	_text(Vector2(o.x + w * 0.5 + 6.0 * k, by + 21.0 * k), "BEST", int(14 * k), DIM)
+	var best_col := F1_PURPLE if _is_session_best(lt) else (F1_GREEN if lt.best_lap > 0.0 else TEXT)
+	_bold_text(Vector2(o.x + w * 0.5 + 48.0 * k, by + 21.0 * k), LapTimer.format_time(lt.best_lap), int(16 * k), best_col)
+
+
+func _is_session_best(lt: LapTimer) -> bool:
+	return lt.best_lap > 0.0 and _circuit != null and absf(lt.best_lap - _circuit.best_lap) < 0.0005
+
+
+func _sector_color(c: int) -> Color:
+	match c:
+		LapTimer.SectorColor.PURPLE:
+			return F1_PURPLE
+		LapTimer.SectorColor.GREEN:
+			return F1_GREEN
+		LapTimer.SectorColor.YELLOW:
+			return F1_YELLOW
+	return F1_GREY
+
+
+## Three-letter timing code: "VEGA" -> "VEG", "PLAYER 2" -> "P2".
+static func _code(racer_name: String) -> String:
+	if racer_name.begins_with("PLAYER "):
+		return "P" + racer_name.trim_prefix("PLAYER ")
+	return racer_name.substr(0, 3).to_upper()
+
+
+func _bold_text(pos: Vector2, text: String, font_size: int, color: Color) -> void:
+	draw_string(_bold, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, color)
+
+
+func _bold_text_centered(pos: Vector2, text: String, font_size: int, color: Color) -> void:
+	var w := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	draw_string(_bold, pos - Vector2(w * 0.5, 0), text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size, color)
 
 
 func _draw_minimap(rect: Rect2) -> void:

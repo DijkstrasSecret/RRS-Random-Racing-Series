@@ -40,6 +40,15 @@ const SURFACE_CELL := 9.0
 ## Build the layout chosen in the menu (GameSettings.track) instead of `points`.
 @export var use_selected_track: bool = false
 
+## Lap fractions where sector 1 and sector 2 end (the real F1 sector lines).
+var sector_splits := PackedFloat32Array([1.0 / 3.0, 2.0 / 3.0])
+## Fastest sector times by anyone this session (-1 = none yet), and fastest lap.
+var best_sectors := PackedFloat32Array([-1.0, -1.0, -1.0])
+var best_lap: float = -1.0
+## Lap fractions of the corners with grandstands (empty = the tightest ones).
+var stand_corners := PackedFloat32Array()
+## Run-off beside the corners: "gravel" or "asphalt".
+var runoff := "gravel"
 var curve := Curve3D.new()
 var length: float = 0.0
 ## Track centre line as (x, z) points, for the minimap.
@@ -66,6 +75,10 @@ func _ready() -> void:
 		track_name = TrackList.display_name(String(track.id))
 		random_seed = int(track.seed)
 		theme = String(track.get("theme", "hills"))
+		if track.has("sectors"):
+			sector_splits = PackedFloat32Array(track.sectors)
+		stand_corners = PackedFloat32Array(track.get("stands", []))
+		runoff = String(track.get("runoff", "gravel"))
 	_build_curve()
 	_sample_curve()
 	_build_surface_grid()
@@ -103,6 +116,14 @@ func get_grid_transform(slot: int) -> Transform3D:
 ## Distance (m) along the lap from the start line to the point nearest `world_pos`.
 func progress_at(world_pos: Vector3) -> float:
 	return curve.get_closest_offset(to_local(world_pos))
+
+
+## Side of the road the infield is on (0 = left, 1 = right): pits go there.
+func infield_side() -> int:
+	var turning := 0.0
+	for smp: Dictionary in _samples:
+		turning += float(smp.curv)
+	return 0 if turning > 0.0 else 1
 
 
 ## Signed curvature (1/radius, + = left turn) of the centre line at `off`.
@@ -412,7 +433,7 @@ func _build_curbs() -> void:
 		var b: Dictionary = _samples[(k + 1) % n]
 		if absf(a.curv) < min_curv and absf(b.curv) < min_curv:
 			continue
-		var color := red if int(a.off / 4.0) % 2 == 0 else white
+		var color := red if int(a.off / 2.0) % 2 == 0 else white
 		st.set_color(color)
 		for side: float in [-1.0, 1.0]:
 			var a_in := _on_surface(a.pos + a.right * side * half)

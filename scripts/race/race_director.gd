@@ -122,6 +122,35 @@ func name_at(i: int) -> String:
 	return _racers[i].name
 
 
+func timer_at(i: int) -> LapTimer:
+	return _racers[i].timer
+
+
+func is_human(i: int) -> bool:
+	return bool(_racers[i].human)
+
+
+## Gap to the car one place ahead, F1 interval style: "+0.842", "+1 LAP",
+## "" for the leader (and before the start).
+func interval(i: int) -> String:
+	var order := standings()
+	var at := order.find(i)
+	if at <= 0:
+		return ""
+	if i in finish_order and order[at - 1] in finish_order:
+		return "+%.3f" % (float(finish_times[i]) - float(finish_times[order[at - 1]]))
+	var mine: LapTimer = _racers[i].timer
+	var theirs: LapTimer = _racers[order[at - 1]].timer
+	if not mine.running or mine.last_point < 0:
+		return ""
+	if theirs.last_point - mine.last_point >= LapTimer.TIMING_POINTS:
+		return "+%d LAP" % int((theirs.last_point - mine.last_point) / LapTimer.TIMING_POINTS)
+	var p := mine.last_point
+	if not theirs.points.has(p):
+		return ""
+	return "+%.3f" % maxf(float(mine.points[p]) - float(theirs.points[p]), 0.0)
+
+
 func completed_laps(i: int) -> int:
 	var t: LapTimer = _racers[i].timer
 	return maxi(t.lap - 1, 0) if t.running else 0
