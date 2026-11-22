@@ -164,7 +164,7 @@ class TrackCard extends Control:
 		if t.get("series", "") != "":
 			var tag := Rect2(Vector2(size.x - 150, 20), Vector2(130, 34))
 			var series := String(t.series)
-			var tag_text := {"F1": "F1 CIRCUIT", "RX": "RALLYCROSS", "ISLAND": "ISLAND"}.get(series, series)
+			var tag_text: String = {"F1": "F1 CIRCUIT", "RX": "RALLYCROSS", "ISLAND": "ISLAND"}.get(series, series)
 			var tag_col: Color = {"F1": Color(0.85, 0.1, 0.1, 0.9), "RX": Color(0.85, 0.5, 0.1, 0.9), "ISLAND": Color(0.1, 0.6, 0.65, 0.9)}.get(series, Color(0.3, 0.3, 0.35, 0.9))
 			draw_rect(tag, tag_col)
 			draw_string(font, tag.position + Vector2(0, 25), tag_text, HORIZONTAL_ALIGNMENT_CENTER, tag.size.x, 18, MenuStyle.TEXT)
