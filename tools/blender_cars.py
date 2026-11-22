@@ -53,7 +53,12 @@ CARS = {
         windshield=1.45, roof_front=2.10, roof_rear=3.05, deck_start=3.62,
         tumble=0.78, nose_round=0.15, tail_round=0.10, crown=0.04,
         paint=(0.05, 0.11, 0.36), grille="single_frame", headlight="angular",
-        taillight="pair_angular", wheel="spokes_silver", bumpers="body", exhaust=1, mirrors="body"),
+        taillight="pair_angular", wheel="spokes_silver", bumpers="body", exhaust=1, mirrors="body",
+        detail=True, belt_chrome=True, pillars=[2.55], door_seams=[1.52, 2.55, 3.2], handles=[2.45, 3.1],
+        plate="06 QDR 16", reverse_lights=[(-0.42, 0.76), (0.42, 0.76)],
+        livery=dict(style="rally", stripe="white", accent="red", number="16", number_s=2.05, number_z=0.59,
+                    sponsor="RRS RACING", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.88, sponsor_z=0.59, sponsor_w=0.5,
+                    banner="QUADRA MOTORSPORT")),
     "bellmont": dict(  # V8 luxury limousine (Bentley Flying Spur inspired)
         L=5.32, W=1.98, H=1.48, wb=3.19, r=0.37, tw=0.26, fo=1.00, rocker=0.22,
         belt=1.05, nose=0.92, cowl=1.06, deck=1.09, tail=1.04,
@@ -67,7 +72,12 @@ CARS = {
         windshield=1.40, roof_front=2.05, roof_rear=3.85, deck_start=4.18,
         tumble=0.78, nose_round=0.20, tail_round=0.10, crown=0.05,
         paint=(0.92, 0.92, 0.91), grille="shield", headlight="almond",
-        taillight="pair_round", wheel="spokes_black", bumpers="body", exhaust=1, mirrors="body"),
+        taillight="pair_round", wheel="spokes_black", bumpers="body", exhaust=1, mirrors="body",
+        detail=True, pillars=[2.5, 3.35], door_seams=[1.47, 2.5, 3.3], handles=[2.4], plate="35 RML 16",
+        reverse_lights=[(-0.3, 0.4), (0.3, 0.4)],
+        livery=dict(style="rally", stripe="red", accent="green", number="47", number_s=2.0, number_z=0.59,
+                    sponsor="NOVA TYRES", sponsor_bg=(0.0, 0.42, 0.2), sponsor_s=2.9, sponsor_z=0.59, sponsor_w=0.5,
+                    banner="ROMOLA CORSE")),
     "bavaro": dict(  # 4-door fastback coupe (BMW 4 Series Gran Coupe inspired)
         L=4.78, W=1.85, H=1.44, wb=2.86, r=0.34, tw=0.24, fo=0.88, rocker=0.20,
         belt=0.98, nose=0.78, cowl=1.00, deck=1.03, tail=1.02,
@@ -129,7 +139,12 @@ CARS = {
         windshield=1.30, roof_front=1.98, roof_rear=3.30, deck_start=3.85,
         tumble=0.76, nose_round=0.22, tail_round=0.12, crown=0.06, tail_drop=0.14,
         paint=(0.93, 0.93, 0.92), grille="black_band", headlight="swept_big",
-        taillight="swept", wheel="spokes_dark", calipers=False, bumpers="body", exhaust=0, mirrors="body"),
+        taillight="swept", wheel="spokes_dark", calipers=False, bumpers="body", exhaust=0, mirrors="body",
+        detail=True, pillars=[2.35, 3.15], door_seams=[1.37, 2.35, 3.15], handles=[2.25], plate="34 MRL 16",
+        reverse_lights=[(-0.3, 0.4), (0.3, 0.4)],
+        livery=dict(style="rally", stripe="yellow", accent="black", number="08", number_s=1.86, number_z=0.59,
+                    sponsor="VOLTA OIL", sponsor_bg=(1.0, 0.78, 0.08), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.75,
+                    sponsor_z=0.59, sponsor_w=0.5, banner="MIRELLE CUP")),
     "kerkenez": dict(  # 1998 Turkish saloon (Tofas Dogan SLX inspired)
         L=4.30, W=1.65, H=1.38, wb=2.49, r=0.30, tw=0.18, fo=0.86, rocker=0.22,
         belt=0.86, nose=0.72, cowl=0.84, deck=0.90, tail=0.88,
@@ -857,6 +872,7 @@ PIXEL_FONT = {
     "R": ["110", "101", "110", "101", "101"], "S": ["111", "100", "111", "001", "111"],
     "T": ["111", "010", "010", "010", "010"], "X": ["101", "101", "010", "101", "101"],
     "Z": ["111", "001", "010", "100", "111"], " ": ["000", "000", "000", "000", "000"],
+    "Q": ["111", "101", "101", "110", "011"],
 }
 
 
@@ -1156,6 +1172,28 @@ def car_specific_details(cid, m, c, M, front_y):
         m.box((0.06, 0.55, 0.012), (0, front_y - 0.5, hz + 0.008), M["chrome"])
         for side in (-1, 1):
             m.box((0.012, 0.09, 0.04), (side * (side_x(c, 0.95, 0.7) + 0.006), front_y - 0.95, c["belt"] - 0.15), M["indicator"])
+    elif cid in ("mirelle", "quadra", "romola"):
+        # Shark-fin antenna at the back of the roof.
+        sf = c["roof_rear"] - 0.15
+        m.box((0.06, 0.2, 0.06), (0, front_y - sf, top_z(c, sf, 0.0) + 0.02), M["black"], rx=-0.25)
+        if cid == "mirelle":
+            # Black protective strips low on the doors, chrome strip on the hatch.
+            for a, b in gaps_between_arches(c, 0.5, c["L"] - 0.5):
+                for side in (-1, 1):
+                    m.box((0.012, b - a, 0.07), (side * (W / 2 + 0.004), front_y - (a + b) / 2, rk + 0.13), M["black"])
+            tz = body_profile(c, L - 0.03)[3] - 0.2
+            m.box((W * 0.5, 0.03, 0.02), (0, rear_y - 0.012, tz), M["chrome"])
+        elif cid == "quadra":
+            # Rear diffuser and a chrome surround on the single-frame grille.
+            m.box((W * 0.7, 0.08, 0.06), (0, rear_y + 0.03, rk + 0.05), M["black"])
+            nose = body_profile(c, 0.04)[3]
+            m.box((0.64, 0.04, 0.015), (0, front_y + 0.012, nose - 0.48), M["chrome"])
+        else:
+            # Hidden rear door handle in the window pillar, black side skirts.
+            for side in (-1, 1):
+                m.box((0.012, 0.1, 0.05), (side * (side_x(c, 3.3, 1.0) + 0.006), front_y - 3.3, c["belt"] + 0.12), M["black"])
+                for a, b in gaps_between_arches(c, 0.4, c["L"] - 0.4):
+                    m.box((0.03, b - a, 0.06), (side * (W / 2 + 0.006), front_y - (a + b) / 2, rk + 0.04), M["black"])
     elif cid == "bastion":
         # Raised front wings either side of a lower bonnet (the classic shape),
         # with the indicator lamps sitting on top of them.
@@ -1427,6 +1465,7 @@ def build_livery(cid, c, M, front_y, coll):
 LIVERY_COLORS = {
     "white": (0.95, 0.95, 0.93), "red": (0.82, 0.06, 0.07), "orange": (1.0, 0.42, 0.03),
     "yellow": (1.0, 0.78, 0.08), "blue": (0.05, 0.22, 0.75), "black": (0.03, 0.03, 0.035),
+    "green": (0.0, 0.5, 0.22),
     "teal": (0.0, 0.55, 0.55),
 }
 

@@ -7,11 +7,11 @@ extends RefCounted
 ## Sorted by class (D slowest ... A fastest), then roughly by pace.
 const CARS: Array[Dictionary] = [
 	{"id": "kartal", "tier": 0, "livery": true, "name": "KARTAL 77 SL", "tagline": "1977 rear-drive classic. Light, slow, loves to slide."},
-	{"id": "mirelle", "tier": 0, "name": "MIRELLE 15D", "tagline": "French diesel supermini. Frugal, light and forgiving."},
+	{"id": "mirelle", "tier": 0, "livery": true, "name": "MIRELLE 15D", "tagline": "French diesel supermini. Frugal, light and forgiving."},
 	{"id": "kerkenez", "tier": 0, "livery": true, "name": "KERKENEZ 98 SX", "tagline": "90s rear-drive saloon. Soft, simple, happy sideways."},
 	{"id": "atmaca", "tier": 0, "livery": true, "name": "ATMACA 90 STANCE", "tagline": "Slammed on air ride. Stiff, low and tail-happy."},
-	{"id": "quadra", "tier": 1, "name": "QUADRA 16D", "tagline": "Compact diesel sedan. Easy and composed."},
-	{"id": "romola", "tier": 1, "name": "ROMOLA STELLA 16D", "tagline": "Italian diesel hatch. Nimble and playful."},
+	{"id": "quadra", "tier": 1, "livery": true, "name": "QUADRA 16D", "tagline": "Compact diesel sedan. Easy and composed."},
+	{"id": "romola", "tier": 1, "livery": true, "name": "ROMOLA STELLA 16D", "tagline": "Italian diesel hatch. Nimble and playful."},
 	{"id": "kaze", "tier": 1, "name": "KAZE SORA 16I", "tagline": "Rev-happy petrol sedan. Sharp and dependable."},
 	{"id": "dingo", "tier": 1, "name": "DINGO 13T", "tagline": "Boxy little turbo SUV. Tall, but surprisingly brisk."},
 	{"id": "piccolo", "tier": 1, "livery": true, "name": "PICCOLO 16", "tagline": "Retro city hatch. Go-kart steering."},
