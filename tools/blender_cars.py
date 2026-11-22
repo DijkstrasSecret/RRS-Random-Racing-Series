@@ -46,7 +46,13 @@ CARS = {
         windshield=1.95, roof_front=2.55, roof_rear=3.30, deck_start=4.30,
         tumble=0.72, nose_round=0.22, tail_round=0.14, crown=0.05, tail_drop=0.16,
         paint=(0.30, 0.32, 0.35), grille="wide_bars", headlight="slim_swept",
-        taillight="blade", wheel="spokes_dark", bumpers="body", exhaust=2, mirrors="black"),
+        taillight="blade", wheel="spokes_dark", bumpers="body", exhaust=2, mirrors="black",
+        detail=True, pillars=[3.2], door_seams=[2.0, 3.15], handles=[3.0], plate="07 GT 12",
+        reverse_lights=[(-0.35, 0.43), (0.35, 0.43)],
+        livery=dict(style="muscle", stripe_set=[(-0.2, 0.2, "white"), (-0.25, -0.22, "red"), (0.22, 0.25, "red")],
+                    side_stripe=False, stripe="white", accent="red", number="12", number_s=2.55, number_z=0.5,
+                    sponsor="VOLTA OIL", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=1.55, sponsor_z=0.73, sponsor_w=0.5,
+                    banner="ASHFORD GT TEAM")),
     "quadra": dict(  # compact diesel sedan (Audi A3 Sedan inspired)
         L=4.46, W=1.80, H=1.42, wb=2.64, r=0.32, tw=0.22, fo=0.88, rocker=0.20,
         belt=0.98, nose=0.76, cowl=1.00, deck=1.03, tail=1.00,
@@ -65,7 +71,13 @@ CARS = {
         windshield=1.80, roof_front=2.50, roof_rear=3.85, deck_start=4.35,
         tumble=0.80, nose_round=0.14, tail_round=0.10, crown=0.04,
         paint=(0.03, 0.03, 0.04), grille="matrix", headlight="round_twin",
-        taillight="oval_pair", wheel="spokes_chrome", bumpers="chrome_trim", exhaust=4, mirrors="body"),
+        taillight="oval_pair", wheel="spokes_chrome", bumpers="chrome_trim", exhaust=4, mirrors="body",
+        detail=True, frame_mat="chrome", pillars=[3.05, 3.9], door_seams=[1.9, 3.05, 3.8], handles=[2.95, 3.7],
+        plate="34 BLM 08", reverse_lights=[(-0.35, 0.47), (0.35, 0.47)],
+        livery=dict(style="muscle", stripe_set=[(-0.3, -0.26, "white"), (0.26, 0.3, "white")], stripe="white",
+                    accent="white", number="08", number_s=2.45, number_z=0.63, sponsor="ROYAL OIL",
+                    sponsor_bg=(0.95, 0.95, 0.93), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=3.42, sponsor_z=0.63,
+                    sponsor_w=0.5, banner="BELLMONT")),
     "romola": dict(  # Italian diesel hatchback (Alfa Romeo Giulietta inspired)
         L=4.35, W=1.80, H=1.46, wb=2.63, r=0.32, tw=0.23, fo=0.88, rocker=0.20,
         belt=0.98, nose=0.74, cowl=1.00, deck=1.10, tail=1.02,
@@ -84,14 +96,24 @@ CARS = {
         windshield=1.55, roof_front=2.25, roof_rear=3.05, deck_start=4.25,
         tumble=0.76, nose_round=0.16, tail_round=0.10, crown=0.04,
         paint=(0.07, 0.19, 0.62), grille="twin_tall", headlight="slim",
-        taillight="blade", wheel="spokes_dark", bumpers="body", exhaust=2, mirrors="black"),
+        taillight="blade", wheel="spokes_dark", bumpers="body", exhaust=2, mirrors="black",
+        detail=True, shark_fin=True, pillars=[2.62, 3.3], door_seams=[1.62, 2.62, 3.32], handles=[2.52, 3.22],
+        plate="34 BV 420", reverse_lights=[(-0.35, 0.45), (0.35, 0.45)],
+        livery=dict(style="muscle", stripe_set=[(-0.26, -0.17, "lightblue"), (-0.15, -0.06, "blue"), (-0.04, 0.05, "red")],
+                    stripe="blue", accent="red", number="20", number_s=2.12, number_z=0.59, sponsor="RRS RACING",
+                    sponsor_bg=(0.05, 0.22, 0.75), sponsor_s=2.97, sponsor_z=0.59, sponsor_w=0.5, banner="BAVARO MOTORSPORT")),
     "hanlong": dict(  # electric fastback sedan (BYD Han inspired)
         L=4.99, W=1.91, H=1.50, wb=2.92, r=0.35, tw=0.25, fo=0.95, rocker=0.20,
         belt=0.98, nose=0.72, cowl=0.98, deck=1.0, tail=0.98,
         windshield=1.55, roof_front=2.30, roof_rear=3.25, deck_start=4.45,
         tumble=0.77, nose_round=0.22, tail_round=0.14, crown=0.05, tail_drop=0.2,
         paint=(0.44, 0.46, 0.49), grille="closed", headlight="led_bar",
-        taillight="full_bar", wheel="spokes_dark", bumpers="body", exhaust=0, mirrors="black"),
+        taillight="full_bar", wheel="spokes_dark", bumpers="body", exhaust=0, mirrors="black",
+        detail=True, shark_fin=True, pillars=[2.62, 3.4], door_seams=[1.62, 2.62, 3.4], handles=[2.52, 3.3],
+        handle_mat="trim", plate="06 HNL 90", reverse_lights=[(-0.35, 0.45), (0.35, 0.45)],
+        livery=dict(style="rally", stripe="red", accent="white", number="88", number_s=2.12, number_z=0.59,
+                    sponsor="VOLTA EV", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=3.0, sponsor_z=0.59, sponsor_w=0.5,
+                    banner="HANLONG E-TEAM")),
     # --- second wave -----------------------------------------------------------------
     "orion": dict(  # electric streamliner sedan (Hyundai Ioniq 6 inspired)
         L=4.86, W=1.88, H=1.49, wb=2.95, r=0.34, tw=0.23, fo=0.90, rocker=0.22,
@@ -100,7 +122,12 @@ CARS = {
         tumble=0.72, nose_round=0.26, tail_round=0.16, crown=0.08, tail_drop=0.2,
         paint=(0.40, 0.44, 0.55), grille="pixel_closed", headlight="pixel",
         taillight="pixel_bar", wheel="aero", calipers=False, bumpers="body", exhaust=0, mirrors="black",
-        spoiler="wing_split"),
+        spoiler="wing_split",
+        detail=True, shark_fin=True, pillars=[2.45, 3.35], door_seams=[1.35, 2.45, 3.3], handles=[2.35, 3.2],
+        handle_mat="trim", plate="34 EV 06", reverse_lights=[(-0.35, 0.42), (0.35, 0.42)],
+        livery=dict(style="rally", stripe="teal", accent="white", stripe_zones=("hood",), number="06", number_s=1.9,
+                    number_z=0.57, sponsor="VOLTA EV", sponsor_bg=(0.0, 0.55, 0.55), sponsor_s=2.85, sponsor_z=0.57,
+                    sponsor_w=0.5, banner="ORION E-RACING")),
     "braxton": dict(  # American muscle coupe (Dodge Challenger inspired)
         L=5.02, W=1.92, H=1.45, wb=2.95, r=0.36, tw=0.26, fo=0.98, rocker=0.24,
         belt=1.0, nose=0.86, cowl=1.0, deck=1.06, tail=1.05,
@@ -120,7 +147,12 @@ CARS = {
         windshield=1.42, roof_front=2.12, roof_rear=2.85, deck_start=3.98,
         tumble=0.76, nose_round=0.18, tail_round=0.12, crown=0.05, tail_drop=0.14,
         paint=(0.25, 0.27, 0.30), grille="wing_bar", headlight="swept",
-        taillight="c_shape", wheel="spokes_silver", bumpers="body", exhaust=2, mirrors="body"),
+        taillight="c_shape", wheel="spokes_silver", bumpers="body", exhaust=2, mirrors="body",
+        detail=True, shark_fin=True, pillars=[2.5, 3.2], door_seams=[1.5, 2.5, 3.25], handles=[2.4, 3.15],
+        plate="16 KZE 19", reverse_lights=[(-0.4, 0.68), (0.4, 0.68)],
+        livery=dict(style="rally", stripe="red", accent="white", number="19", number_s=2.0, number_z=0.58,
+                    sponsor="KAZE SPORT", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.88, sponsor_z=0.58, sponsor_w=0.5,
+                    banner="KAZE RACING")),
     "atmaca": dict(  # slammed 1990 Turkish saloon (Tofas Sahin inspired)
         L=4.26, W=1.65, H=1.30, wb=2.49, r=0.30, tw=0.21, fo=0.82, rocker=0.13,
         belt=0.82, nose=0.74, cowl=0.80, deck=0.86, tail=0.84,
@@ -180,7 +212,12 @@ CARS = {
         paint=(0.05, 0.20, 0.66), grille="pickup", headlight="led_wide",
         taillight="vertical", tail_z=1.02, wheel="offroad", calipers=False, bumpers="body", exhaust=1,
         mirrors="black", deck_top="black", flares="black", steps="trim", roof_rails="black",
-        sports_bar=True, skid=True),
+        sports_bar=True, skid=True,
+        detail=True, pillars=[2.62], door_seams=[1.62, 2.62, 3.35], handles=[2.52, 3.25], handle_mat="black",
+        plate="55 AMK 23", plate_rear_z=0.72, reverse_lights=[(-0.89, 0.84), (0.89, 0.84)],
+        livery=dict(style="rally", stripe="yellow", accent="black", stripe_zones=("hood",), side_z=0.66, number="23",
+                    number_s=2.1, number_z=1.06, sponsor="RRS RAID", sponsor_bg=(1.0, 0.78, 0.08),
+                    sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.98, sponsor_z=1.06, sponsor_w=0.5, banner="MAMMOTH RAID")),
     "bastion": dict(  # boxy off-road icon (Mercedes G-Class inspired)
         L=4.56, W=1.86, H=1.95, wb=2.85, r=0.38, tw=0.28, fo=0.78, rocker=0.42,
         belt=1.38, nose=1.10, cowl=1.18, deck=1.86, tail=1.86,
@@ -199,7 +236,12 @@ CARS = {
         tumble=0.86, nose_round=0.12, tail_round=0.06, crown=0.02, tail_drop=0.05,
         paint=(0.92, 0.92, 0.90), grille="seven_slot", headlight="round_big",
         taillight="x_square", wheel="spokes_dark", calipers=False, bumpers="black", exhaust=1,
-        mirrors="black", flares="black", roof_rails="black", cladding=True),
+        mirrors="black", flares="black", roof_rails="black", cladding=True,
+        detail=True, shark_fin=True, pillars=[2.4, 3.25], door_seams=[1.42, 2.4, 3.1], handles=[2.3, 3.0],
+        handle_mat="black", plate="07 DNG 22", reverse_lights=[(-0.5, 1.0), (0.5, 1.0)],
+        livery=dict(style="rally", stripe="orange", accent="black", side_z=0.52, number="22", number_s=1.9, number_z=0.85,
+                    sponsor="TRAIL OIL", sponsor_bg=(1.0, 0.42, 0.03), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.75,
+                    sponsor_z=0.85, sponsor_w=0.5, banner="DINGO OFFROAD")),
     "harcourt": dict(  # British executive saloon (Jaguar X-Type inspired)
         L=4.67, W=1.79, H=1.39, wb=2.71, r=0.33, tw=0.21, fo=0.88, rocker=0.21,
         belt=0.92, nose=0.70, cowl=0.92, deck=0.98, tail=0.94,
@@ -207,7 +249,12 @@ CARS = {
         tumble=0.78, nose_round=0.18, tail_round=0.14, crown=0.05, tail_drop=0.14,
         paint=(0.32, 0.34, 0.38), grille="oval_mesh", headlight="round_quad",
         taillight="wedge", wheel="multi_spoke", bumpers="chrome_trim", exhaust=1, mirrors="chrome",
-        belt_chrome=True),
+        belt_chrome=True,
+        detail=True, frame_mat="chrome", pillars=[2.62], door_seams=[1.62, 2.62, 3.25], handles=[2.52, 3.15],
+        plate="34 HRC 08", reverse_lights=[(-0.35, 0.62), (0.35, 0.62)],
+        livery=dict(style="muscle", stripe_set=[(-0.16, 0.16, "white")], side_stripe=False, stripe="white",
+                    accent="white", number="05", number_s=2.12, number_z=0.56, sponsor="ROYAL OIL",
+                    sponsor_bg=(0.05, 0.3, 0.15), sponsor_s=2.95, sponsor_z=0.56, sponsor_w=0.5, banner="HARCOURT RACING")),
 }
 
 SHARED = {
@@ -1106,6 +1153,9 @@ def add_details(cid, m, c, M, front_y):
           4: [-(W / 2 - 0.3), -(W / 2 - 0.42), W / 2 - 0.42, W / 2 - 0.3]}.get(ex, [])
     for x in xs:
         m.cyl(0.032, 0.02, (x, rear_y - 0.035, rk + 0.04), M["black"], segs=8)
+    if c.get("shark_fin"):
+        sf = c["roof_rear"] - 0.15
+        m.box((0.06, 0.2, 0.06), (0, front_y - sf, top_z(c, sf, 0.0) + 0.02), M["black"], rx=-0.25)
     car_specific_details(cid, m, c, M, front_y)
 
 
@@ -1194,6 +1244,23 @@ def car_specific_details(cid, m, c, M, front_y):
                 m.box((0.012, 0.1, 0.05), (side * (side_x(c, 3.3, 1.0) + 0.006), front_y - 3.3, c["belt"] + 0.12), M["black"])
                 for a, b in gaps_between_arches(c, 0.4, c["L"] - 0.4):
                     m.box((0.03, b - a, 0.06), (side * (W / 2 + 0.006), front_y - (a + b) / 2, rk + 0.04), M["black"])
+    elif cid == "ashford":
+        # Side strakes behind the front wheels.
+        for side in (-1, 1):
+            for k in range(3):
+                m.box((0.012, 0.18, 0.025), (side * (side_x(c, 1.55, 0.6) + 0.006), front_y - 1.55, 0.52 + k * 0.05), M["black"])
+    elif cid == "bellmont":
+        # Bonnet mascot and a chrome line along the boot lid.
+        z = body_profile(c, 0.2)[3]
+        m.box((0.04, 0.12, 0.07), (0, front_y - 0.2, z + 0.035), M["chrome"])
+        tz = body_profile(c, L - 0.03)[3] - 0.1
+        m.box((W * 0.6, 0.03, 0.018), (0, rear_y - 0.012, tz), M["chrome"])
+    elif cid == "harcourt":
+        # Bonnet ornament and a chrome boot strip.
+        z = body_profile(c, 0.22)[3]
+        m.box((0.035, 0.16, 0.04), (0, front_y - 0.22, z + 0.02), M["chrome"])
+        tz = body_profile(c, L - 0.03)[3] - 0.12
+        m.box((W * 0.55, 0.03, 0.018), (0, rear_y - 0.012, tz), M["chrome"])
     elif cid == "bastion":
         # Raised front wings either side of a lower bonnet (the classic shape),
         # with the indicator lamps sitting on top of them.
@@ -1427,18 +1494,23 @@ def build_livery(cid, c, M, front_y, coll):
     if style == "muscle":
         # Twin stripes over bonnet, roof and boot with a thin gap.
         zones = tuple(lv.get("stripe_zones", ("hood", "roof", "deck")))
-        for x0, x1 in lv.get("stripes", ((-0.34, -0.1), (0.1, 0.34))):
-            top_stripe(m, c, front_y, x0, x1, col[lv["stripe"]], zones=zones)
+        if lv.get("stripe_set"):
+            for x0, x1, ck in lv["stripe_set"]:
+                top_stripe(m, c, front_y, x0, x1, col[ck], zones=zones)
+        else:
+            for x0, x1 in lv.get("stripes", ((-0.34, -0.1), (0.1, 0.34))):
+                top_stripe(m, c, front_y, x0, x1, col[lv["stripe"]], zones=zones)
         if lv.get("side_stripe", True):
             for side in (-1, 1):
                 for a, b in gaps_between_arches(c, 0.6, L - 0.45):
                     side_panel(m, c, front_y, side, a, b, rk + 0.12, rk + 0.2, col[lv["accent"]])
     elif style == "rally":
-        top_stripe(m, c, front_y, -0.2, 0.2, col[lv["stripe"]], zones=("hood", "deck"))
+        top_stripe(m, c, front_y, -0.2, 0.2, col[lv["stripe"]], zones=tuple(lv.get("stripe_zones", ("hood", "deck"))))
+        z0 = lv.get("side_z", rk + 0.07)
         for side in (-1, 1):
             for a, b in gaps_between_arches(c, 0.3, L - 0.3):
-                side_panel(m, c, front_y, side, a, b, rk + 0.07, rk + 0.15, col[lv["stripe"]])
-                side_panel(m, c, front_y, side, a, b, rk + 0.17, rk + 0.21, col[lv["accent"]])
+                side_panel(m, c, front_y, side, a, b, z0, z0 + 0.08, col[lv["stripe"]])
+                side_panel(m, c, front_y, side, a, b, z0 + 0.1, z0 + 0.14, col[lv["accent"]])
     elif style == "raid":
         top_stripe(m, c, front_y, -0.45, 0.45, col[lv["accent"]], zones=("hood",))
         for side in (-1, 1):
@@ -1465,7 +1537,7 @@ def build_livery(cid, c, M, front_y, coll):
 LIVERY_COLORS = {
     "white": (0.95, 0.95, 0.93), "red": (0.82, 0.06, 0.07), "orange": (1.0, 0.42, 0.03),
     "yellow": (1.0, 0.78, 0.08), "blue": (0.05, 0.22, 0.75), "black": (0.03, 0.03, 0.035),
-    "green": (0.0, 0.5, 0.22),
+    "green": (0.0, 0.5, 0.22), "lightblue": (0.3, 0.65, 0.95),
     "teal": (0.0, 0.55, 0.55),
 }
 

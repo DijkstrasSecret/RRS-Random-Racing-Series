@@ -18,6 +18,8 @@ func _run() -> void:
 	var cars := PackedStringArray(["braxton", "atmaca", "bastion"])
 	var prefix := "shot"
 	var time_of_day := 1
+	var chase_shot := true
+	var far := false  # framed for a square crop (whole car in the middle)
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--cars="):
 			cars = arg.get_slice("=", 1).split(",")
@@ -25,6 +27,10 @@ func _run() -> void:
 			prefix = arg.get_slice("=", 1)
 		elif arg.begins_with("--time="):
 			time_of_day = int(arg.get_slice("=", 1))
+		elif arg == "--far":
+			far = true
+		elif arg == "--no-chase":
+			chase_shot = false
 		elif arg.begins_with("--livery="):
 			GameSettings.p1_livery = arg.get_slice("=", 1) == "1"
 	GameSettings.track = "greenhill"
@@ -52,8 +58,10 @@ func _run() -> void:
 		cam.fov = 40.0
 		scene.add_child(cam)
 		for shot: Array in [["front", Vector3(3.3, 1.05, -4.8)], ["rear", Vector3(-3.1, 1.35, 5.2)]]:
-			cam.global_position = car.to_global(shot[1])
-			cam.look_at(car.to_global(Vector3(0, 0.62, 0)), Vector3.UP)
+			var offset: Vector3 = shot[1] * (1.45 if far else 1.0)
+			cam.global_position = car.to_global(offset)
+			var aim := Vector3(0, 0.62, -0.45 if shot[0] == "front" else 0.45) if far else Vector3(0, 0.62, 0)
+			cam.look_at(car.to_global(aim), Vector3.UP)
 			cam.make_current()
 			await _wait(0.4)
 			await _save("%s_game_%s_%s" % [prefix, id, shot[0]])
@@ -62,8 +70,9 @@ func _run() -> void:
 		if hud:
 			hud.visible = true
 		car.controls_locked = false
-		await _wait(7.0)
-		await _save("%s_game_%s_chase" % [prefix, id])
+		if chase_shot:
+			await _wait(7.0)
+			await _save("%s_game_%s_chase" % [prefix, id])
 		scene.queue_free()
 		current_scene = null
 		await process_frame
