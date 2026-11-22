@@ -10,7 +10,7 @@ extends RefCounted
 
 const TRACKS: Array[Dictionary] = [
 	{
-		"id": "greenhill", "name": "GREENHILL RING", "seed": 11, "theme": "hills", "hills": 12.0,
+		"id": "greenhill", "name": "GREENHILL RING", "seed": 11, "theme": "hills", "hills": 20.0,
 		"tagline": "Fast and flowing. A long main straight into a tight hairpin.",
 		"points": [
 			Vector2(0, 250), Vector2(0, -330), Vector2(20, -405), Vector2(75, -425),
@@ -22,7 +22,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12, "theme": "hills", "hills": 12.0,
+		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12, "theme": "hills", "hills": 20.0,
 		"tagline": "The Ring run backwards. New braking points everywhere.",
 		"points": [
 			Vector2(0, 0), Vector2(0, 250), Vector2(0, 315), Vector2(10, 360),
@@ -34,7 +34,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "kestrel", "name": "KESTREL PARK", "seed": 23, "theme": "mountains", "hills": 18.0,
+		"id": "kestrel", "name": "KESTREL PARK", "seed": 23, "theme": "mountains", "hills": 30.0,
 		"tagline": "Short and twisty. Hairpins, esses and very little rest.",
 		"points": [
 			Vector2(0, 0), Vector2(0, -260), Vector2(25, -320), Vector2(85, -335),
@@ -46,7 +46,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true, "hills": 3.0,
+		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true, "hills": 5.0,
 		"tagline": "Temple of speed. Huge straights, tight chicanes, late braking.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -63,9 +63,10 @@ const TRACKS: Array[Dictionary] = [
 	},
 	{
 		"id": "spa", "name": "SPA-FRANCORCHAMPS", "seed": 37, "theme": "mountains", "real": true,
-		# Real rise and fall (Stavelot = 0, Les Combes ~100 m), halved like the layout.
-		"height_scale": 0.5, "profile": [
-			[0.0, 55.0], [0.03, 57.0], [0.065, 44.0], [0.1, 22.0], [0.14, 52.0], [0.2, 72.0],
+		# Real rise and fall (Stavelot = 0, Les Combes ~100 m), exaggerated a
+		# little: the layout is halved but the hills only lose a fifth.
+		"height_scale": 0.8, "profile": [
+			[0.0, 55.0], [0.03, 57.0], [0.065, 44.0], [0.1, 22.0], [0.125, 38.0], [0.15, 52.0], [0.2, 68.0],
 			[0.29, 100.0], [0.33, 90.0], [0.4, 72.0], [0.5, 50.0], [0.58, 30.0], [0.64, 2.0],
 			[0.7, 6.0], [0.8, 25.0], [0.88, 40.0], [0.94, 50.0],
 		],
@@ -88,7 +89,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "real": true, "hills": 4.0,
+		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "real": true, "hills": 6.0,
 		"tagline": "Old airfield. Fast sweepers through Maggotts, Becketts and Chapel.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -111,7 +112,7 @@ const TRACKS: Array[Dictionary] = [
 	{
 		"id": "istanbul", "name": "ISTANBUL PARK", "seed": 47, "theme": "hills", "real": true,
 		# Downhill plunge into Turn 1, Turn 8 on the side of the hill.
-		"height_scale": 0.65, "profile": [
+		"height_scale": 1.0, "profile": [
 			[0.0, 20.0], [0.06, 10.0], [0.1, 4.0], [0.16, 10.0], [0.22, 16.0], [0.3, 14.0],
 			[0.36, 18.0], [0.42, 22.0], [0.52, 18.0], [0.58, 14.0], [0.62, 12.0], [0.72, 18.0],
 			[0.82, 22.0], [0.92, 24.0],
@@ -183,29 +184,53 @@ static func make_curve(points: PackedVector2Array, heights: PackedFloat32Array =
 	return curve
 
 
-## Height (m) of every control point of track `id`.
-static func heights_of(id: String) -> PackedFloat32Array:
+## The road's centre line for track `id`, with its hills. With elevation it
+## is rebuilt from evenly spaced points (every ~6 m) so the slopes are smooth.
+static func track_curve(id: String) -> Curve3D:
 	var t := get_track(id)
-	var pts := points_of(id)
-	var out := PackedFloat32Array()
-	out.resize(pts.size())
-	out.fill(0.0)
-	if t.has("profile"):
-		var flat := make_curve(pts)
-		var total := flat.get_baked_length()
-		var scale: float = t.get("height_scale", 1.0)
-		for i in pts.size():
-			var f := 0.0 if i == 0 else flat.get_closest_offset(Vector3(pts[i].x, 0.0, pts[i].y)) / total
-			out[i] = profile_height(t.profile, f) * scale
-	elif t.has("hills"):
-		for i in pts.size():
-			out[i] = rolling_height(pts[i].x, pts[i].y, t.hills)
+	var flat := make_curve(points_of(id))
+	if not (t.has("profile") or t.has("hills")):
+		return flat
+	var total := flat.get_baked_length()
+	var n := int(total / 6.0)
+	var pts := PackedVector2Array()
+	var hs := PackedFloat32Array()
+	var scale: float = t.get("height_scale", 1.0)
+	for k in n:
+		var p := flat.sample_baked(total * k / n, true)
+		pts.append(Vector2(p.x, p.z))
+		if t.has("profile"):
+			hs.append(profile_height(t.profile, float(k) / n) * scale)
+		else:
+			hs.append(rolling_height(p.x, p.z, t.hills))
+	hs = _blend_nearby(pts, hs, 30.0)
 	# Lowest point at 0 so the land never dips below the base.
 	var low := 1e9
-	for h in out:
+	for h in hs:
 		low = minf(low, h)
-	for i in out.size():
-		out[i] -= low
+	for i in hs.size():
+		hs[i] -= low
+	return make_curve(pts, hs)
+
+
+## Averages each point's height with every road point within `radius` on the
+## map, so where two stretches run side by side (a tight chicane, a hairpin)
+## their road surfaces meet at the same height instead of leaving a lip.
+static func _blend_nearby(pts: PackedVector2Array, hs: PackedFloat32Array, radius: float) -> PackedFloat32Array:
+	var out := PackedFloat32Array()
+	out.resize(hs.size())
+	var r2 := radius * radius
+	for i in pts.size():
+		var sum := 0.0
+		var wsum := 0.0
+		for j in pts.size():
+			var d2 := pts[i].distance_squared_to(pts[j])
+			if d2 < r2:
+				var w := 1.0 - sqrt(d2) / radius
+				w *= w
+				sum += hs[j] * w
+				wsum += w
+		out[i] = sum / wsum
 	return out
 
 

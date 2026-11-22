@@ -157,8 +157,11 @@ func _heightfield(circuit: Circuit) -> void:
 
 ## The 16 m grid can bulge above the road in a dip: wherever the ground
 ## would come up through the road or curbs, lower just those grid points.
+## A little further out (where cars cut corners) the grass may not be higher
+## than the road beside it either.
 func _clear_road(circuit: Circuit) -> void:
-	var reach := circuit.road_width * 0.5 + circuit.curb_width + 1.0
+	var road := circuit.road_width * 0.5 + circuit.curb_width + 1.0
+	var reach := 14.0
 	for pass_i in 3:
 		var changed := false
 		for smp: Dictionary in circuit._samples:
@@ -167,7 +170,9 @@ func _clear_road(circuit: Circuit) -> void:
 			var lat := -reach
 			while lat <= reach + 0.01:
 				var q := c + right * lat
-				var limit := c.y + Circuit.ROAD_Y - 0.08
+				var lq := circuit.to_local(q)
+				var surf := circuit.surface_y(lq.x, lq.z, smp.pos.y)
+				var limit := surf + circuit.global_position.y + Circuit.ROAD_Y - (0.08 if absf(lat) <= road else 0.0)
 				var over := height_at(q.x, q.z) - limit
 				if over > 0.0:
 					var ix := clampi(int((q.x - _origin.x) / CELL), 0, _w - 2)

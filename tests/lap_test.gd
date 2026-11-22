@@ -11,6 +11,7 @@ var _circuit: Circuit
 var _ai: AIDriver
 var _t := 0.0
 var _off_track_time := 0.0
+var _off_spots: PackedStringArray = []
 var _max_centre := 0.0
 var _top_speed := 0.0
 var _laps_wanted := 2
@@ -62,6 +63,8 @@ func _physics_process(delta: float) -> void:
 	_top_speed = maxf(_top_speed, kmh)
 	_min_up = minf(_min_up, _car.global_basis.y.y)
 	if _car.off_track:
+		if _off_track_time == 0.0 or fmod(_off_track_time, 1.0) < delta:
+			_off_spots.append("%.0f%% of the lap" % (_circuit.progress_at(_car.global_position) / _circuit.length * 100.0))
 		_off_track_time += delta
 	if _t > 2.0:
 		_max_centre = maxf(_max_centre, _circuit.distance_from_centre(_car.global_position))
@@ -79,10 +82,12 @@ func _physics_process(delta: float) -> void:
 		if OS.get_cmdline_user_args().has("--contacts"):
 			print("      touching: %s  y %.2f  rpm %.0f thr_out %.2f clutch %s shift %.2f omega %s loads %s" % [str(_car.get_colliding_bodies().map(func(b): return b.name)),
 				_car.global_position.y, _car.drivetrain.rpm, _car.throttle_out, str(_car.drivetrain.clutch_slipping), _car.drivetrain.shift_timer, str(_car.wheels.map(func(w): return "%.1f/%.2f/%.2f/%d/%d" % [w.omega, w.v_long, w.slip_ratio, roundi(w.force_long), roundi(w.drive_torque)])), str(_car.wheels.map(func(w): return roundi(w.tire_load)))])
-	if _laps.size() >= _laps_wanted or _t > 150.0 * _laps_wanted:
+	# ~1 minute per kilometre per lap, at least 150 s (+ the run to the line).
+	var per_lap := maxf(150.0, _circuit.length / 1000.0 * 60.0) if _circuit else 150.0
+	if _laps.size() >= _laps_wanted or _t > 10.0 + per_lap * _laps_wanted:
 		print("  laps completed        %d / %d" % [_laps.size(), _laps_wanted])
 		print("  top speed             %.0f km/h" % _top_speed)
-		print("  time off track        %.1f s" % _off_track_time)
+		print("  time off track        %.1f s%s" % [_off_track_time, "" if _off_spots.is_empty() else "  (" + ", ".join(_off_spots) + ")"])
 		print("  max distance from line %.1f m (road half-width %.1f)" % [_max_centre, _circuit.road_width * 0.5])
 		print("  stayed upright        %s (min up %.2f)" % [str(_min_up > 0.5), _min_up])
 		print("  AI resets             %d" % _ai.resets)

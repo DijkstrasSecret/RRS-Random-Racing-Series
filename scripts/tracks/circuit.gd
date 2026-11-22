@@ -11,6 +11,8 @@ extends Node3D
 
 const LAYER_WORLD := 1
 const ROAD_Y := 0.03
+## Radius (m) of the road-surface blend (and its lookup grid cell).
+const SURFACE_CELL := 9.0
 
 @export var track_name: String = "Greenhill Ring"
 ## Control points (x, z) in metres. The road runs through them in order and
@@ -50,6 +52,8 @@ var terrain: TrackTerrain
 var _samples: Array[Dictionary] = []
 var _materials: Dictionary = {}
 var _bounds := Rect2()
+var _surface_grid: Dictionary = {}  ## Vector2i cell -> sample indices
+var _track_id := ""  ## set when built from the track list (use_selected_track)
 
 
 func _ready() -> void:
@@ -58,12 +62,13 @@ func _ready() -> void:
 		GameSettings.ensure_loaded()
 		var track := TrackList.get_track(GameSettings.track)
 		points = PackedVector2Array(track.points)
-		heights = TrackList.heights_of(GameSettings.track)
+		_track_id = GameSettings.track
 		track_name = String(track.name).capitalize()
 		random_seed = int(track.seed)
 		theme = String(track.get("theme", "hills"))
 	_build_curve()
 	_sample_curve()
+	_build_surface_grid()
 	_build_environment()
 	_build_ground()
 	_build_road()
@@ -134,12 +139,19 @@ func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: fl
 		for j in range(-3, 4):
 			k = maxf(k, absf(_samples[(i + j + n) % n].curv))
 		v[i] = minf(sqrt(lateral_accel / maxf(k, 0.0001)), top_speed)
+		# Ease off over sharp crests so the car doesn't go light and slide.
+		var crest: float = _samples[i].crest
+		if crest > 0.0:
+			v[i] = minf(v[i], sqrt(9.81 * 0.9 / crest))
 	var step := length / n
 	# Two laps backwards so braking zones wrap past the start line.
 	for pass_i in 2:
 		for idx in range(n - 1, -1, -1):
 			var next := v[(idx + 1) % n]
-			v[idx] = minf(v[idx], sqrt(next * next + 2.0 * brake_accel * step))
+			# Downhill the brakes have gravity against them (uphill they get help).
+			var grade: float = (_samples[(idx + 1) % n].pos.y - _samples[idx].pos.y) / step
+			var decel := maxf(brake_accel + 9.81 * grade, brake_accel * 0.4)
+			v[idx] = minf(v[idx], sqrt(next * next + 2.0 * decel * step))
 	return v
 
 
@@ -165,7 +177,7 @@ func distance_from_centre(world_pos: Vector3) -> float:
 # --- Shape -------------------------------------------------------------------
 
 func _build_curve() -> void:
-	curve = TrackList.make_curve(points, heights)
+	curve = TrackList.track_curve(_track_id) if _track_id != "" else TrackList.make_curve(points, heights)
 	length = curve.get_baked_length()
 
 
@@ -181,12 +193,17 @@ func _sample_curve() -> void:
 		var t2 := ((_at(off + 8.0) - pos) * flat).normalized()
 		# + = turning left, in radians per metre.
 		var curvature := t1.signed_angle_to(t2, Vector3.UP) / 16.0
+		# Over a crest the slope gets less steep: + = crest (1/radius).
+		var g0 := (pos.y - _at(off - 8.0).y) / 8.0
+		var g1 := (_at(off + 8.0).y - pos.y) / 8.0
+		var crest := (g0 - g1) / 8.0
 		_samples.append({
 			"pos": pos,
 			"right": tangent.cross(Vector3.UP).normalized(),
 			"tangent": tangent,
 			"off": off,
 			"curv": curvature,
+			"crest": crest,
 		})
 		outline.append(Vector2(pos.x, pos.z))
 		_bounds = Rect2(pos.x, pos.z, 0, 0) if k == 0 else _bounds.expand(Vector2(pos.x, pos.z))
@@ -260,6 +277,42 @@ func ground_height(x: float, z: float) -> float:
 
 # --- Road & curbs ------------------------------------------------------------
 
+## Height of the road surface at a map position: a blend of the centre line
+## within 9 m. Along a single stretch that is just its own height; where two
+## stretches overlap both get the same blend.
+func surface_y(x: float, z: float, fallback: float = 0.0) -> float:
+	var cx := int(floor(x / SURFACE_CELL))
+	var cz := int(floor(z / SURFACE_CELL))
+	var sum := 0.0
+	var wsum := 0.0
+	for dz in range(-1, 2):
+		for dx in range(-1, 2):
+			for k: int in _surface_grid.get(Vector2i(cx + dx, cz + dz), []):
+				var p: Vector3 = _samples[k].pos
+				var d := Vector2(p.x - x, p.z - z).length()
+				if d < SURFACE_CELL:
+					var w := 1.0 - d / SURFACE_CELL
+					w *= w
+					sum += p.y * w
+					wsum += w
+	return sum / wsum if wsum > 0.0 else fallback
+
+
+## `p` (circuit space) moved onto the road surface.
+func _on_surface(p: Vector3) -> Vector3:
+	return Vector3(p.x, surface_y(p.x, p.z, p.y) + ROAD_Y, p.z)
+
+
+func _build_surface_grid() -> void:
+	_surface_grid.clear()
+	for k in _samples.size():
+		var p: Vector3 = _samples[k].pos
+		var key := Vector2i(int(floor(p.x / SURFACE_CELL)), int(floor(p.z / SURFACE_CELL)))
+		if not _surface_grid.has(key):
+			_surface_grid[key] = []
+		_surface_grid[key].append(k)
+
+
 func _build_road() -> void:
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
@@ -272,11 +325,16 @@ func _build_road() -> void:
 		var b_off: float = a_off + sample_step if k == n - 1 else b.off
 		var va := a_off / road_width
 		var vb := b_off / road_width
-		var al: Vector3 = a.pos - a.right * half + Vector3.UP * ROAD_Y
-		var ar: Vector3 = a.pos + a.right * half + Vector3.UP * ROAD_Y
-		var bl: Vector3 = b.pos - b.right * half + Vector3.UP * ROAD_Y
-		var br: Vector3 = b.pos + b.right * half + Vector3.UP * ROAD_Y
-		_quad(st, al, ar, br, bl, Vector2(0, va), Vector2(1, va), Vector2(1, vb), Vector2(0, vb))
+		# Three strips across, each corner on the shared road surface (so
+		# stretches that overlap in a tight chicane meet without a lip).
+		for strip in 3:
+			var u0 := strip / 3.0
+			var u1 := (strip + 1) / 3.0
+			var al := _on_surface(a.pos + a.right * half * (u0 * 2.0 - 1.0))
+			var ar := _on_surface(a.pos + a.right * half * (u1 * 2.0 - 1.0))
+			var bl := _on_surface(b.pos + b.right * half * (u0 * 2.0 - 1.0))
+			var br := _on_surface(b.pos + b.right * half * (u1 * 2.0 - 1.0))
+			_quad(st, al, ar, br, bl, Vector2(u0, va), Vector2(u1, va), Vector2(u1, vb), Vector2(u0, vb))
 	var mesh := st.commit()
 	var mat := StandardMaterial3D.new()
 	mat.albedo_texture = _road_texture()
@@ -303,10 +361,10 @@ func _build_curbs() -> void:
 		var color := red if int(a.off / 4.0) % 2 == 0 else white
 		st.set_color(color)
 		for side: float in [-1.0, 1.0]:
-			var a_in: Vector3 = a.pos + a.right * side * half + Vector3.UP * ROAD_Y
-			var b_in: Vector3 = b.pos + b.right * side * half + Vector3.UP * ROAD_Y
-			var a_out: Vector3 = a.pos + a.right * side * (half + curb_width) + Vector3.UP * (ROAD_Y + 0.04)
-			var b_out: Vector3 = b.pos + b.right * side * (half + curb_width) + Vector3.UP * (ROAD_Y + 0.04)
+			var a_in := _on_surface(a.pos + a.right * side * half)
+			var b_in := _on_surface(b.pos + b.right * side * half)
+			var a_out := _on_surface(a.pos + a.right * side * (half + curb_width)) + Vector3.UP * 0.04
+			var b_out := _on_surface(b.pos + b.right * side * (half + curb_width)) + Vector3.UP * 0.04
 			# Lift the inner edge a hair so the curb draws over the road edge.
 			a_in.y += 0.005
 			b_in.y += 0.005
