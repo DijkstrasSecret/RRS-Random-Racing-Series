@@ -248,7 +248,7 @@ func _physics_process(delta: float) -> void:
 	airborne = grounded_count == 0
 	var slow_wheels := 0
 	for w in wheels:
-		if w.grounded and w.surface_grip < 0.85:
+		if w.grounded and not w.on_road:
 			slow_wheels += 1
 	off_track = slow_wheels >= 2
 	_apply_anti_roll(front_wheels, config.front_anti_roll)

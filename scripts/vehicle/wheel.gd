@@ -56,6 +56,8 @@ var mu_load: float = 0.0  ## Max friction force available right now.
 var surface_grip: float = 1.0
 ## Extra rolling drag of the surface (collider meta "surface_drag").
 var surface_drag: float = 0.0
+## True when the tyre is on the track itself (road of any surface or curbs).
+var on_road: bool = true
 
 var _prev_spring_length: float = 0.30
 var _fwd: Vector3 = Vector3.FORWARD
@@ -117,6 +119,14 @@ func update_suspension(dt: float) -> void:
 		var collider := get_collider()
 		surface_grip = collider.get_meta(&"surface_grip", 1.0) if collider else 1.0
 		surface_drag = collider.get_meta(&"surface_drag", 0.0) if collider else 0.0
+		# Track bodies say so; anything without surface info (test track,
+		# free-roam ground) counts as road, loose ground (grip < 0.85) doesn't.
+		if collider == null:
+			on_road = false
+		elif collider.has_meta(&"road"):
+			on_road = true
+		else:
+			on_road = surface_grip >= 0.85
 		spring_length = clampf(global_position.distance_to(contact_point) - radius, 0.0, rest_length)
 	else:
 		spring_length = rest_length

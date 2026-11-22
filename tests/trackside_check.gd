@@ -58,8 +58,8 @@ func _check_track(c: Circuit) -> void:
 			if absf(y - want) > 0.08:
 				lips.append("%s %+.0fm %+.2f" % [at, lat, y - want])
 			lat += 1.5
-		# Just off the road, both sides.
-		for side: float in [-1.0, 1.0]:
+		# Just off the road, both sides (over the water on a causeway: nothing there).
+		for side: float in ([] if smp.bridge else [-1.0, 1.0]):
 			var edge := pos + right * side * half
 			var road_y := c.surface_y(edge.x, edge.z, smp.pos.y) + Circuit.ROAD_Y
 			for out: float in [0.8, 3.0]:
@@ -79,6 +79,9 @@ func _check_track(c: Circuit) -> void:
 		var xf := shape_node.global_transform
 		var size := (shape_node.shape as BoxShape3D).size
 		var at := "%.0f%%" % (c.progress_at(xf.origin) / c.length * 100.0)
+		var near := c.nearest_sample(c.to_local(xf.origin).x, c.to_local(xf.origin).z)
+		if near >= 0 and c._samples[near].bridge:
+			continue  # causeway railings stand on the deck edge
 		if c.distance_from_centre(xf.origin) < half + 0.3:
 			on_road.append(at)
 		for end: float in [-0.45, 0.0, 0.45]:

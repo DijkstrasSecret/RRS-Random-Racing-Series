@@ -161,10 +161,13 @@ class TrackCard extends Control:
 		draw_line(a - side * 14.0, a + side * 14.0, MenuStyle.ACCENT, 5.0)
 		draw_colored_polygon(PackedVector2Array([b + dir * 22.0, b + side * 9.0, b - side * 9.0]), MenuStyle.ACCENT)
 		var y := 420.0
-		if t.get("real", false):
+		if t.get("series", "") != "":
 			var tag := Rect2(Vector2(size.x - 150, 20), Vector2(130, 34))
-			draw_rect(tag, Color(0.85, 0.1, 0.1, 0.9))
-			draw_string(font, tag.position + Vector2(0, 25), "F1 CIRCUIT", HORIZONTAL_ALIGNMENT_CENTER, tag.size.x, 18, MenuStyle.TEXT)
+			var series := String(t.series)
+			var tag_text := {"F1": "F1 CIRCUIT", "RX": "RALLYCROSS", "ISLAND": "ISLAND"}.get(series, series)
+			var tag_col: Color = {"F1": Color(0.85, 0.1, 0.1, 0.9), "RX": Color(0.85, 0.5, 0.1, 0.9), "ISLAND": Color(0.1, 0.6, 0.65, 0.9)}.get(series, Color(0.3, 0.3, 0.35, 0.9))
+			draw_rect(tag, tag_col)
+			draw_string(font, tag.position + Vector2(0, 25), tag_text, HORIZONTAL_ALIGNMENT_CENTER, tag.size.x, 18, MenuStyle.TEXT)
 		draw_string_outline(font, Vector2(30, y), t.name, HORIZONTAL_ALIGNMENT_LEFT, size.x - 60, 34, 6, Color(0, 0, 0, 0.8))
 		draw_string(font, Vector2(30, y), t.name, HORIZONTAL_ALIGNMENT_LEFT, size.x - 60, 34,
 				MenuStyle.ACCENT if selected else MenuStyle.TEXT)

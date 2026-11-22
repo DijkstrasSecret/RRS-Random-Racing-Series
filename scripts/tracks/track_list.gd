@@ -4,6 +4,9 @@ extends RefCounted
 ## `use_selected_track` builds the one in GameSettings.track.
 ## Each layout ends with a straight run into the start/finish line (the grid,
 ## grandstands and pits sit there).
+## "series": F1 / RX (rallycross) / ISLAND, shown on the track card.
+## "surfaces" = [from, to, "gravel" | "sand" | "wood"] lap fractions (rest is tarmac).
+## "bridge" = [from, to] lap fractions built over water (island causeway).
 ## "stands" = lap fractions of the famous corners with grandstands;
 ## "runoff" = "gravel" (old-school traps) or "asphalt" (modern painted run-off).
 ## "sectors" = lap fractions where the real F1 sector 1 and 2 lines are.
@@ -13,7 +16,7 @@ extends RefCounted
 
 const TRACKS: Array[Dictionary] = [
 	{
-		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true, "hills": 5.0,
+		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "series": "F1", "hills": 5.0,
 		"sectors": [0.34, 0.69],  # after the Roggia chicane / after Ascari
 		# Grandstands: Rettifilo, Roggia, Lesmo, Ascari, Parabolica. Gravel run-off.
 		"stands": [0.11, 0.31, 0.42, 0.62, 0.88], "runoff": "gravel",
@@ -32,7 +35,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "spa", "name": "SPA-FRANCORCHAMPS", "seed": 37, "theme": "mountains", "real": true,
+		"id": "spa", "name": "SPA-FRANCORCHAMPS", "seed": 37, "theme": "mountains", "series": "F1",
 		"sectors": [0.31, 0.72],  # before Les Combes / after Stavelot
 		# La Source, Eau Rouge, Les Combes, Pouhon, Stavelot, Bus Stop.
 		"stands": [0.03, 0.1, 0.32, 0.5, 0.64, 0.95], "runoff": "gravel",
@@ -62,7 +65,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "real": true, "hills": 6.0,
+		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "series": "F1", "hills": 6.0,
 		"sectors": [0.31, 0.70],  # after Aintree / after Chapel
 		# Abbey, Maggotts-Becketts, Stowe, Vale-Club, Brooklands-Luffield. Painted asphalt run-off.
 		"stands": [0.06, 0.2, 0.46, 0.7, 0.88], "runoff": "asphalt",
@@ -86,7 +89,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "istanbul", "name": "ISTANBUL PARK", "seed": 47, "theme": "hills", "real": true,
+		"id": "istanbul", "name": "ISTANBUL PARK", "seed": 47, "theme": "hills", "series": "F1",
 		"sectors": [0.30, 0.67],  # after Turn 6 / after Turn 11
 		# Turn 1, Turns 3-4, Turn 8, Turn 9, Turns 12-14.
 		"stands": [0.05, 0.21, 0.42, 0.62, 0.9], "runoff": "asphalt",
@@ -111,6 +114,101 @@ const TRACKS: Array[Dictionary] = [
 			Vector2(-614, -312), Vector2(-604, -311), Vector2(-568, -322), Vector2(-551, -318), Vector2(-282, -160), Vector2(-270, -145),
 			Vector2(-257, -123), Vector2(-135, 304), Vector2(-129, 313), Vector2(-119, 317), Vector2(-110, 317), Vector2(-98, 311),
 			Vector2(-93, 303), Vector2(-89, 278), Vector2(-79, 269), Vector2(-25, 289), Vector2(-9, 285),
+		],
+	},
+	{
+		"id": "holjes", "name": "HÖLJES", "seed": 53, "theme": "mountains", "series": "RX", "hills": 14.0,
+		"runoff": "gravel", "surfaces": [[0.1385, 0.5326, "gravel"], [0.6406, 0.8712, "gravel"]],
+		"tagline": "Sweden's rallycross temple. Pine forest, loose gravel and a flying jump.",
+		# Rallycross circuit, layout follows the real track's character.
+		"points": [
+			Vector2(0, 0), Vector2(0, -22), Vector2(0, -44), Vector2(0, -66), Vector2(4, -88), Vector2(22, -100),
+			Vector2(43, -96), Vector2(57, -79), Vector2(68, -60), Vector2(79, -41), Vector2(90, -22), Vector2(101, -3),
+			Vector2(118, 11), Vector2(139, 18), Vector2(162, 16), Vector2(184, 12), Vector2(206, 12), Vector2(227, 19),
+			Vector2(245, 32), Vector2(258, 50), Vector2(264, 70), Vector2(267, 93), Vector2(268, 115), Vector2(270, 137),
+			Vector2(272, 159), Vector2(274, 181), Vector2(273, 203), Vector2(257, 217), Vector2(235, 215), Vector2(216, 205),
+			Vector2(196, 196), Vector2(175, 188), Vector2(153, 189), Vector2(135, 202), Vector2(123, 221), Vector2(103, 229),
+			Vector2(82, 225), Vector2(65, 211), Vector2(48, 197), Vector2(31, 182), Vector2(14, 168), Vector2(3, 149),
+			Vector2(0, 128), Vector2(0, 106), Vector2(0, 84), Vector2(0, 62), Vector2(0, 40), Vector2(0, 18),
+		],
+	},
+	{
+		"id": "lydden", "name": "LYDDEN HILL", "seed": 59, "theme": "hills", "series": "RX", "hills": 12.0,
+		"runoff": "gravel", "surfaces": [[0.1660, 0.5939, "gravel"]],
+		"tagline": "Where rallycross was born. Devil's Elbow, then up the gravel to North Bend.",
+		# Rallycross circuit, layout follows the real track's character.
+		"points": [
+			Vector2(0, 0), Vector2(0, -22), Vector2(0, -44), Vector2(0, -66), Vector2(7, -86), Vector2(28, -93),
+			Vector2(45, -80), Vector2(56, -61), Vector2(67, -42), Vector2(78, -23), Vector2(89, -4), Vector2(100, 15),
+			Vector2(115, 32), Vector2(135, 42), Vector2(157, 44), Vector2(179, 44), Vector2(201, 44), Vector2(223, 44),
+			Vector2(245, 47), Vector2(265, 56), Vector2(283, 69), Vector2(298, 86), Vector2(307, 106), Vector2(312, 128),
+			Vector2(316, 149), Vector2(320, 171), Vector2(323, 193), Vector2(327, 215), Vector2(331, 236), Vector2(335, 258),
+			Vector2(339, 280), Vector2(343, 302), Vector2(346, 323), Vector2(350, 345), Vector2(354, 367), Vector2(358, 388),
+			Vector2(362, 410), Vector2(359, 431), Vector2(341, 443), Vector2(320, 438), Vector2(306, 421), Vector2(292, 404),
+			Vector2(277, 388), Vector2(263, 371), Vector2(249, 354), Vector2(235, 337), Vector2(221, 320), Vector2(206, 303),
+			Vector2(192, 286), Vector2(178, 269), Vector2(164, 252), Vector2(150, 235), Vector2(136, 218), Vector2(121, 202),
+			Vector2(107, 185), Vector2(86, 176), Vector2(64, 179), Vector2(42, 180), Vector2(22, 172), Vector2(7, 156),
+			Vector2(0, 134), Vector2(0, 112), Vector2(0, 90), Vector2(0, 68), Vector2(0, 46), Vector2(0, 24),
+			Vector2(0, 2),
+		],
+	},
+	{
+		"id": "montalegre", "name": "MONTALEGRE", "seed": 61, "theme": "mountains", "series": "RX", "hills": 22.0,
+		"runoff": "gravel", "surfaces": [[0.1210, 0.6015, "gravel"], [0.6360, 0.9240, "gravel"]],
+		"tagline": "Portuguese hills. A big left-right, a long gravel sweeper and a tight hairpin.",
+		# Rallycross circuit, layout follows the real track's character.
+		"points": [
+			Vector2(0, 0), Vector2(0, -22), Vector2(0, -44), Vector2(0, -66), Vector2(6, -87), Vector2(23, -100),
+			Vector2(45, -98), Vector2(64, -87), Vector2(84, -76), Vector2(103, -65), Vector2(123, -57), Vector2(145, -61),
+			Vector2(161, -76), Vector2(170, -96), Vector2(179, -116), Vector2(189, -136), Vector2(198, -156), Vector2(207, -176),
+			Vector2(217, -195), Vector2(226, -215), Vector2(239, -233), Vector2(257, -245), Vector2(279, -249), Vector2(301, -245),
+			Vector2(320, -234), Vector2(333, -217), Vector2(340, -196), Vector2(346, -175), Vector2(351, -153), Vector2(357, -132),
+			Vector2(363, -111), Vector2(369, -90), Vector2(374, -68), Vector2(380, -47), Vector2(386, -26), Vector2(391, -5),
+			Vector2(397, 17), Vector2(403, 38), Vector2(408, 59), Vector2(414, 81), Vector2(420, 102), Vector2(426, 123),
+			Vector2(431, 144), Vector2(437, 166), Vector2(443, 187), Vector2(448, 208), Vector2(454, 229), Vector2(458, 251),
+			Vector2(447, 270), Vector2(426, 274), Vector2(406, 265), Vector2(386, 256), Vector2(366, 246), Vector2(346, 237),
+			Vector2(326, 228), Vector2(306, 218), Vector2(286, 209), Vector2(266, 200), Vector2(246, 190), Vector2(226, 181),
+			Vector2(206, 172), Vector2(186, 162), Vector2(166, 153), Vector2(146, 144), Vector2(124, 140), Vector2(103, 147),
+			Vector2(87, 163), Vector2(70, 176), Vector2(48, 180), Vector2(27, 175), Vector2(10, 161), Vector2(1, 141),
+			Vector2(0, 120), Vector2(0, 98), Vector2(0, 76), Vector2(0, 54), Vector2(0, 32), Vector2(0, 10),
+		],
+	},
+	{
+		"id": "hell", "name": "HELL", "seed": 67, "theme": "mountains", "series": "RX", "hills": 4.0,
+		"runoff": "gravel", "surfaces": [[0.3570, 0.6121, "gravel"]],
+		"tagline": "Fast and flat by the Norwegian fjord. Long straights, one gravel loop.",
+		# Rallycross circuit, layout follows the real track's character.
+		"points": [
+			Vector2(0, 0), Vector2(0, -22), Vector2(0, -44), Vector2(0, -66), Vector2(0, -88), Vector2(6, -110),
+			Vector2(22, -125), Vector2(44, -129), Vector2(66, -125), Vector2(87, -121), Vector2(109, -117), Vector2(131, -114),
+			Vector2(152, -110), Vector2(174, -106), Vector2(196, -102), Vector2(217, -95), Vector2(229, -77), Vector2(226, -55),
+			Vector2(220, -33), Vector2(214, -12), Vector2(209, 9), Vector2(203, 31), Vector2(197, 52), Vector2(192, 73),
+			Vector2(194, 95), Vector2(210, 110), Vector2(229, 121), Vector2(235, 142), Vector2(224, 161), Vector2(204, 169),
+			Vector2(182, 174), Vector2(161, 180), Vector2(140, 186), Vector2(118, 191), Vector2(97, 197), Vector2(76, 203),
+			Vector2(54, 207), Vector2(32, 202), Vector2(14, 189), Vector2(3, 170), Vector2(0, 148), Vector2(0, 126),
+			Vector2(0, 104), Vector2(0, 82), Vector2(0, 60), Vector2(0, 38), Vector2(0, 16),
+		],
+	},
+	{
+		"id": "coral", "name": "CORAL BAY", "seed": 71, "theme": "island", "series": "ISLAND", "hills": 6.0,
+		"runoff": "sand", "surfaces": [[0.0651, 0.4241, "sand"], [0.4241, 0.6303, "wood"], [0.6303, 0.8859, "sand"]],
+		"bridge": [0.4241, 0.6303],  # wooden causeway over the lagoon
+		"tagline": "Tropical island. Sandy roads, beach front, and a wooden causeway over the lagoon.",
+		# Fictional island circuit.
+		"points": [
+			Vector2(0, 0), Vector2(0, -22), Vector2(0, -44), Vector2(0, -66), Vector2(0, -88), Vector2(0, -110),
+			Vector2(6, -131), Vector2(23, -145), Vector2(44, -149), Vector2(67, -147), Vector2(89, -145), Vector2(111, -143),
+			Vector2(133, -141), Vector2(155, -139), Vector2(177, -137), Vector2(199, -135), Vector2(221, -136), Vector2(241, -145),
+			Vector2(257, -161), Vector2(269, -179), Vector2(282, -197), Vector2(295, -215), Vector2(308, -232), Vector2(329, -239),
+			Vector2(349, -229), Vector2(359, -210), Vector2(369, -190), Vector2(378, -170), Vector2(387, -150), Vector2(396, -130),
+			Vector2(406, -110), Vector2(411, -88), Vector2(411, -65), Vector2(405, -44), Vector2(400, -22), Vector2(394, -1),
+			Vector2(388, 20), Vector2(382, 42), Vector2(377, 63), Vector2(371, 84), Vector2(365, 105), Vector2(360, 127),
+			Vector2(354, 148), Vector2(348, 169), Vector2(343, 190), Vector2(337, 212), Vector2(331, 233), Vector2(325, 254),
+			Vector2(320, 276), Vector2(309, 295), Vector2(289, 304), Vector2(268, 300), Vector2(250, 287), Vector2(232, 275),
+			Vector2(213, 262), Vector2(192, 258), Vector2(173, 269), Vector2(165, 290), Vector2(156, 310), Vector2(137, 322),
+			Vector2(115, 322), Vector2(96, 311), Vector2(83, 293), Vector2(71, 275), Vector2(58, 257), Vector2(46, 239),
+			Vector2(33, 221), Vector2(20, 202), Vector2(8, 184), Vector2(1, 163), Vector2(0, 140), Vector2(0, 118),
+			Vector2(0, 96), Vector2(0, 74), Vector2(0, 52), Vector2(0, 30), Vector2(0, 8),
 		],
 	},
 ]

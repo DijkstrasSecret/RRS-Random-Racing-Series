@@ -49,11 +49,15 @@ func _ready() -> void:
 	_build_buildings()
 	_build_billboards()
 	_build_marshal_posts()
-	_build_farm()
+	if circuit.theme != "island":
+		_build_farm()
 	_build_paddock()
 	_build_car_park()
 	_build_camping()
-	_build_hamlets()
+	if circuit.theme == "island":
+		_build_beach()
+	else:
+		_build_hamlets()
 	_build_forest()
 	_flush_batches()
 	if circuit.atmosphere and circuit.atmosphere.time_of_day == TrackAtmosphere.DayTime.NIGHT:
@@ -186,6 +190,8 @@ func _plan_runoff() -> void:
 			for j in range(-10, 11):
 				total += widened[(i + j + n) % n]
 			smooth[i] = half + total / 21.0
+			if s[i].bridge:
+				smooth[i] = half + 0.15  # railings on the causeway's edge beams
 		_barrier_dist.append(smooth)
 		_outside_corner.append(out_w)
 
@@ -328,7 +334,7 @@ func _build_gravel() -> void:
 			var j := (i + 1) % n
 			var di := _barrier_dist[side][i]
 			var dj := _barrier_dist[side][j]
-			if _outside_corner[side][i] < 0.45 or di - half < 13.0:
+			if _outside_corner[side][i] < 0.45 or di - half < 13.0 or s[i].bridge or s[j].bridge:
 				continue
 			var inner := half + circuit.curb_width + 2.5
 			if not _clear_of_track(circuit.to_global(s[i].pos + s[i].right * sign_ * (di - 1.5)), di - 1.5):
@@ -405,6 +411,8 @@ func _speckle_texture(a: Color, b: Color) -> ImageTexture:
 
 func _barrier_type(i: int, side: int) -> String:
 	var off: float = _samples()[i].off
+	if _samples()[i].bridge:
+		return "armco"
 	if _in_spectator_zone(off, side):
 		return "concrete_red" if int(off / 3.0) % 2 == 0 else "concrete_white"
 	if _outside_corner[side][i] > 0.55:
@@ -450,6 +458,12 @@ func _place_segment(kind: String, a: Vector3, b: Vector3, side: int, seg_len: fl
 	if absf(b.y - a.y) > length * 0.35:
 		return
 	var mid := (a + b) * 0.5
+	# Standing in the sea (beside a causeway end): leave it out.
+	if circuit.theme == "island" and circuit.ground_height(mid.x, mid.z) < TrackTerrain.SEA_LEVEL - 0.1:
+		var lm := circuit.to_local(mid)
+		var near := circuit.nearest_sample(lm.x, lm.z)
+		if near < 0 or not circuit._samples[near].bridge:
+			return
 	# Ground dipping or bulging between the two ends (inside a hairpin): the
 	# rail would float or sink in the middle, so leave this piece out too.
 	for t: float in [0.25, 0.5, 0.75]:
@@ -475,7 +489,7 @@ func _build_spectators() -> void:
 	var n := s.size()
 	for side in 2:
 		for i in n:
-			if not _in_spectator_zone(s[i].off, side):
+			if not _in_spectator_zone(s[i].off, side) or s[i].bridge:
 				continue
 			for row in 3:
 				if _rng.randf() > 0.75:
@@ -585,6 +599,7 @@ func _box_mesh(boxes: Array) -> ArrayMesh:
 		var size: Vector3 = b[0]
 		var c: Vector3 = b[1]
 		var col: Color = b[2]
+		var rot: Basis = b[3] if b.size() > 3 else Basis.IDENTITY  # optional rotation
 		var h := size * 0.5
 		var faces := [
 			[Vector3(-1, -1, 1), Vector3(1, -1, 1), Vector3(1, 1, 1), Vector3(-1, 1, 1)],
@@ -596,7 +611,7 @@ func _box_mesh(boxes: Array) -> ArrayMesh:
 		for f: Array in faces:
 			var q: Array[Vector3] = []
 			for v: Vector3 in f:
-				q.append(c + v * h)
+				q.append(c + rot * (v * h))
 			for idx: int in [0, 2, 1, 0, 3, 2]:
 				st.set_color(col)
 				st.add_vertex(q[idx])
@@ -884,7 +899,10 @@ func _build_forest() -> void:
 	var mountains := circuit.theme == "mountains"
 	var area := circuit._bounds.grow(700.0 if mountains else 600.0)
 	var kinds := ["tree_pine", "tree_pine", "tree_pine_tall", "tree_round", "tree_round", "bush"]
-	if mountains:
+	if circuit.theme == "island":
+		_meshes["palm"] = _palm_mesh()
+		kinds = ["palm", "palm", "palm", "bush"]
+	elif mountains:
 		kinds = ["tree_pine", "tree_pine", "tree_pine_tall", "tree_pine_tall", "bush"]
 	var placed := 0
 	var target := 1300 if mountains else 1100
@@ -908,9 +926,127 @@ func _build_forest() -> void:
 		if blocked:
 			continue
 		p.y = circuit.ground_height(p.x, p.z)
+		if circuit.theme == "island" and p.y < TrackTerrain.SEA_LEVEL + 0.4:
+			continue  # not in the sea
 		if mountains and p.y > 175.0 + density * 40.0:
 			continue  # tree line
 		var kind: String = kinds[_rng.randi() % kinds.size()]
 		var sc := _rng.randf_range(0.8, 1.35)
 		_add(kind, Transform3D(Basis(Vector3.UP, _rng.randf() * TAU).scaled(Vector3.ONE * sc), p))
 		placed += 1
+
+
+# --- island ----------------------------------------------------------------------------
+
+## A leaning palm: a tapered trunk and a crown of drooping fronds (~40 tris).
+func _palm_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var bark := Color(0.48, 0.36, 0.24)
+	var leaf := Color(0.2, 0.55, 0.22)
+	var lean := Vector3(1.6, 0.0, 0.0)
+	var top := Vector3(0.0, 7.5, 0.0) + lean
+	for k in 5:
+		var a0 := TAU * k / 5.0
+		var a1 := TAU * (k + 1) / 5.0
+		var b0 := Vector3(cos(a0), 0.0, sin(a0)) * 0.28
+		var b1 := Vector3(cos(a1), 0.0, sin(a1)) * 0.28
+		var t0 := top + Vector3(cos(a0), 0.0, sin(a0)) * 0.16
+		var t1 := top + Vector3(cos(a1), 0.0, sin(a1)) * 0.16
+		for v in [b0, t0, b1, b1, t0, t1]:
+			st.set_color(bark)
+			st.add_vertex(v)
+	for k in 7:
+		var a := TAU * k / 7.0 + 0.3
+		var dir := Vector3(cos(a), 0.0, sin(a))
+		var side := dir.cross(Vector3.UP) * 0.7
+		var mid := top + dir * 2.0 + Vector3.UP * 0.5
+		var tip := top + dir * 3.8 - Vector3.UP * 1.3
+		for v in [top, mid + side, mid - side, mid + side, tip, mid - side]:
+			st.set_color(leaf)
+			st.add_vertex(v)
+	st.generate_normals()
+	var mesh := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 1.0
+	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	mesh.surface_set_material(0, mat)
+	return mesh
+
+
+## Beach life: huts and sunshades along the sand, and a wooden pier with
+## boats reaching out to sea from the beach nearest the start.
+func _build_beach() -> void:
+	var sea := TrackTerrain.SEA_LEVEL
+	var boxes: Array = []
+	var area := circuit._bounds.grow(160.0)
+	var huts := 0
+	for attempt in 4000:
+		if huts >= 40:
+			break
+		var p := Vector3(_rng.randf_range(area.position.x, area.end.x), 0.0, _rng.randf_range(area.position.y, area.end.y))
+		var d := circuit.distance_from_centre(p)
+		if d < circuit.road_width * 0.5 + 14.0:
+			continue
+		p.y = circuit.ground_height(p.x, p.z)
+		if p.y < sea + 0.25 or p.y > sea + 1.6:
+			continue  # only on the sand just above the water
+		if not _free_spot(p, 14.0):
+			continue
+		var colors := [Color(0.95, 0.35, 0.3), Color(0.25, 0.55, 0.9), Color(0.98, 0.8, 0.2), Color(0.95, 0.95, 0.92)]
+		var c: Color = colors[_rng.randi() % colors.size()]
+		if _rng.randf() < 0.35:
+			# Beach hut: wooden box with a coloured roof.
+			boxes.append([Vector3(3.2, 2.4, 3.2), p + Vector3(0, 1.2, 0), Color(0.6, 0.45, 0.3)])
+			boxes.append([Vector3(3.8, 0.35, 3.8), p + Vector3(0, 2.55, 0), c])
+		else:
+			# Sunshade: pole and a flat canopy.
+			boxes.append([Vector3(0.12, 2.2, 0.12), p + Vector3(0, 1.1, 0), Color(0.9, 0.9, 0.88)])
+			boxes.append([Vector3(2.4, 0.15, 2.4), p + Vector3(0, 2.25, 0), c])
+		_claim(Transform3D(Basis.IDENTITY, p), Vector2(2.5, 2.5))
+		huts += 1
+	# The pier: from the shore beside the start straight, straight out to sea.
+	var s := _samples()
+	var side := 1 - circuit.infield_side()
+	for i in range(0, s.size(), 4):
+		var off: float = fposmod(float(s[i].off) - circuit.length * 0.06, circuit.length)
+		var k := int(off / circuit.length * s.size()) % s.size()
+		var base := _side_point(k, side, 20.0)
+		var out := (base - _side_point(k, side, 0.0))
+		out.y = 0.0
+		out = out.normalized()
+		# Walk out until we reach water, then build 70 m of pier from there.
+		var start := base
+		var found := false
+		for step in 40:
+			var q := base + out * step * 4.0
+			if circuit.ground_height(q.x, q.z) < sea - 0.2:
+				start = q - out * 6.0
+				found = true
+				break
+		if not found:
+			continue
+		var right := out.cross(Vector3.UP)
+		var deck_y := sea + 1.3
+		for m in 18:
+			var c := start + out * (m * 4.0 + 2.0)
+			c.y = deck_y
+			var basis := Basis(right, Vector3.UP, out)
+			boxes.append([Vector3(5.0, 0.25, 4.1), c, Color(0.5, 0.36, 0.24), basis])
+			for e: float in [-2.3, 2.3]:
+				boxes.append([Vector3(0.3, 3.4, 0.3), c + right * e - Vector3.UP * 1.6, Color(0.36, 0.26, 0.18)])
+		# Boats moored along the pier.
+		for b in 3:
+			var bc := start + out * (18.0 + b * 18.0) + right * (5.5 if b % 2 == 0 else -5.5)
+			bc.y = sea + 0.25
+			var basis2 := Basis(right, Vector3.UP, out)
+			boxes.append([Vector3(2.2, 0.8, 6.0), bc, [Color(0.95, 0.95, 0.95), Color(0.2, 0.45, 0.8), Color(0.85, 0.25, 0.2)][b], basis2])
+			boxes.append([Vector3(1.4, 0.7, 1.8), bc + Vector3.UP * 0.7 - out * 0.8, Color(0.9, 0.9, 0.86), basis2])
+		break
+	if boxes.is_empty():
+		return
+	var mi := MeshInstance3D.new()
+	mi.name = "Beach"
+	mi.mesh = _box_mesh(boxes)
+	add_child(mi)

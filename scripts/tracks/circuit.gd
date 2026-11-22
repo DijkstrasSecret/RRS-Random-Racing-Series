@@ -47,8 +47,15 @@ var best_sectors := PackedFloat32Array([-1.0, -1.0, -1.0])
 var best_lap: float = -1.0
 ## Lap fractions of the corners with grandstands (empty = the tightest ones).
 var stand_corners := PackedFloat32Array()
-## Run-off beside the corners: "gravel" or "asphalt".
+## Run-off beside the corners: "gravel", "asphalt" or "sand".
 var runoff := "gravel"
+## Road surface sections: [from, to, type] lap fractions; the rest is tarmac.
+var surfaces: Array = []
+## Lap fractions built over water (island causeway), or (-1, -1).
+var bridge := Vector2(-1.0, -1.0)
+## Grip and extra rolling drag of each road surface.
+const SURFACE_GRIP := {"tarmac": 1.0, "gravel": 0.78, "sand": 0.7, "wood": 0.95}
+const SURFACE_DRAG := {"tarmac": 0.0, "gravel": 0.025, "sand": 0.045, "wood": 0.005}
 var curve := Curve3D.new()
 var length: float = 0.0
 ## Track centre line as (x, z) points, for the minimap.
@@ -79,6 +86,9 @@ func _ready() -> void:
 			sector_splits = PackedFloat32Array(track.sectors)
 		stand_corners = PackedFloat32Array(track.get("stands", []))
 		runoff = String(track.get("runoff", "gravel"))
+		surfaces = track.get("surfaces", [])
+		if track.has("bridge"):
+			bridge = Vector2(track.bridge[0], track.bridge[1])
 	_build_curve()
 	_sample_curve()
 	_build_surface_grid()
@@ -87,6 +97,7 @@ func _ready() -> void:
 	_build_road()
 	_build_curbs()
 	_build_verge()
+	_build_causeway()
 	_build_start_line()
 	_build_brake_boards()
 	var dressing := TrackDressing.new()
@@ -116,6 +127,23 @@ func get_grid_transform(slot: int) -> Transform3D:
 ## Distance (m) along the lap from the start line to the point nearest `world_pos`.
 func progress_at(world_pos: Vector3) -> float:
 	return curve.get_closest_offset(to_local(world_pos))
+
+
+## Road surface type at lap distance `off`: "tarmac", "gravel", "sand" or "wood".
+func surface_at(off: float) -> String:
+	var f := fposmod(off, length) / length
+	for sec in surfaces:
+		if f >= float(sec[0]) and f < float(sec[1]):
+			return String(sec[2])
+	return "tarmac"
+
+
+## True if lap distance `off` is on the causeway over the water.
+func on_bridge(off: float) -> bool:
+	if bridge.x < 0.0:
+		return false
+	var f := fposmod(off, length) / length
+	return f >= bridge.x and f < bridge.y
 
 
 ## Side of the road the infield is on (0 = left, 1 = right): pits go there.
@@ -160,7 +188,7 @@ func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: fl
 		var k := 0.0
 		for j in range(-3, 4):
 			k = maxf(k, absf(_samples[(i + j + n) % n].curv))
-		v[i] = minf(sqrt(lateral_accel / maxf(k, 0.0001)), top_speed)
+		v[i] = minf(sqrt(lateral_accel * float(_samples[i].grip) / maxf(k, 0.0001)), top_speed)
 		# Ease off over sharp crests so the car doesn't go light and slide.
 		var crest: float = _samples[i].crest
 		if crest > 0.0:
@@ -172,7 +200,7 @@ func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: fl
 			var next := v[(idx + 1) % n]
 			# Downhill the brakes have gravity against them (uphill they get help).
 			var grade: float = (_samples[(idx + 1) % n].pos.y - _samples[idx].pos.y) / step
-			var decel := maxf(brake_accel + 9.81 * grade, brake_accel * 0.4)
+			var decel := maxf(brake_accel * float(_samples[idx].grip) + 9.81 * grade, brake_accel * 0.4)
 			v[idx] = minf(v[idx], sqrt(next * next + 2.0 * decel * step))
 	return v
 
@@ -226,6 +254,9 @@ func _sample_curve() -> void:
 			"off": off,
 			"curv": curvature,
 			"crest": crest,
+			"surf": surface_at(off),
+			"grip": float(SURFACE_GRIP[surface_at(off)]),
+			"bridge": on_bridge(off),
 		})
 		outline.append(Vector2(pos.x, pos.z))
 		_bounds = Rect2(pos.x, pos.z, 0, 0) if k == 0 else _bounds.expand(Vector2(pos.x, pos.z))
@@ -389,13 +420,18 @@ func _build_surface_grid() -> void:
 
 
 func _build_road() -> void:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var tools := {}
 	var half := road_width * 0.5
 	var n := _samples.size()
 	for k in n:
 		var a: Dictionary = _samples[k]
 		var b: Dictionary = _samples[(k + 1) % n]
+		var kind: String = a.surf
+		if not tools.has(kind):
+			var t := SurfaceTool.new()
+			t.begin(Mesh.PRIMITIVE_TRIANGLES)
+			tools[kind] = t
+		var st: SurfaceTool = tools[kind]
 		var a_off: float = a.off
 		var b_off: float = a_off + sample_step if k == n - 1 else b.off
 		var va := a_off / road_width
@@ -410,14 +446,43 @@ func _build_road() -> void:
 			var bl := _on_surface(b.pos + b.right * half * (u0 * 2.0 - 1.0))
 			var br := _on_surface(b.pos + b.right * half * (u1 * 2.0 - 1.0))
 			_quad(st, al, ar, br, bl, Vector2(u0, va), Vector2(u1, va), Vector2(u1, vb), Vector2(u0, vb))
-	var mesh := st.commit()
-	var mat := StandardMaterial3D.new()
-	mat.albedo_texture = _road_texture()
-	mat.roughness = 0.9
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
-	mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
-	mesh.surface_set_material(0, mat)
-	_add_static_mesh("Road", mesh, 1.0, 0.0)
+	for kind: String in tools:
+		var mesh := (tools[kind] as SurfaceTool).commit()
+		var mat := StandardMaterial3D.new()
+		mat.albedo_texture = _road_texture() if kind == "tarmac" else _surface_texture(kind)
+		mat.roughness = 0.9
+		mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+		mat.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS_ANISOTROPIC
+		mesh.surface_set_material(0, mat)
+		var body_name := "Road" if kind == "tarmac" else "Road_" + kind
+		_add_static_mesh(body_name, mesh, SURFACE_GRIP[kind], SURFACE_DRAG[kind])
+
+
+## Road textures for the loose / wooden sections (one tile = road width x road width).
+func _surface_texture(kind: String) -> ImageTexture:
+	var w := 64
+	var img := Image.create_empty(w, w, false, Image.FORMAT_RGB8)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 9
+	var a := Color(0.52, 0.45, 0.36)
+	var b := Color(0.64, 0.56, 0.45)
+	if kind == "sand":
+		a = Color(0.82, 0.74, 0.55)
+		b = Color(0.9, 0.84, 0.66)
+	elif kind == "wood":
+		a = Color(0.42, 0.3, 0.2)
+		b = Color(0.52, 0.38, 0.25)
+	for y in w:
+		for x in w:
+			var c := a.lerp(b, rng.randf())
+			if kind == "wood":
+				# Planks across the road, dark gaps between them.
+				c = a.lerp(b, 0.4 + 0.3 * sin(float(x) * 0.7 + float(y / 6) * 2.1)) * (0.55 if y % 6 == 0 else 1.0)
+			elif kind != "sand" and absf(float(x) - w * 0.5) > w * 0.36:
+				c = c.lerp(Color(0.4, 0.36, 0.3), 0.35)  # loose stones pushed to the edges
+			img.set_pixel(x, y, c)
+	img.generate_mipmaps()
+	return ImageTexture.create_from_image(img)
 
 
 func _build_curbs() -> void:
@@ -432,6 +497,8 @@ func _build_curbs() -> void:
 		var a: Dictionary = _samples[k]
 		var b: Dictionary = _samples[(k + 1) % n]
 		if absf(a.curv) < min_curv and absf(b.curv) < min_curv:
+			continue
+		if a.surf != "tarmac" or b.surf != "tarmac":
 			continue
 		var color := red if int(a.off / 2.0) % 2 == 0 else white
 		st.set_color(color)
@@ -504,6 +571,8 @@ func _build_verge() -> void:
 	for k in n:
 		var a_rows: Array = rows[k]
 		var b_rows: Array = rows[(k + 1) % n]
+		if _samples[k].bridge or _samples[(k + 1) % n].bridge:
+			continue  # over the water: no grass verge
 		for side in 2:
 			var a: PackedVector3Array = a_rows[side]
 			var b: PackedVector3Array = b_rows[side]
@@ -523,6 +592,54 @@ func _build_verge() -> void:
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.surface_set_material(0, mat)
 	_add_static_mesh("Verge", mesh, 0.55, 0.05)
+
+
+## Wooden posts and side beams under the causeway, down into the water.
+func _build_causeway() -> void:
+	if bridge.x < 0.0:
+		return
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half := road_width * 0.5
+	var wood := Color(0.36, 0.26, 0.18)
+	var floor_y := to_local(Vector3(0, TrackTerrain.SEA_LEVEL - 2.0, 0)).y
+	for k in _samples.size():
+		var smp: Dictionary = _samples[k]
+		if not smp.bridge:
+			continue
+		var pos: Vector3 = smp.pos
+		var right: Vector3 = smp.right
+		var fwd: Vector3 = smp.tangent
+		# Side beams along the deck edges.
+		for side: float in [-1.0, 1.0]:
+			var c := pos + right * side * (half + 0.15) + Vector3.UP * (ROAD_Y - 0.25)
+			_box(st, c, right * 0.18, Vector3.UP * 0.35, fwd * 1.05, wood)
+		if k % 5 == 0:
+			for side: float in [-1.0, 1.0, 0.0]:
+				var top := pos + right * side * (half - 0.4)
+				var mid := Vector3(top.x, (top.y + floor_y) * 0.5, top.z)
+				_box(st, mid, right * 0.25, Vector3.UP * (top.y - floor_y) * 0.5, fwd * 0.25, wood)
+	st.generate_normals()
+	var mesh := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.vertex_color_use_as_albedo = true
+	mat.roughness = 1.0
+	mesh.surface_set_material(0, mat)
+	var mi := MeshInstance3D.new()
+	mi.name = "Causeway"
+	mi.mesh = mesh
+	add_child(mi)
+
+
+## A box centred on `c` with half-axes `ax`, `ay`, `az`.
+func _box(st: SurfaceTool, c: Vector3, ax: Vector3, ay: Vector3, az: Vector3, col: Color) -> void:
+	var corners := []
+	for i in 8:
+		corners.append(c + ax * (1.0 if i & 1 else -1.0) + ay * (1.0 if i & 2 else -1.0) + az * (1.0 if i & 4 else -1.0))
+	for f: Array in [[0, 1, 3, 2], [4, 6, 7, 5], [0, 4, 5, 1], [2, 3, 7, 6], [0, 2, 6, 4], [1, 5, 7, 3]]:
+		for idx: int in [f[0], f[1], f[2], f[0], f[2], f[3]]:
+			st.set_color(col)
+			st.add_vertex(corners[idx])
 
 
 func _verge_quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3) -> void:
@@ -555,6 +672,9 @@ func _add_static_mesh(node_name: String, mesh: ArrayMesh, grip: float, drag: flo
 	body.collision_mask = 0
 	body.set_meta(&"surface_grip", grip)
 	body.set_meta(&"surface_drag", drag)
+	# Part of the track (road of any surface, curbs): not "off track" there.
+	if node_name.begins_with("Road") or node_name == "Curbs":
+		body.set_meta(&"road", true)
 	var mi := MeshInstance3D.new()
 	mi.mesh = mesh
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF

@@ -17,6 +17,10 @@ var _h := 0
 var _heights := PackedFloat32Array()
 var _dist := PackedFloat32Array()
 var _base := PackedFloat32Array()  ## road height of the nearest bit of track
+## Island theme: sea level (world y) and distance from the causeway per grid point.
+const SEA_LEVEL := -0.45
+var _bridge_dist := PackedFloat32Array()
+var _inside := PackedByteArray()
 var _rng := RandomNumberGenerator.new()
 
 
@@ -28,10 +32,15 @@ func build(circuit: Circuit) -> void:
 	_w = int(ceil(rect.size.x / CELL)) + 1
 	_h = int(ceil(rect.size.y / CELL)) + 1
 	_distance_field(circuit)
+	if theme == "island":
+		_island_masks(circuit)
 	_heightfield(circuit)
 	_build_mesh()
 	_build_collision()
-	_build_villages()
+	if theme == "island":
+		_build_water()
+	else:
+		_build_villages()
 
 
 ## Height of the ground at a world position (about the road's height near the track).
@@ -60,6 +69,8 @@ func _distance_field(circuit: Circuit) -> void:
 	_base.resize(_w * _h)
 	_base.fill(0.0)
 	for s: Dictionary in circuit._samples:
+		if s.bridge:
+			continue  # the land doesn't follow the causeway over the water
 		var p: Vector3 = circuit.to_global(s.pos)
 		var cx := int(round((p.x - _origin.x) / CELL))
 		var cz := int(round((p.z - _origin.y) / CELL))
@@ -148,6 +159,9 @@ func _heightfield(circuit: Circuit) -> void:
 			var d := _dist[i]
 			var n := noise.get_noise_2d(wx, wz) * 0.5 + 0.5
 			var h := 0.0
+			if theme == "island":
+				_heights[i] = _island_height(i, d, n, detail.get_noise_2d(wx, wz))
+				continue
 			if theme == "mountains":
 				h = n * (smoothstep(70.0, 320.0, d) * 110.0 + smoothstep(320.0, 1250.0, d) * 300.0)
 				h += detail.get_noise_2d(wx, wz) * 6.0 * smoothstep(70.0, 200.0, d)
@@ -211,8 +225,68 @@ func _clear_road(circuit: Circuit) -> void:
 			break
 
 
+# --- island ----------------------------------------------------------------------------
+
+## Which grid points are inside the lap (the island's middle) and how far each
+## is from the causeway.
+func _island_masks(circuit: Circuit) -> void:
+	var poly := PackedVector2Array()
+	for k in range(0, circuit._samples.size(), 4):
+		var p: Vector3 = circuit.to_global(circuit._samples[k].pos)
+		poly.append(Vector2(p.x, p.z))
+	var bridge_pts := PackedVector2Array()
+	for smp: Dictionary in circuit._samples:
+		if smp.bridge:
+			var p: Vector3 = circuit.to_global(smp.pos)
+			bridge_pts.append(Vector2(p.x, p.z))
+	_inside.resize(_w * _h)
+	_bridge_dist.resize(_w * _h)
+	for z in _h:
+		for x in _w:
+			var i := z * _w + x
+			var q := Vector2(_origin.x + x * CELL, _origin.y + z * CELL)
+			_inside[i] = 1 if Geometry2D.is_point_in_polygon(q, poly) else 0
+			var bd := 1e9
+			for k in range(0, bridge_pts.size(), 3):
+				bd = minf(bd, q.distance_squared_to(bridge_pts[k]))
+			_bridge_dist[i] = sqrt(bd)
+
+
+## Land in the middle of the lap and a strip of beach outside it; the sea
+## everywhere else and in a lagoon under the causeway.
+func _island_height(i: int, d: float, n: float, detail: float) -> float:
+	var land := 1.0 if _inside[i] == 1 else 1.0 - smoothstep(26.0, 70.0, d)
+	# Lagoon: the water reaches in under the causeway.
+	land *= smoothstep(45.0, 120.0, _bridge_dist[i]) if _bridge_dist[i] < 1e8 else 1.0
+	var inland := smoothstep(40.0, 260.0, d) * (8.0 + n * 26.0) if _inside[i] == 1 else 0.0
+	var top := _base[i] - 0.06 + inland + detail * 1.2 * smoothstep(30.0, 90.0, d)
+	# Shallow near the shore (turquoise lagoon), deeper out to sea.
+	var floor_y := SEA_LEVEL - 1.0 - smoothstep(60.0, 320.0, d) * 9.0
+	return lerpf(floor_y, top, smoothstep(0.0, 1.0, land))
+
+
+func _build_water() -> void:
+	var plane := PlaneMesh.new()
+	plane.size = Vector2((_w - 1) * CELL + 4000.0, (_h - 1) * CELL + 4000.0)
+	plane.subdivide_width = 4
+	plane.subdivide_depth = 4
+	var mat := ShaderMaterial.new()
+	mat.shader = load("res://assets/vfx/shaders/water.gdshader")
+	plane.material = mat
+	var mi := MeshInstance3D.new()
+	mi.name = "Sea"
+	mi.mesh = plane
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = Vector3(_origin.x + (_w - 1) * CELL * 0.5, SEA_LEVEL, _origin.y + (_h - 1) * CELL * 0.5)
+	add_child(mi)
+
+
 func _ground_color(h: float, slope: float, wx: float, wz: float) -> Color:
 	var v := sin(wx * 0.013) * cos(wz * 0.011) * 0.5 + 0.5
+	if theme == "island":
+		var sand := Color(0.86, 0.78, 0.58).lerp(Color(0.92, 0.86, 0.68), v)
+		var jungle := Color(0.2, 0.46, 0.2).lerp(Color(0.3, 0.55, 0.22), v)
+		return sand.lerp(jungle, smoothstep(1.6, 4.0, h + v * 1.5)).lerp(Color(0.45, 0.42, 0.36), smoothstep(0.55, 1.0, slope) * 0.6)
 	if theme == "mountains":
 		var grass := Color(0.26, 0.42, 0.2).lerp(Color(0.33, 0.45, 0.22), v)
 		var rock := Color(0.42, 0.4, 0.38).lerp(Color(0.5, 0.46, 0.4), v)
@@ -245,7 +319,11 @@ func _build_mesh() -> void:
 			var slope := sqrt(1.0 - n.y * n.y) / maxf(n.y, 0.05)
 			verts[i] = Vector3(wx, _heights[i], wz)
 			normals[i] = n
-			colors[i] = _ground_color(_heights[i] - _base[i], slope, wx, wz)
+			var above := _heights[i] - SEA_LEVEL if theme == "island" else _heights[i] - _base[i]
+			if theme == "island":
+				# Sandy beside the sandy roads too, jungle further in.
+				above = minf(above, lerpf(0.0, 6.0, smoothstep(14.0, 45.0, _dist[i])))
+			colors[i] = _ground_color(above, slope, wx, wz)
 			uvs[i] = Vector2(wx, wz) * 0.08
 	var indices := PackedInt32Array()
 	for z in _h - 1:
