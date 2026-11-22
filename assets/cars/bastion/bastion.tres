@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 2.3
+display_name = "Bastion 350D"
+mass = 2500
+center_of_mass = Vector3(0.0, 0.62, 0.0)
+inertia_box_size = Vector3(1.86, 1.8, 4.66)
+wheel_radius = 0.38
+wheel_width = 0.28
+tire_grip = 1.05
+tire_peak_slip_angle_deg = 8.5
+rear_grip_scale = 0.98
+front_spring_rate = 60000
+rear_spring_rate = 62000
+front_damper_bump = 5000
+front_damper_rebound = 6600
+rear_damper_bump = 5100
+rear_damper_rebound = 6800
+front_anti_roll = 22000
+rear_anti_roll = 13000
+idle_rpm = 700
+redline_rpm = 4600
+launch_rpm = 2000
+max_torque = 600
+torque_curve = PackedVector2Array(1000.0, 0.62, 1600.0, 1.0, 2400.0, 1.0, 3600.0, 0.8, 4600.0, 0.55)
+engine_brake_torque = 130
+gear_ratios = PackedFloat32Array(4.38, 2.86, 1.92, 1.37, 1.0, 0.82, 0.73)
+reverse_ratio = 3.4
+final_drive = 3.7
+auto_upshift_rpm = 4200
+auto_downshift_rpm = 1700
+drive_type = 2
+diff_lock = 0.5
+awd_front_split = 0.4
+brake_torque = 12500
+brake_bias = 0.68
+handbrake_torque = 3500
+max_steer_deg = 33
+steer_rate = 3.1
+drag_area = 1.55
+downforce_area = -0.08
+engine_sound_pitch = 0.85
+engine_sound_gain_db = 2.0

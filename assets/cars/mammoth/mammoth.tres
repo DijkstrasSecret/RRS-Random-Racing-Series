@@ -1,0 +1,47 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 2.4
+display_name = "Mammoth 20TD"
+mass = 2300
+center_of_mass = Vector3(0.0, 0.6, -0.1)
+inertia_box_size = Vector3(1.95, 1.7, 5.35)
+wheel_radius = 0.4
+wheel_width = 0.29
+tire_grip = 1.0
+tire_peak_slip_angle_deg = 9.0
+rear_grip_scale = 0.98
+front_spring_rate = 52000
+rear_spring_rate = 62000
+front_damper_bump = 4600
+front_damper_rebound = 6200
+rear_damper_bump = 4800
+rear_damper_rebound = 6500
+front_anti_roll = 20000
+rear_anti_roll = 12000
+idle_rpm = 750
+redline_rpm = 4500
+launch_rpm = 2000
+max_torque = 500
+torque_curve = PackedVector2Array(1000.0, 0.6, 1750.0, 1.0, 2500.0, 1.0, 3750.0, 0.78, 4500.0, 0.55)
+engine_brake_torque = 110
+gear_ratios = PackedFloat32Array(4.7, 2.99, 2.15, 1.8, 1.52, 1.28, 1.0, 0.85, 0.69, 0.64)
+reverse_ratio = 4.9
+final_drive = 3.73
+auto_upshift_rpm = 4000
+auto_downshift_rpm = 1600
+drive_type = 2
+diff_lock = 0.4
+awd_front_split = 0.45
+brake_torque = 11000
+brake_bias = 0.68
+handbrake_torque = 3500
+max_steer_deg = 33
+steer_rate = 3.2
+drag_area = 1.15
+downforce_area = -0.05
+engine_sound_pitch = 0.8
+engine_sound_gain_db = 2.0

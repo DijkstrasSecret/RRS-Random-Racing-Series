@@ -61,8 +61,8 @@ func _refresh() -> void:
 	var s := CarRoster.stats(e.id)
 	_name.text = e.name
 	_tagline.text = e.tagline
-	_specs.text = "%d HP   ·   %d KG   ·   %d KM/H   ·   %s%s" % [
-		s.hp, s.kg, s.top_kmh, s.drive, "   ·   ELECTRIC" if s.electric else ""]
+	_specs.text = "CLASS %s   ·   %d HP   ·   %d KG   ·   %d KM/H   ·   %s%s" % [
+		CarRoster.TIER_NAMES[int(e.tier)], s.hp, s.kg, s.top_kmh, s.drive, "   ·   ELECTRIC" if s.electric else ""]
 	_bars.stats = s
 	_bars.queue_redraw()
 	car_shown.emit(e.id)

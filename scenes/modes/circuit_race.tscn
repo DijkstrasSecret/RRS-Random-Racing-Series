@@ -17,6 +17,7 @@ track_path = NodePath("Circuit")
 vehicle_path = NodePath("Vehicle")
 
 [node name="Circuit" parent="." instance=ExtResource("2_track")]
+use_selected_track = true
 
 [node name="Vehicle" parent="." instance=ExtResource("3_vehicle")]
 

@@ -2,7 +2,7 @@ extends Node
 ## Circuit smoke test: the AIDriver drives the PSX hatch round the circuit.
 ## Checks the track is drivable and lap timing works. Run without a window:
 ##   Godot_console.exe --headless --fixed-fps 120 --path . res://tests/lap_test.tscn
-## Optional: -- --laps=2
+## Optional: -- --laps=2 --car=<id> --track=<id> --verbose --trace=from,to,step
 
 var _scene: Node
 var _car: Vehicle
@@ -33,6 +33,8 @@ func _ready() -> void:
 			_trace_step = float(parts[2]) if parts.size() > 2 else 0.25
 		if arg.begins_with("--car="):
 			GameSettings.p1_car = arg.get_slice("=", 1)
+		if arg.begins_with("--track="):
+			GameSettings.track = arg.get_slice("=", 1)
 		if arg.begins_with("--laps="):
 			_laps_wanted = int(arg.get_slice("=", 1))
 	_scene = load("res://scenes/modes/circuit_practice.tscn").instantiate()

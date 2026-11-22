@@ -17,7 +17,7 @@ extends Node
 @export var ai_skill_min: float = 0.5
 @export var ai_skill_max: float = 0.82
 @export var random_seed: int = 0
-## Take the AI count and difficulty from the player's settings.
+## Take the AI count, difficulty and allowed car classes from the player's settings.
 @export var use_game_settings: bool = true
 
 const AI_NAMES: PackedStringArray = ["VEGA", "KATO", "MOREAU", "LIND", "OKAFOR", "RUIZ", "HALE", "NOVAK", "SATO"]
@@ -61,7 +61,10 @@ func _build() -> void:
 
 	# Opponents drive a shuffled mix of the roster; a car that is already
 	# on the grid gets a different paint so everyone can be told apart.
-	var roster := Array(CarRoster.ids())
+	# Only the car classes allowed in the race settings (all of them if none).
+	var roster := Array(CarRoster.ids_in_tiers(GameSettings.ai_tiers if use_game_settings else 15))
+	if roster.is_empty():
+		roster = Array(CarRoster.ids())
 	roster.shuffle()
 	var used: Array[String] = []
 	for path in player_paths:

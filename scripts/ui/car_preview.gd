@@ -3,6 +3,9 @@ extends SubViewportContainer
 ## A slowly turning car on its own little stage (own 3D world, transparent
 ## background), used by the garage. show_car(id) swaps the model.
 
+## How far the camera sits from the car (smaller = car fills more of the frame).
+var camera_distance: float = 7.6
+
 var _viewport: SubViewport
 var _pivot: Node3D
 var _current: String = ""
@@ -37,7 +40,7 @@ func _ready() -> void:
 	_viewport.add_child(rim)
 
 	var cam := Camera3D.new()
-	cam.position = Vector3(0, 1.8, 7.6)
+	cam.position = Vector3(0, 1.8, camera_distance)
 	cam.fov = 38.0
 	_viewport.add_child(cam)
 	cam.look_at(Vector3(0, 0.55, 0), Vector3.UP)
@@ -45,6 +48,22 @@ func _ready() -> void:
 
 	_pivot = Node3D.new()
 	_viewport.add_child(_pivot)
+
+	# Soft round shadow so the car sits on something instead of floating.
+	var shadow := MeshInstance3D.new()
+	var disc := CylinderMesh.new()
+	disc.top_radius = 2.7
+	disc.bottom_radius = 2.7
+	disc.height = 0.01
+	disc.radial_segments = 48
+	shadow.mesh = disc
+	var shade := StandardMaterial3D.new()
+	shade.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	shade.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+	shade.albedo_color = Color(0, 0, 0, 0.55)
+	shadow.material_override = shade
+	shadow.scale = Vector3(1.0, 1.0, 0.75)
+	_viewport.add_child(shadow)
 
 
 func show_car(id: String) -> void:

@@ -4,20 +4,49 @@ extends RefCounted
 ## designs (fictional names) inspired by real models.
 ## apply() turns any Vehicle instance into the chosen car before it is ready.
 
+## Sorted by class (D slowest ... A fastest), then roughly by pace.
 const CARS: Array[Dictionary] = [
-	{"id": "kartal", "name": "KARTAL 77 SL", "tagline": "1977 rear-drive classic. Light, slow, loves to slide."},
-	{"id": "romola", "name": "ROMOLA STELLA 16D", "tagline": "Italian diesel hatch. Nimble and playful."},
-	{"id": "quadra", "name": "QUADRA 16D", "tagline": "Compact diesel sedan. Easy and composed."},
-	{"id": "psx_hatch", "name": "RETRO HATCH", "tagline": "Lively little 80s hatchback.",
+	{"id": "kartal", "tier": 0, "name": "KARTAL 77 SL", "tagline": "1977 rear-drive classic. Light, slow, loves to slide."},
+	{"id": "mirelle", "tier": 0, "name": "MIRELLE 15D", "tagline": "French diesel supermini. Frugal, light and forgiving."},
+	{"id": "kerkenez", "tier": 0, "name": "KERKENEZ 98 SX", "tagline": "90s rear-drive saloon. Soft, simple, happy sideways."},
+	{"id": "atmaca", "tier": 0, "name": "ATMACA 90 STANCE", "tagline": "Slammed on air ride. Stiff, low and tail-happy."},
+	{"id": "quadra", "tier": 1, "name": "QUADRA 16D", "tagline": "Compact diesel sedan. Easy and composed."},
+	{"id": "romola", "tier": 1, "name": "ROMOLA STELLA 16D", "tagline": "Italian diesel hatch. Nimble and playful."},
+	{"id": "kaze", "tier": 1, "name": "KAZE SORA 16I", "tagline": "Rev-happy petrol sedan. Sharp and dependable."},
+	{"id": "dingo", "tier": 1, "name": "DINGO 13T", "tagline": "Boxy little turbo SUV. Tall, but surprisingly brisk."},
+	{"id": "piccolo", "tier": 1, "name": "PICCOLO 16", "tagline": "Retro city hatch. Go-kart steering."},
+	{"id": "harcourt", "tier": 1, "name": "HARCOURT X21", "tagline": "V6 executive saloon. Smooth and refined."},
+	{"id": "psx_hatch", "tier": 1, "name": "RETRO HATCH", "tagline": "Lively little 80s hatchback.",
 		"model": "res://assets/cars/psx_hatch/psx_hatch.glb", "config": "res://assets/cars/psx_hatch/psx_hatch.tres",
 		"paint_reference": "res://assets/cars/psx_hatch/psx_hatch_red.png"},
-	{"id": "bavaro", "name": "BAVARO 4 GRAN", "tagline": "Rear-drive four-door coupe. Balanced and quick."},
-	{"id": "hanlong", "name": "HANLONG E9", "tagline": "Electric, all-wheel drive. Brutal launch, silent speed."},
-	{"id": "bellmont", "name": "BELLMONT WINGSPAN V8", "tagline": "Luxury express. All-wheel drive, V8, huge brakes."},
-	{"id": "ashford", "name": "ASHFORD GT12", "tagline": "V12 grand tourer. Rear-drive, handle with care."},
+	{"id": "mammoth", "tier": 2, "name": "MAMMOTH 20TD", "tagline": "Twin-turbo diesel pickup. Heavy, tall, unstoppable."},
+	{"id": "orion", "tier": 2, "name": "ORION ARC 6", "tagline": "Electric streamliner. Rear-drive, slippery and silent."},
+	{"id": "bastion", "tier": 2, "name": "BASTION 350D", "tagline": "Off-road icon. A brick with a big diesel heart."},
+	{"id": "bavaro", "tier": 2, "name": "BAVARO 4 GRAN", "tagline": "Rear-drive four-door coupe. Balanced and quick."},
+	{"id": "braxton", "tier": 2, "name": "BRAXTON BRAWLER V6", "tagline": "American muscle. Big, loud and loose at the rear."},
+	{"id": "ashford", "tier": 3, "name": "ASHFORD GT12", "tagline": "V12 grand tourer. Rear-drive, handle with care."},
+	{"id": "bellmont", "tier": 3, "name": "BELLMONT WINGSPAN V8", "tagline": "Luxury express. All-wheel drive, V8, huge brakes."},
+	{"id": "hanlong", "tier": 3, "name": "HANLONG E9", "tagline": "Electric, all-wheel drive. Brutal launch, silent speed."},
 ]
 
 const DRIVE_NAMES: PackedStringArray = ["FRONT", "REAR", "ALL-WHEEL"]
+## Car classes, slowest first.
+const TIER_NAMES: PackedStringArray = ["D", "C", "B", "A"]
+const TIER_TITLES: PackedStringArray = ["CLASSIC", "STREET", "SPORT", "SUPER"]
+const TIER_COLORS: PackedColorArray = [Color(0.55, 0.8, 0.45), Color(0.35, 0.7, 1.0), Color(0.75, 0.5, 1.0), Color(1.0, 0.45, 0.3)]
+
+
+static func tier(id: String) -> int:
+	return int(entry(id).get("tier", 1))
+
+
+## Car ids whose class bit is set in `mask` (bit 0 = D ... bit 3 = A).
+static func ids_in_tiers(mask: int) -> PackedStringArray:
+	var out := PackedStringArray()
+	for c in CARS:
+		if mask & (1 << int(c.tier)):
+			out.append(c.id)
+	return out
 
 
 static func ids() -> PackedStringArray:

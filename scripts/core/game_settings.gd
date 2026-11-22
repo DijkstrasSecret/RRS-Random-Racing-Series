@@ -27,6 +27,9 @@ static var sound_volume: int = 8  ## 0..10, engines and effects
 static var music_volume: int = 6  ## 0..10
 static var p1_car: String = "bavaro"
 static var p2_car: String = "quadra"
+static var track: String = "greenhill"
+## Car classes the AI may drive: bit 0 = D ... bit 3 = A.
+static var ai_tiers: int = 15
 
 static var _loaded: bool = false
 
@@ -49,6 +52,12 @@ static func ensure_loaded() -> void:
 	music_volume = cfg.get_value("audio", "music", music_volume)
 	p1_car = cfg.get_value("garage", "p1_car", p1_car)
 	p2_car = cfg.get_value("garage", "p2_car", p2_car)
+	track = cfg.get_value("race", "track", track)
+	ai_tiers = cfg.get_value("race", "ai_tiers", ai_tiers)
+	if CarRoster.ids().find(p1_car) == -1:
+		p1_car = "bavaro"
+	if CarRoster.ids().find(p2_car) == -1:
+		p2_car = "quadra"
 	look = cfg.get_value("video", "look", look)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	if fullscreen:
@@ -74,6 +83,8 @@ static func save() -> void:
 	cfg.set_value("audio", "music", music_volume)
 	cfg.set_value("garage", "p1_car", p1_car)
 	cfg.set_value("garage", "p2_car", p2_car)
+	cfg.set_value("race", "track", track)
+	cfg.set_value("race", "ai_tiers", ai_tiers)
 	cfg.save(PATH)
 
 

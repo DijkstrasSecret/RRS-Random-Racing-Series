@@ -30,6 +30,9 @@ var _vehicle: Vehicle
 var _circuit: Circuit
 var _profile := PackedFloat32Array()
 var _lost_time: float = 0.0
+## Shrinks a little every time the car has to be reset, so a car that keeps
+## overcooking a corner learns to take it slower.
+var _corner_scale: float = 1.0
 
 
 func poll(delta: float) -> void:
@@ -61,6 +64,10 @@ func poll(delta: float) -> void:
 	var slip := absf(atan2(_vehicle.lateral_speed, maxf(absf(v), 0.5)))
 	if v > 8.0 and slip > deg_to_rad(7.0):
 		target_speed = minf(target_speed, v - 2.0)
+	# Full lock at speed and still not turning enough (understeer): scrub off
+	# speed now rather than at the edge of the road.
+	if v > 14.0 and absf(steer) >= max_steer_input * 0.97:
+		target_speed = minf(target_speed, v - 2.5)
 
 	var from_centre := _circuit.distance_from_centre(pos)
 	# Running wide toward the edge: ease off before it reaches the grass.
@@ -74,6 +81,9 @@ func poll(delta: float) -> void:
 	var stuck := absf(v) < 1.0 and not _vehicle.controls_locked
 	_lost_time = _lost_time + delta if (off_line or wrong_way or stuck) else 0.0
 	if _lost_time > reset_after:
+		if OS.get_cmdline_user_args().has("--log-resets"):
+			print("    reset %s at %.0f m (%s%s%s)" % [_vehicle.name, off, "off line " if off_line else "",
+				"wrong way " if wrong_way else "", "stuck" if stuck else ""])
 		_reset_onto_track(off, track_dir)
 		return
 
@@ -99,12 +109,16 @@ func _setup() -> bool:
 	# AI cars use the Arcade assists (stability and counter-steer help); this
 	# changes how the car is driven, not how much grip it has.
 	_vehicle.set_handling_profile(HandlingAssists.Profile.ARCADE)
+	_build_profile()
+	return true
+
+
+func _build_profile() -> void:
 	# Heavy cars lose grip under load (tyre load sensitivity): plan for it.
 	var heavy := clampf(1.0 - (_vehicle.config.mass - 1300.0) / 9000.0, 0.85, 1.05)
 	var grip := _vehicle.config.tire_grip * heavy * 9.81
-	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill),
+	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill) * _corner_scale,
 			grip * lerpf(0.42, 0.58, skill), 95.0)
-	return true
 
 
 ## Returns (lane shift in metres, speed cap in m/s) caused by nearby cars.
@@ -137,6 +151,8 @@ func _read_traffic(v: float) -> Vector2:
 ## Put the car back on the centre line, pointing the right way.
 func _reset_onto_track(off: float, track_dir: Vector3) -> void:
 	resets += 1
+	_corner_scale = maxf(_corner_scale * 0.95, 0.8)
+	_build_profile()
 	_lost_time = 0.0
 	lane = 0.0
 	var pos := _circuit.point_at(off) + Vector3.UP * 0.3

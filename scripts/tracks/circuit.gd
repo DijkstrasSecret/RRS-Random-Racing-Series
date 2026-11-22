@@ -31,6 +31,8 @@ const ROAD_Y := 0.03
 @export var tree_count: int = 240
 @export var tree_clearance: float = 32.0
 @export var random_seed: int = 11
+## Build the layout chosen in the menu (GameSettings.track) instead of `points`.
+@export var use_selected_track: bool = false
 
 var curve := Curve3D.new()
 var length: float = 0.0
@@ -44,6 +46,12 @@ var _bounds := Rect2()
 
 func _ready() -> void:
 	add_to_group("circuit")
+	if use_selected_track:
+		GameSettings.ensure_loaded()
+		var track := TrackList.get_track(GameSettings.track)
+		points = PackedVector2Array(track.points)
+		track_name = String(track.name).capitalize()
+		random_seed = int(track.seed)
 	_build_curve()
 	_sample_curve()
 	_build_environment()
@@ -147,20 +155,7 @@ func distance_from_centre(world_pos: Vector3) -> float:
 # --- Shape -------------------------------------------------------------------
 
 func _build_curve() -> void:
-	var n := points.size()
-	for i in n:
-		var p := points[i]
-		var prev := points[(i - 1 + n) % n]
-		var next := points[(i + 1) % n]
-		# Catmull-Rom tangent direction, but each handle is limited to a third
-		# of its own segment so uneven spacing (a long straight next to a tight
-		# corner) can't make the curve overshoot into a kink.
-		var dir := Vector3(next.x - prev.x, 0.0, next.y - prev.y).normalized()
-		var len_in := p.distance_to(prev) / 3.0
-		var len_out := p.distance_to(next) / 3.0
-		curve.add_point(Vector3(p.x, 0.0, p.y), -dir * len_in, dir * len_out)
-	curve.add_point(curve.get_point_position(0), curve.get_point_in(0), curve.get_point_out(0))
-	curve.bake_interval = 1.0
+	curve = TrackList.make_curve(points)
 	length = curve.get_baked_length()
 
 

@@ -4,7 +4,7 @@ extends Node
 ## finishes, prints the results, AI resets and whether the dirt effect ran.
 ## Run without a window:
 ##   Godot_console.exe --headless --fixed-fps 120 --path . res://tests/race_test.tscn
-## Options:  -- --laps=N (default 2)  --scene=versus_race | circuit_race
+## Options:  -- --laps=N (default 2)  --scene=versus_race | circuit_race  --track=<id>
 
 var _scene: Node
 var _race: RaceDirector
@@ -23,6 +23,8 @@ func _ready() -> void:
 			_laps = int(arg.get_slice("=", 1))
 		if arg.begins_with("--scene="):
 			_scene_name = arg.get_slice("=", 1)
+		if arg.begins_with("--track="):
+			GameSettings.track = arg.get_slice("=", 1)
 	_scene = load("res://scenes/modes/%s.tscn" % _scene_name).instantiate()
 	_race = _scene.get_node("RaceLayer/RaceDirector")
 	_race.use_game_settings = false
@@ -39,7 +41,7 @@ func _ready() -> void:
 				ai.skill = 0.75
 				node.add_child(ai)
 	add_child(_scene)
-	print("race_test | %s | %d lap(s)" % [_scene_name, _laps])
+	print("race_test | %s | %s | %d lap(s)" % [_scene_name, GameSettings.track, _laps])
 
 
 func _physics_process(delta: float) -> void:

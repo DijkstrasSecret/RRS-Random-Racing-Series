@@ -42,6 +42,29 @@ static func ensure() -> void:
 		"handbrake": [KEY_SLASH, KEY_KP_0], "shift_up": [KEY_PERIOD], "shift_down": [KEY_COMMA],
 		"recover": [KEY_ENTER, KEY_KP_ENTER], "cycle_camera": [KEY_APOSTROPHE],
 	})
+	# Menus where both players choose at once (car select).
+	_add_menu(1, 0, {"up": [KEY_W], "down": [KEY_S], "left": [KEY_A], "right": [KEY_D],
+		"accept": [KEY_SPACE, KEY_E], "back": [KEY_Q]})
+	_add_menu(2, 1, {"up": [KEY_UP], "down": [KEY_DOWN], "left": [KEY_LEFT], "right": [KEY_RIGHT],
+		"accept": [KEY_ENTER, KEY_KP_ENTER], "back": [KEY_BACKSPACE]})
+
+
+## Adds "p<player>_menu_<up/down/left/right/accept/back>": keys plus that player's gamepad.
+static func _add_menu(player: int, device: int, keys: Dictionary) -> void:
+	var pad := {
+		"up": [_axis(JOY_AXIS_LEFT_Y, -1.0, device), _button(JOY_BUTTON_DPAD_UP, device)],
+		"down": [_axis(JOY_AXIS_LEFT_Y, 1.0, device), _button(JOY_BUTTON_DPAD_DOWN, device)],
+		"left": [_axis(JOY_AXIS_LEFT_X, -1.0, device), _button(JOY_BUTTON_DPAD_LEFT, device)],
+		"right": [_axis(JOY_AXIS_LEFT_X, 1.0, device), _button(JOY_BUTTON_DPAD_RIGHT, device)],
+		"accept": [_button(JOY_BUTTON_A, device)],
+		"back": [_button(JOY_BUTTON_B, device)],
+	}
+	for action: String in keys:
+		var events: Array = []
+		for code: Key in keys[action]:
+			events.append(_key(code))
+		events.append_array(pad[action])
+		_add(StringName("p%d_menu_%s" % [player, action]), events, 0.5)
 
 
 ## Adds "p<player>_<action>" actions: the given keys plus that player's gamepad.

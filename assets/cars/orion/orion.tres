@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 1.5
+display_name = "Orion Arc 6"
+mass = 1800
+center_of_mass = Vector3(0.0, 0.42, 0.05)
+inertia_box_size = Vector3(1.88, 1.2, 4.86)
+wheel_radius = 0.34
+wheel_width = 0.23
+tire_grip = 1.1
+rear_grip_scale = 0.95
+front_spring_rate = 42000
+rear_spring_rate = 44000
+front_damper_bump = 3500
+front_damper_rebound = 4700
+rear_damper_bump = 3600
+rear_damper_rebound = 4900
+front_anti_roll = 14000
+rear_anti_roll = 12000
+idle_rpm = 50
+redline_rpm = 15300
+launch_rpm = 100
+max_torque = 350
+torque_curve = PackedVector2Array(0.0, 1.0, 3000.0, 1.0, 6000.0, 0.5, 9000.0, 0.33, 12000.0, 0.25, 15400.0, 0.2)
+engine_brake_torque = 40
+gear_ratios = PackedFloat32Array(1.0)
+reverse_ratio = 1.0
+final_drive = 10.65
+drivetrain_efficiency = 0.95
+shift_time = 0.0
+auto_upshift_rpm = 99999
+auto_downshift_rpm = 0
+drive_type = 1
+diff_lock = 0.25
+brake_torque = 8500
+brake_bias = 0.66
+handbrake_torque = 3000
+max_steer_deg = 33
+steer_rate = 3.9
+drag_area = 0.48
+downforce_area = 0.12
+electric = true
+engine_sound_pitch = 1.1
+engine_sound_gain_db = -1.0
