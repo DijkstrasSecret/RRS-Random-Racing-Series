@@ -34,7 +34,12 @@ CARS = {
         tumble=0.86, nose_round=0.10, tail_round=0.06, crown=0.03, tail_drop=0.06,
         paint=(0.22, 0.62, 0.10), roof_color="vinyl",
         grille="mesh_rect", headlight="square", taillight="pair_wide",
-        wheel="hubcap", whitewall=True, bumpers="chrome", exhaust=1, mirrors="chrome"),
+        wheel="hubcap", whitewall=True, bumpers="chrome", exhaust=1, mirrors="chrome",
+        detail=True, frame_mat="chrome", belt_chrome=True, pillars=[2.5], door_seams=[1.7, 2.5, 3.1],
+        handles=[2.4, 3.0], plate="34 AN 77", reverse_lights=[(-0.36, 0.66), (0.36, 0.66)],
+        livery=dict(style="rally", stripe="white", accent="black", number="77", number_s=2.1, number_z=0.62,
+                    sponsor="TURBO OIL", sponsor_bg=(0.95, 0.78, 0.1), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.8,
+                    sponsor_z=0.62, sponsor_w=0.5, banner="KARTAL RACING")),
     "ashford": dict(  # British V12 grand tourer (Aston Martin DB11 inspired)
         L=4.74, W=1.95, H=1.28, wb=2.80, r=0.35, tw=0.25, fo=0.95, rocker=0.18,
         belt=0.82, nose=0.66, cowl=0.92, deck=0.95, tail=0.98,
@@ -132,7 +137,12 @@ CARS = {
         tumble=0.86, nose_round=0.06, tail_round=0.04, crown=0.02, tail_drop=0.06,
         paint=(0.40, 0.04, 0.07), grille="slatted", headlight="rect_slant",
         taillight="ribbed", wheel="spokes_silver", bumpers="black", exhaust=1, mirrors="black",
-        rub_strip=True),
+        rub_strip=True,
+        detail=True, pillars=[2.52], door_seams=[1.66, 2.52, 3.1], handles=[2.42, 3.0], plate="61 KRK 98",
+        reverse_lights=[(-0.18, 0.68), (0.18, 0.68)], antenna=(3.2, 1),
+        livery=dict(style="rally", stripe="yellow", accent="white", number="61", number_s=2.1, number_z=0.7,
+                    sponsor="RRS RALLY", sponsor_bg=(0.95, 0.95, 0.93), sponsor_fg=(0.4, 0.04, 0.07), sponsor_s=2.8,
+                    sponsor_z=0.7, sponsor_w=0.5, banner="KERKENEZ RALLY")),
     "piccolo": dict(  # retro city hatch (2006 Mini Cooper inspired)
         L=3.63, W=1.69, H=1.41, wb=2.47, r=0.30, tw=0.20, fo=0.62, rocker=0.22,
         belt=0.98, nose=0.78, cowl=0.98, deck=1.06, tail=1.0,
@@ -140,7 +150,13 @@ CARS = {
         tumble=0.84, nose_round=0.22, tail_round=0.08, crown=0.02, tail_drop=0.08,
         paint=(0.02, 0.02, 0.025), roof_color="silver", grille="hex_chrome", headlight="round_big",
         hl_dz=0.06, taillight="vertical_oval", wheel="white", bumpers="body", exhaust=1,
-        mirrors="silver", flares="black"),
+        mirrors="silver", flares="black",
+        detail=True, pillars=[2.45], door_seams=[1.25, 2.4], handles=[2.25], plate="06 PCL 16",
+        reverse_lights=[(-0.3, 0.4), (0.3, 0.4)],
+        livery=dict(style="muscle", stripes=((-0.3, -0.08), (0.08, 0.3)), stripe_zones=("hood",), side_stripe=False,
+                    stripe="white", accent="red", number="16", number_s=1.6, number_z=0.62,
+                    sponsor="NOVA TYRES", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.08, sponsor_z=0.62, sponsor_w=0.5,
+                    banner="PICCOLO WORKS")),
     "mammoth": dict(  # double-cab pickup (VW Amarok inspired)
         L=5.35, W=1.95, H=1.88, wb=3.27, r=0.40, tw=0.29, fo=0.95, rocker=0.50,
         belt=1.30, nose=1.12, cowl=1.22, deck=1.28, tail=1.28,
@@ -160,10 +176,7 @@ CARS = {
         exhaust=2, mirrors="black", flares="paint", steps="chrome", spare=True, rear_window=True,
         detail=True, pillars=[2.45, 3.25], door_seams=[1.6, 2.45, 3.2], handles=[2.35, 3.1], handle_mat="black",
         plate="06 G 350", plate_front_z=0.6, plate_rear_z=0.55, plate_rear_dy=0.07,
-        reverse_lights=[(-0.55, 0.62), (0.55, 0.62)],
-        livery=dict(style="raid", stripe="orange", accent="black", number="21", number_s=2.05,
-                    sponsor="RRS RAID", sponsor_bg=(1.0, 0.42, 0.03), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=0.95,
-                    sponsor_z=1.08, sponsor_w=0.46, banner="BASTION RAID TEAM")),
+        reverse_lights=[(-0.55, 0.62), (0.55, 0.62)]),
     "dingo": dict(  # compact boxy SUV (Jeep Renegade inspired)
         L=4.24, W=1.81, H=1.67, wb=2.57, r=0.34, tw=0.22, fo=0.85, rocker=0.36,
         belt=1.12, nose=0.98, cowl=1.10, deck=1.20, tail=1.20,
@@ -834,7 +847,7 @@ PIXEL_FONT = {
     "0": ["111", "101", "101", "101", "111"], "1": ["010", "110", "010", "010", "111"],
     "2": ["111", "001", "111", "100", "111"], "3": ["111", "001", "111", "001", "111"],
     "4": ["101", "101", "111", "001", "001"], "5": ["111", "100", "111", "001", "111"],
-    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "010", "010", "010"],
+    "6": ["111", "100", "111", "101", "111"], "7": ["111", "001", "001", "010", "010"],
     "8": ["111", "101", "111", "101", "111"], "9": ["111", "101", "111", "001", "111"],
     "A": ["010", "101", "111", "101", "101"], "B": ["110", "101", "110", "101", "110"],
     "C": ["111", "100", "100", "100", "111"], "D": ["110", "101", "101", "101", "110"],
@@ -1031,9 +1044,10 @@ def add_details(cid, m, c, M, front_y):
     seam_bottom = rk + 0.06
     for s in c.get("door_seams", []):
         top = min(c["belt"] - 0.01, body_profile(c, s)[2])
-        h = top - seam_bottom
+        bottom = max(seam_bottom, body_profile(c, s)[1] + 0.03)
+        h = top - bottom
         for side in (-1, 1):
-            m.box((0.012, 0.012, h), (side * side_x(c, s, 0), front_y - s, seam_bottom + h / 2), seam_mat)
+            m.box((0.012, 0.012, h), (side * side_x(c, s, 0), front_y - s, bottom + h / 2), seam_mat)
     for s in c.get("handles", []):
         z = c["belt"] - 0.09
         for side in (-1, 1):
@@ -1122,6 +1136,26 @@ def car_specific_details(cid, m, c, M, front_y):
         # Polished trim along the sill.
         for side in (-1, 1):
             m.box((0.01, c["wb"] - 0.75, 0.025), (side * (W / 2 + 0.005), front_y - c["fo"] - c["wb"] / 2, rk + 0.03), M["chrome"])
+    elif cid == "kartal":
+        # Chrome bonnet ornament and chrome trim round the tail lamps.
+        z = body_profile(c, 0.25)[3]
+        m.box((0.05, 0.16, 0.05), (0, front_y - 0.25, z + 0.025), M["chrome"])
+        tz = body_profile(c, L - 0.03)[3] - 0.14
+        m.box((W * 0.96, 0.03, 0.02), (0, rear_y - 0.015, tz + 0.07), M["chrome"])
+    elif cid == "kerkenez":
+        # Grille emblem, black B-pillar trim strip and a chrome sill line.
+        nose = body_profile(c, 0.04)[3]
+        m.box((0.07, 0.05, 0.07), (0, front_y + 0.03, nose - 0.12), M["silver"])
+        for side in (-1, 1):
+            m.box((0.008, c["wb"] - 0.8, 0.018), (side * (W / 2 + 0.006), front_y - c["fo"] - c["wb"] / 2, rk + 0.06), M["chrome"])
+    elif cid == "piccolo":
+        # Roof spoiler, chrome bonnet strip and side indicators on the wings.
+        sp = c["roof_rear"] - 0.06
+        m.box((W * 0.7, 0.2, 0.035), (0, front_y - sp - 0.04, top_z(c, sp, 0.0) + 0.012), M["black"], rx=0.1)
+        hz = body_profile(c, 0.5)[3]
+        m.box((0.06, 0.55, 0.012), (0, front_y - 0.5, hz + 0.008), M["chrome"])
+        for side in (-1, 1):
+            m.box((0.012, 0.09, 0.04), (side * (side_x(c, 0.95, 0.7) + 0.006), front_y - 0.95, c["belt"] - 0.15), M["indicator"])
     elif cid == "bastion":
         # Raised front wings either side of a lower bonnet (the classic shape),
         # with the indicator lamps sitting on top of them.
@@ -1354,11 +1388,13 @@ def build_livery(cid, c, M, front_y, coll):
     belt = c["belt"]
     if style == "muscle":
         # Twin stripes over bonnet, roof and boot with a thin gap.
-        for x0, x1 in ((-0.34, -0.1), (0.1, 0.34)):
-            top_stripe(m, c, front_y, x0, x1, col[lv["stripe"]])
-        for side in (-1, 1):
-            for a, b in gaps_between_arches(c, 0.6, L - 0.45):
-                side_panel(m, c, front_y, side, a, b, rk + 0.12, rk + 0.2, col[lv["accent"]])
+        zones = tuple(lv.get("stripe_zones", ("hood", "roof", "deck")))
+        for x0, x1 in lv.get("stripes", ((-0.34, -0.1), (0.1, 0.34))):
+            top_stripe(m, c, front_y, x0, x1, col[lv["stripe"]], zones=zones)
+        if lv.get("side_stripe", True):
+            for side in (-1, 1):
+                for a, b in gaps_between_arches(c, 0.6, L - 0.45):
+                    side_panel(m, c, front_y, side, a, b, rk + 0.12, rk + 0.2, col[lv["accent"]])
     elif style == "rally":
         top_stripe(m, c, front_y, -0.2, 0.2, col[lv["stripe"]], zones=("hood", "deck"))
         for side in (-1, 1):
