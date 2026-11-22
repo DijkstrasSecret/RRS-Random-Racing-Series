@@ -24,6 +24,7 @@ var _grid: CarGrid
 var _portraits: CarPortraits
 var _hint: Label
 var _ready_timer := -1.0
+var _t := 0.0
 
 
 func _ready() -> void:
@@ -76,8 +77,8 @@ func open(player_count: int) -> void:
 	_hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	_hint.offset_top = -70
-	_hint.offset_bottom = -40
+	_hint.offset_top = -48
+	_hint.offset_bottom = -18
 	add_child(_hint)
 	_refresh()
 
@@ -109,7 +110,13 @@ func _refresh() -> void:
 		_grid.queue_redraw()
 
 
+func _draw() -> void:
+	MenuStyle.draw_backdrop(self, size, _t)
+
+
 func _process(delta: float) -> void:
+	_t += delta
+	queue_redraw()
 	if _ready_timer < 0.0:
 		return
 	_ready_timer -= delta
@@ -209,8 +216,15 @@ class CarGrid extends Control:
 	var owner_select: CarSelect
 	var portraits: CarPortraits
 
+	var _t := 0.0
+
 	func _ready() -> void:
 		mouse_filter = Control.MOUSE_FILTER_STOP
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST  # chunky PS1 portraits
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
 
 	func tile_rect(i: int) -> Rect2:
 		var n := CarRoster.CARS.size()
@@ -262,7 +276,15 @@ class CarGrid extends Control:
 			var r := tile_rect(i)
 			var tier := int(e.tier)
 			var tc: Color = CarRoster.TIER_COLORS[tier]
-			draw_rect(r, Color(0.07, 0.08, 0.11, 0.88))
+			# Tiles under a cursor light up and lift a little.
+			var hovered := false
+			for p in owner_select.players:
+				hovered = hovered or owner_select.cursor_of(p) == i
+			if hovered:
+				r = r.grow(3.0)
+			var top := Color(0.11, 0.12, 0.16, 0.92) if hovered else Color(0.07, 0.08, 0.11, 0.88)
+			draw_rect(r, top)
+			draw_rect(Rect2(r.position, Vector2(r.size.x, r.size.y * 0.5)), Color(1, 1, 1, 0.035))
 			draw_rect(Rect2(r.position + Vector2(0, r.size.y - 4), Vector2(r.size.x, 4)), tc)
 			var tex: Texture2D = portraits.textures.get(e.id)
 			if tex:
@@ -276,12 +298,15 @@ class CarGrid extends Control:
 			draw_string(font, r.position + Vector2(6, r.size.y - 10), short_name, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 10, 14, MenuStyle.TEXT)
 		# Player cursors (player 2 inside player 1 when on the same car).
 		for p in owner_select.players:
-			var r := tile_rect(owner_select.cursor_of(p)).grow(4.0 - p * 5.0)
+			var r := tile_rect(owner_select.cursor_of(p)).grow(7.0 - p * 5.0)
 			var col: Color = P_COLORS[p]
 			var locked := owner_select.is_locked(p)
+			var pulse := 0.5 + 0.5 * sin(_t * 6.0 + p * 1.5)
 			if locked:
-				draw_rect(r, Color(col, 0.18))
-			draw_rect(r, col, false, 5.0 if locked else 3.0)
+				draw_rect(r, Color(col, 0.2))
+			else:
+				draw_rect(r.grow(3.0), Color(col, 0.18 * pulse), false, 6.0)
+			draw_rect(r, col.lerp(Color.WHITE, 0.3 * pulse), false, 5.0 if locked else 3.0)
 			var tag := "%dP" % (p + 1) if owner_select.players == 2 else ""
 			if tag != "":
 				var tp := Vector2(r.end.x - 30, r.position.y + 20) if p == 0 else Vector2(r.end.x - 30, r.end.y - 14)
@@ -289,17 +314,23 @@ class CarGrid extends Control:
 				draw_string(font, tp, tag, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, MenuStyle.DARK)
 
 
-## One player's big preview: turning car, name, class, specs and stat bars.
+## One player's showroom: the hovering car, its name with a class badge,
+## specs and sliding stat bars, in a frame of the player's colour.
 class PlayerCard extends Control:
 	var player: int
 	var _header: Label
 	var _preview: CarPreview
+	var _badge_bg: ColorRect
+	var _badge: Label
 	var _name: Label
 	var _class: Label
 	var _tagline: Label
 	var _specs: Label
 	var _bars: GaragePanel.StatBars
 	var _title: String
+	var _locked := false
+	var _t := 0.0
+	var _overlay: Control
 
 	static func create(p: int, title: String, wide: bool) -> PlayerCard:
 		var card := PlayerCard.new()
@@ -313,37 +344,60 @@ class PlayerCard extends Control:
 		var col: Color = P_COLORS[player]
 		_header = MenuStyle.label(_title, 26, col)
 		_preview = CarPreview.new()
+		_preview.accent = col
 		_name = MenuStyle.label("", 40, MenuStyle.TEXT)
 		_class = MenuStyle.label("", 20, MenuStyle.ACCENT)
 		_tagline = MenuStyle.label("", 18, MenuStyle.DIM)
 		_specs = MenuStyle.label("", 19, MenuStyle.ACCENT)
 		_bars = GaragePanel.StatBars.new()
 		_bars.custom_minimum_size = Vector2(540, 6 * 30)
+		# Class badge: a coloured square with the class letter, before the name.
+		_badge_bg = ColorRect.new()
+		_badge_bg.custom_minimum_size = Vector2(46, 46)
+		_badge_bg.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_badge = MenuStyle.label("", 30, MenuStyle.DARK)
+		_badge.add_theme_constant_override("outline_size", 0)
+		_badge.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_badge.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_badge_bg.add_child(_badge)
+		var name_row := HBoxContainer.new()
+		name_row.add_theme_constant_override("separation", 14)
+		name_row.add_child(_badge_bg)
+		name_row.add_child(_name)
 		var info := VBoxContainer.new()
 		info.add_theme_constant_override("separation", 4)
 		info.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		for l: Control in [_name, _class, _tagline, _specs]:
+		for l: Control in [name_row, _class, _tagline, _specs]:
 			info.add_child(l)
 		var gap := Control.new()
-		gap.custom_minimum_size = Vector2(0, 8)
+		gap.custom_minimum_size = Vector2(0, 10)
 		info.add_child(gap)
 		info.add_child(_bars)
+		_header.position = Vector2(4, 0)
 		if wide:
-			_preview.position = Vector2(0, 30)
-			_preview.size = Vector2(900, 470)
-			_header.position = Vector2(10, 0)
-			info.position = Vector2(960, 70)
+			_preview.position = Vector2(0, 44)
+			_preview.size = Vector2(900, 456)
+			info.position = Vector2(950, 60)
 		else:
-			_header.position = Vector2(10, 0)
-			_preview.position = Vector2(0, 26)
-			_preview.size = Vector2(760, 228)
-			_preview.camera_distance = 5.6
-			info.position = Vector2(10, 252)
+			_preview.position = Vector2(0, 40)
+			_preview.size = Vector2(760, 216)
+			_preview.camera_distance = 7.4
+			info.position = Vector2(4, 266)
 			_name.add_theme_font_size_override("font_size", 32)
+			_badge_bg.custom_minimum_size = Vector2(38, 38)
+			_badge.add_theme_font_size_override("font_size", 24)
 			_bars.custom_minimum_size = Vector2(540, 6 * 26)
 		add_child(_preview)
 		add_child(_header)
 		add_child(info)
+		# Drawn on top of the 3D view (the READY banner).
+		_overlay = Control.new()
+		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_overlay.position = _preview.position
+		_overlay.size = _preview.size
+		_overlay.draw.connect(_draw_overlay)
+		add_child(_overlay)
 
 	func show_car(id: String) -> void:
 		var e := CarRoster.entry(id)
@@ -351,13 +405,50 @@ class PlayerCard extends Control:
 		var tier := int(e.tier)
 		_preview.show_car(id)
 		_name.text = e.name
+		_badge.text = CarRoster.TIER_NAMES[tier]
+		_badge_bg.color = CarRoster.TIER_COLORS[tier]
 		_class.text = "CLASS %s  ·  %s" % [CarRoster.TIER_NAMES[tier], CarRoster.TIER_TITLES[tier]]
 		_class.add_theme_color_override("font_color", CarRoster.TIER_COLORS[tier])
 		_tagline.text = e.tagline
 		_specs.text = "%d HP   ·   %d KG   ·   %d KM/H   ·   %s%s" % [
 			s.hp, s.kg, s.top_kmh, s.drive, "   ·   ELECTRIC" if s.electric else ""]
 		_bars.stats = s
-		_bars.queue_redraw()
 
 	func set_locked(locked: bool) -> void:
+		_locked = locked
 		_header.text = "%s  -  READY" % _title if locked else _title
+
+	func _process(delta: float) -> void:
+		_t += delta
+		queue_redraw()
+		_overlay.queue_redraw()
+
+	func _draw() -> void:
+		var col: Color = P_COLORS[player]
+		var r := Rect2(_preview.position, _preview.size)
+		# Header strip and frame round the showroom (corner brackets glow
+		# brighter, and pulse once the player is ready).
+		draw_rect(Rect2(r.position.x, r.position.y - 8.0, r.size.x, 3.0), Color(col, 0.8))
+		draw_rect(r.grow(6.0), Color(0, 0, 0, 0.6))
+		var frame_a := 1.0 if _locked else 0.45
+		draw_rect(r.grow(3.0), Color(col, frame_a), false, 2.0)
+		var bright := col.lerp(Color.WHITE, 0.35 + (0.25 * sin(_t * 8.0) if _locked else 0.0))
+		var k := 28.0
+		var g := r.grow(6.0)
+		for c: Vector2 in [g.position, Vector2(g.end.x, g.position.y), g.end, Vector2(g.position.x, g.end.y)]:
+			var sx := 1.0 if c.x < g.get_center().x else -1.0
+			var sy := 1.0 if c.y < g.get_center().y else -1.0
+			draw_line(c, c + Vector2(k * sx, 0.0), bright, 5.0)
+			draw_line(c, c + Vector2(0.0, k * sy), bright, 5.0)
+
+	func _draw_overlay() -> void:
+		if not _locked:
+			return
+		var col: Color = P_COLORS[player]
+		var r := Rect2(Vector2.ZERO, _overlay.size)
+		var banner := Rect2(r.position.x, r.end.y - 44.0, r.size.x, 40.0)
+		_overlay.draw_rect(banner, Color(col, 0.8))
+		var font := ThemeDB.fallback_font
+		var w := font.get_string_size("READY", HORIZONTAL_ALIGNMENT_LEFT, -1, 30).x
+		_overlay.draw_string(font, Vector2(banner.get_center().x - w * 0.5, banner.end.y - 10.0), "READY",
+				HORIZONTAL_ALIGNMENT_LEFT, -1, 30, MenuStyle.DARK)

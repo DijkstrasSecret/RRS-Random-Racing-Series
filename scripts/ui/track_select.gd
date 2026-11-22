@@ -39,9 +39,21 @@ func _ready() -> void:
 	hint.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hint.grow_vertical = Control.GROW_DIRECTION_BEGIN
-	hint.offset_top = -70
-	hint.offset_bottom = -40
+	hint.offset_top = -48
+	hint.offset_bottom = -18
 	add_child(hint)
+
+
+var _t := 0.0
+
+
+func _draw() -> void:
+	MenuStyle.draw_backdrop(self, size, _t)
+
+
+func _process(delta: float) -> void:
+	_t += delta
+	queue_redraw()
 
 
 func open() -> void:

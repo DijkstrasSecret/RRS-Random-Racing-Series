@@ -67,6 +67,22 @@ static func label(text: String, font_size: int = 22, color: Color = TEXT) -> Lab
 	return l
 
 
+## Full-screen backdrop for the race-flow screens: slowly drifting
+## diagonal stripes, a title bar on top and a hint bar along the bottom.
+static func draw_backdrop(ci: CanvasItem, size: Vector2, t: float, accent: Color = ACCENT) -> void:
+	var stripe := 90.0
+	var shift := fmod(t * 18.0, stripe * 2.0)
+	var x := -size.y - stripe * 2.0 + shift
+	while x < size.x:
+		ci.draw_colored_polygon(PackedVector2Array([Vector2(x, size.y), Vector2(x + stripe, size.y),
+				Vector2(x + stripe + size.y, 0.0), Vector2(x + size.y, 0.0)]), Color(1, 1, 1, 0.025))
+		x += stripe * 2.0
+	ci.draw_rect(Rect2(0, 0, size.x, 96.0), Color(0, 0, 0, 0.5))
+	ci.draw_rect(Rect2(0, 96.0, size.x, 3.0), Color(accent, 0.8))
+	ci.draw_rect(Rect2(0, size.y - 64.0, size.x, 64.0), Color(0, 0, 0, 0.5))
+	ci.draw_rect(Rect2(0, size.y - 66.0, size.x, 2.0), Color(accent, 0.5))
+
+
 ## Wide letter spacing for titles ("R A C E").
 static func spaced(text: String) -> String:
 	return " ".join(text.split(""))

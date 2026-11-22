@@ -5,21 +5,29 @@ extends Node
 ## `textures[id]` is ready to draw straight away and fills in on the next frame.
 
 const SIZE := Vector2i(320, 192)
+## PS1 look: rendered small (and drawn with blocky pixels) with the
+## wobbly PS1 car materials.
+const SIZE_PS1 := Vector2i(100, 60)
 
 var textures: Dictionary = {}
 
 
+var _ps1 := true
+
+
 func _ready() -> void:
+	GameSettings.ensure_loaded()
+	_ps1 = GameSettings.look != RetroLook.Level.PS2
 	for id in CarRoster.ids():
 		textures[id] = _render(id)
 
 
 func _render(id: String) -> Texture2D:
 	var vp := SubViewport.new()
-	vp.size = SIZE
+	vp.size = SIZE_PS1 if _ps1 else SIZE
 	vp.own_world_3d = true
 	vp.transparent_bg = true
-	vp.msaa_3d = Viewport.MSAA_4X
+	vp.msaa_3d = Viewport.MSAA_DISABLED if _ps1 else Viewport.MSAA_4X
 	vp.render_target_update_mode = SubViewport.UPDATE_ONCE
 	add_child(vp)
 
@@ -42,6 +50,8 @@ func _render(id: String) -> Texture2D:
 	vp.add_child(rim)
 
 	var model := (load(CarRoster.model_path(id)) as PackedScene).instantiate() as Node3D
+	if _ps1:
+		CarLook.apply_retro(model, Vector2(SIZE_PS1))
 	# Every car is drawn about the same length so the grid looks even.
 	var length := CarRoster.config(id).inertia_box_size.z
 	model.scale = Vector3.ONE * clampf(4.5 / length, 0.78, 1.25)
