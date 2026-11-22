@@ -15,6 +15,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_child(PauseMenu.new())
+	MusicPlayer.start_race()
 	print("RRS %s | Godot %s | %d players" % [name, Engine.get_version_info().string, car_paths.size()])
 	var circuit := get_node(circuit_path) as Circuit
 	if get_tree().get_first_node_in_group("race_setup"):

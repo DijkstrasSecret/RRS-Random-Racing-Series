@@ -24,7 +24,7 @@ func _build() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(root)
 	_dim = ColorRect.new()
-	_dim.color = Color(0, 0, 0, 0.55)
+	_dim.color = Color(0, 0, 0, 0.62)
 	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(_dim)
 
@@ -71,6 +71,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func open() -> void:
 	get_tree().paused = true
+	MusicPlayer.duck(true)
 	visible = true
 	for device in Input.get_connected_joypads():
 		Input.stop_joy_vibration(device)
@@ -80,15 +81,18 @@ func open() -> void:
 func resume() -> void:
 	visible = false
 	get_tree().paused = false
+	MusicPlayer.duck(false)
 
 
 func _restart() -> void:
 	get_tree().paused = false
+	MusicPlayer.duck(false)
 	get_tree().reload_current_scene()
 
 
 func _main_menu() -> void:
 	get_tree().paused = false
+	MusicPlayer.duck(false)
 	get_tree().change_scene_to_file(GameSettings.MAIN_MENU)
 
 

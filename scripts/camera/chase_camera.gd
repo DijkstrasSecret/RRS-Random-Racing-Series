@@ -42,6 +42,7 @@ var _time: float = 0.0
 func _ready() -> void:
 	top_level = true
 	physics_interpolation_mode = Node.PHYSICS_INTERPOLATION_MODE_OFF
+	doppler_tracking = Camera3D.DOPPLER_TRACKING_IDLE_STEP
 	_target = get_node_or_null(target_path) as RigidBody3D
 	fov = base_fov
 	snap()

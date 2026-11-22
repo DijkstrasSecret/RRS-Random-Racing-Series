@@ -1,11 +1,12 @@
-# Normalise line endings for text files
-* text=auto eol=lf
 
 # Binary assets
+# Normalise line endings for text files
+* text=auto eol=lf
 *.blend binary
 *.glb binary
-*.png binary
 *.jpg binary
-*.wav binary
+*.mp3 binary
 *.ogg binary
 *.pdf binary
+*.png binary
+*.wav binary

@@ -17,6 +17,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	add_child(PauseMenu.new())
+	MusicPlayer.start_race()
 	var engine_name: String = ProjectSettings.get_setting("physics/3d/physics_engine")
 	print("RRS %s | Godot %s | physics: %s @ %d Hz" % [
 		name, Engine.get_version_info().string, engine_name, Engine.physics_ticks_per_second])

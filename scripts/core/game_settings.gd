@@ -23,6 +23,8 @@ static var handling_profile: int = 1  ## 0 Arcade, 1 Sport, 2 Sim
 static var look: int = 1  ## 0 Modern, 1 PS2, 2 PS1
 static var fullscreen: bool = false
 static var vibration: bool = true
+static var sound_volume: int = 8  ## 0..10, engines and effects
+static var music_volume: int = 6  ## 0..10
 
 static var _loaded: bool = false
 
@@ -34,16 +36,20 @@ static func ensure_loaded() -> void:
 	_loaded = true
 	var cfg := ConfigFile.new()
 	if cfg.load(PATH) != OK:
+		apply_volume()
 		return
 	laps = cfg.get_value("race", "laps", laps)
 	ai_count = cfg.get_value("race", "ai_count", ai_count)
 	ai_difficulty = cfg.get_value("race", "ai_difficulty", ai_difficulty)
 	handling_profile = cfg.get_value("car", "handling_profile", handling_profile)
 	vibration = cfg.get_value("car", "vibration", vibration)
+	sound_volume = cfg.get_value("audio", "sound", sound_volume)
+	music_volume = cfg.get_value("audio", "music", music_volume)
 	look = cfg.get_value("video", "look", look)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	if fullscreen:
 		apply_window()
+	apply_volume()
 
 
 ## Tests call this so the saved file doesn't change their results.
@@ -60,11 +66,29 @@ static func save() -> void:
 	cfg.set_value("car", "vibration", vibration)
 	cfg.set_value("video", "look", look)
 	cfg.set_value("video", "fullscreen", fullscreen)
+	cfg.set_value("audio", "sound", sound_volume)
+	cfg.set_value("audio", "music", music_volume)
 	cfg.save(PATH)
 
 
 static func ai_skill_range() -> Vector2:
 	return DIFFICULTY_SKILLS[clampi(ai_difficulty, 0, DIFFICULTY_SKILLS.size() - 1)]
+
+
+## Makes sure the "Music" and "SFX" buses exist (both feed Master).
+static func ensure_buses() -> void:
+	for bus_name: String in ["Music", "SFX"]:
+		if AudioServer.get_bus_index(bus_name) == -1:
+			AudioServer.add_bus()
+			var i := AudioServer.bus_count - 1
+			AudioServer.set_bus_name(i, bus_name)
+			AudioServer.set_bus_send(i, &"Master")
+
+
+static func apply_volume() -> void:
+	ensure_buses()
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("SFX"), linear_to_db(maxf(sound_volume / 10.0, 0.0001)))
+	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear_to_db(maxf(music_volume / 10.0, 0.0001)))
 
 
 static func apply_window() -> void:
@@ -77,6 +101,7 @@ static func apply_window() -> void:
 ## Applies the settings that can change mid-game (look, handling, window).
 static func apply_live(tree: SceneTree) -> void:
 	apply_window()
+	apply_volume()
 	for node in tree.get_nodes_in_group("retro_look"):
 		node.set_level(look)
 	for node in tree.get_nodes_in_group("vehicles"):

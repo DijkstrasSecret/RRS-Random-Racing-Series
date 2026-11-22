@@ -52,8 +52,9 @@ func _ready() -> void:
 	_build_curbs()
 	_build_start_line()
 	_build_brake_boards()
-	_build_grandstand()
-	_build_trees()
+	var dressing := TrackDressing.new()
+	dressing.name = "Dressing"
+	add_child(dressing)
 
 
 ## Starting position: on the grid just behind the start/finish line.
@@ -425,77 +426,6 @@ func _brake_board(pos: Vector3, tangent: Vector3, text: String) -> void:
 	label.outline_size = 0
 	label.transform = Transform3D(rot, pos + Vector3(0, 2.4, 0) - tangent * 0.06)
 	add_child(label)
-
-
-func _build_grandstand() -> void:
-	# Stepped stand along the left of the start straight, facing the track.
-	var s: Dictionary = _samples[int(_samples.size() * 0.97)]
-	var rot := Basis.looking_at(s.right, Vector3.UP)  # front faces the road
-	var base: Vector3 = s.pos - s.right * (road_width * 0.5 + 14.0)
-	for step in 5:
-		var d := 2.0 * step
-		_static_box_basis(Vector3(70.0, 1.0 + step, 2.0), base + rot * Vector3(0.0, (1.0 + step) * 0.5, d),
-				rot, Color(0.55, 0.57, 0.62))
-	_static_box_basis(Vector3(70.0, 0.4, 12.0), base + rot * Vector3(0.0, 7.5, 4.0), rot, Color(0.85, 0.2, 0.15))
-
-
-func _build_trees() -> void:
-	var rng := RandomNumberGenerator.new()
-	rng.seed = random_seed
-	var area := _bounds.grow(200.0)
-	var trunk_mesh := CylinderMesh.new()
-	trunk_mesh.top_radius = 0.25
-	trunk_mesh.bottom_radius = 0.35
-	trunk_mesh.height = 2.0
-	trunk_mesh.radial_segments = 6
-	trunk_mesh.material = _color_mat(Color(0.35, 0.24, 0.15))
-	var crown_mesh := CylinderMesh.new()
-	crown_mesh.top_radius = 0.0
-	crown_mesh.bottom_radius = 2.4
-	crown_mesh.height = 6.0
-	crown_mesh.radial_segments = 7
-	crown_mesh.material = _color_mat(Color(0.16, 0.36, 0.17))
-	var transforms: Array[Transform3D] = []
-	var tries := 0
-	while transforms.size() < tree_count and tries < tree_count * 8:
-		tries += 1
-		var p := Vector3(rng.randf_range(area.position.x, area.end.x), 0.0,
-				rng.randf_range(area.position.y, area.end.y))
-		if distance_from_centre(global_transform * p) < tree_clearance:
-			continue
-		var tree_scale := rng.randf_range(0.8, 1.5)
-		transforms.append(Transform3D(Basis.from_scale(Vector3.ONE * tree_scale).rotated(Vector3.UP, rng.randf() * TAU), p))
-	var trunks := _multimesh(trunk_mesh, transforms, Vector3(0, 1.0, 0))
-	var crowns := _multimesh(crown_mesh, transforms, Vector3(0, 5.0, 0))
-	add_child(trunks)
-	add_child(crowns)
-	# Solid trunks.
-	var body := StaticBody3D.new()
-	body.name = "Trees"
-	body.collision_layer = LAYER_WORLD
-	body.collision_mask = 0
-	var trunk_shape := CylinderShape3D.new()
-	trunk_shape.radius = 0.45
-	trunk_shape.height = 4.0
-	for xf in transforms:
-		var cs := CollisionShape3D.new()
-		cs.shape = trunk_shape
-		cs.position = xf.origin + Vector3(0, 2.0, 0)
-		body.add_child(cs)
-	add_child(body)
-
-
-func _multimesh(mesh: Mesh, transforms: Array[Transform3D], offset: Vector3) -> MultiMeshInstance3D:
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = mesh
-	mm.instance_count = transforms.size()
-	for i in transforms.size():
-		var xf := transforms[i]
-		mm.set_instance_transform(i, Transform3D(xf.basis, xf.origin + xf.basis * offset))
-	var mmi := MultiMeshInstance3D.new()
-	mmi.multimesh = mm
-	return mmi
 
 
 # --- Helpers -----------------------------------------------------------------

@@ -30,6 +30,13 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.look = i)
 	_add_row("FULLSCREEN", PackedStringArray(["OFF", "ON"]), int(GameSettings.fullscreen),
 			func(i: int) -> void: GameSettings.fullscreen = i == 1)
+	var volumes := PackedStringArray()
+	for n in 11:
+		volumes.append(str(n))
+	_add_row("MUSIC VOLUME", volumes, GameSettings.music_volume,
+			func(i: int) -> void: GameSettings.music_volume = i)
+	_add_row("SOUND VOLUME", volumes, GameSettings.sound_volume,
+			func(i: int) -> void: GameSettings.sound_volume = i)
 	_add_row("VIBRATION", PackedStringArray(["OFF", "ON"]), int(GameSettings.vibration),
 			func(i: int) -> void: GameSettings.vibration = i == 1)
 

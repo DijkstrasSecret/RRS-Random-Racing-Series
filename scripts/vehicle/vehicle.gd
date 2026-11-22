@@ -27,6 +27,8 @@ const FALL_RESET_Y := -30.0
 @export var paint_color: Color = Color(0, 0, 0, 0)
 ## A second colour variant of the model's texture, used to find the paint area.
 @export var paint_reference: Texture2D
+## Engine, tyre and surface sounds.
+@export var sounds_enabled: bool = true
 
 @export_group("Body motion (visual only)")
 ## Extra body tilt per g of acceleration/braking (nose up / nose dive).
@@ -123,6 +125,10 @@ func _ready() -> void:
 	_wheelbase = maxf(absf(_rear_axle_z - _front_axle_z), 1.0)
 
 	drivetrain.setup(config)
+	if sounds_enabled and DisplayServer.get_name() != "headless":
+		var audio := CarAudio.new()
+		audio.name = "Audio"
+		add_child(audio)
 	GameSettings.ensure_loaded()
 	set_handling_profile(GameSettings.handling_profile)
 	spawn_transform = global_transform

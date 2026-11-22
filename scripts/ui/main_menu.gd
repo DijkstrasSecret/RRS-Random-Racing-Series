@@ -23,6 +23,7 @@ func _enter_tree() -> void:
 
 func _ready() -> void:
 	get_tree().paused = false
+	MusicPlayer.start_menu()
 	_camera = $ChaseCamera
 	_camera.mode = ChaseCamera.Mode.FAR
 	_setup = $RaceSetup
@@ -37,6 +38,8 @@ func _process(delta: float) -> void:
 		_showcase_timer = showcase_switch_time
 		_showcase_index = (_showcase_index + 1) % _setup.ai_vehicles.size()
 		_camera.set_target(_setup.ai_vehicles[_showcase_index])
+		# Background cars a bit quieter than in a race.
+		get_tree().call_group("car_audio", "set_gain", -9.0)
 
 
 func _build_ui() -> void:
@@ -52,14 +55,14 @@ func _build_ui() -> void:
 	# Dark fade on the left so the menu reads well over the 3D scene.
 	var fade := TextureRect.new()
 	var grad := Gradient.new()
-	grad.colors = PackedColorArray([Color(0, 0, 0, 0.85), Color(0, 0, 0, 0.0)])
+	grad.colors = PackedColorArray([Color(0, 0, 0, 0.55), Color(0, 0, 0, 0.0)])
 	var fade_tex := GradientTexture2D.new()
 	fade_tex.gradient = grad
 	fade_tex.fill_to = Vector2(1, 0)
 	fade.texture = fade_tex
 	fade.stretch_mode = TextureRect.STRETCH_SCALE
 	fade.set_anchors_preset(Control.PRESET_LEFT_WIDE)
-	fade.custom_minimum_size = Vector2(900, 0)
+	fade.custom_minimum_size = Vector2(1000, 0)
 	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(fade)
 
@@ -77,23 +80,28 @@ func _build_ui() -> void:
 	margin.add_child(column)
 
 	_title = VBoxContainer.new()
-	_title.add_child(MenuStyle.label("RRS", 132, MenuStyle.ACCENT))
-	_title.add_child(MenuStyle.label("RANDOM RACING SERIES", 34))
+	var big := MenuStyle.label("RRS", 150, MenuStyle.ACCENT)
+	big.add_theme_constant_override("outline_size", 14)
+	_title.add_child(big)
+	_title.add_child(MenuStyle.label(MenuStyle.spaced("RANDOM RACING SERIES"), 22, MenuStyle.TEXT))
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 30)
+	gap.custom_minimum_size = Vector2(0, 46)
 	_title.add_child(gap)
 	column.add_child(_title)
 
 	_main = VBoxContainer.new()
 	_main.add_child(MenuStyle.button("RACE", func() -> void: _go(GameSettings.RACE)))
-	_main.add_child(MenuStyle.button("SPLIT SCREEN  (2 PLAYERS)", func() -> void: _go(GameSettings.VERSUS)))
+	_main.add_child(MenuStyle.button("SPLIT SCREEN", func() -> void: _go(GameSettings.VERSUS)))
 	_main.add_child(MenuStyle.button("PRACTICE", func() -> void: _go(GameSettings.PRACTICE)))
 	_main.add_child(MenuStyle.button("TEST TRACK", func() -> void: _go(GameSettings.TEST_TRACK)))
 	_main.add_child(MenuStyle.button("SETTINGS", _show_settings))
 	_main.add_child(MenuStyle.button("CONTROLS", _show_controls))
 	_main.add_child(MenuStyle.button("QUIT", func() -> void: get_tree().quit()))
 	column.add_child(_main)
-	_summary = MenuStyle.label("", 19, MenuStyle.DIM)
+	var gap2 := Control.new()
+	gap2.custom_minimum_size = Vector2(0, 14)
+	column.add_child(gap2)
+	_summary = MenuStyle.label("", 18, MenuStyle.DIM)
 	column.add_child(_summary)
 
 	_settings = SettingsPanel.new()
