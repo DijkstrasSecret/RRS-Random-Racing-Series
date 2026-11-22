@@ -182,14 +182,37 @@ func position_of(i: int) -> int:
 
 ## Racer indices sorted by current position.
 func standings() -> Array[int]:
+	var frame := Engine.get_physics_frames()
+	if frame == _order_frame and _order_cache.size() == _racers.size():
+		return _order_cache
+	_order_frame = frame
 	var order: Array[int] = []
 	for i in _racers.size():
 		order.append(i)
 	order.sort_custom(func(a: int, b: int) -> bool: return position_of(a) < position_of(b))
+	_order_cache = order
 	return order
 
 
+## Race distance of every car, measured once per frame (the HUD position
+## tower asks for positions and gaps many times a frame).
+var _dist_cache := PackedFloat32Array()
+var _dist_frame := -1
+var _order_cache: Array[int] = []
+var _order_frame := -1
+
+
 func _race_distance(i: int) -> float:
+	var frame := Engine.get_physics_frames()
+	if frame != _dist_frame or _dist_cache.size() != _racers.size():
+		_dist_frame = frame
+		_dist_cache.resize(_racers.size())
+		for k in _racers.size():
+			_dist_cache[k] = _measure_distance(k)
+	return _dist_cache[i]
+
+
+func _measure_distance(i: int) -> float:
 	if _circuit == null:
 		return 0.0
 	var t: LapTimer = _racers[i].timer
