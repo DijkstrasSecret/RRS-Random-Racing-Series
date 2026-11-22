@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 2.3
-display_name = "Bastion 350D"
+display_name = "Mercedes-Benz G 350 d"
 mass = 2500
 center_of_mass = Vector3(0.0, 0.62, 0.0)
 inertia_box_size = Vector3(1.86, 1.8, 4.66)

@@ -315,7 +315,7 @@ class CarGrid extends Control:
 			var badge := Rect2(r.position + Vector2(5, 5), Vector2(22, 22))
 			draw_rect(badge, tc)
 			draw_string(font, badge.position + Vector2(5, 17), CarRoster.TIER_NAMES[tier], HORIZONTAL_ALIGNMENT_LEFT, -1, 16, MenuStyle.DARK)
-			var short_name: String = e.name.split(" ")[0]
+			var short_name: String = CarRoster.short_name(e.id)
 			draw_string_outline(font, r.position + Vector2(6, r.size.y - 10), short_name, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 10, 14, 4, Color(0, 0, 0, 0.85))
 			draw_string(font, r.position + Vector2(6, r.size.y - 10), short_name, HORIZONTAL_ALIGNMENT_LEFT, r.size.x - 10, 14, MenuStyle.TEXT)
 		# Player cursors (player 2 inside player 1 when on the same car).

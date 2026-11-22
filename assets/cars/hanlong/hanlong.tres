@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 1.7
-display_name = "Hanlong E9"
+display_name = "BYD Han EV"
 mass = 2250
 center_of_mass = Vector3(0.0, 0.42, 0.0)
 inertia_box_size = Vector3(1.91, 1.2, 4.99)

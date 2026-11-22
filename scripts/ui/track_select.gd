@@ -1,6 +1,7 @@
 class_name TrackSelect
 extends Control
 ## Pick the circuit: one card per layout with its map, length and corners.
+## The cards slide along so the chosen one sits in the middle.
 ## Left / right to browse, Enter / Space / A to pick, Esc / B to go back.
 ## In split screen either player can choose.
 
@@ -12,6 +13,7 @@ const GAP := 40.0
 
 var _index := 0
 var _cards: Array[TrackCard] = []
+var _scroll := 0.0  ## x offset of the card row (eases towards the chosen card)
 
 
 func _ready() -> void:
@@ -23,11 +25,9 @@ func _ready() -> void:
 	title.offset_top = 28
 	add_child(title)
 	var n := TrackList.TRACKS.size()
-	var total := n * CARD.x + (n - 1) * GAP
 	for i in n:
 		var card := TrackCard.new()
 		card.track_id = TrackList.TRACKS[i].id
-		card.position = Vector2((1920 - total) * 0.5 + i * (CARD.x + GAP), 190)
 		card.size = CARD
 		card.hovered.connect(func() -> void: _select(i))
 		card.clicked.connect(func() -> void:
@@ -53,12 +53,26 @@ func _draw() -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	_scroll = lerpf(_scroll, _target_scroll(), 1.0 - exp(-10.0 * delta))
+	_place_cards()
 	queue_redraw()
+
+
+## Row offset that puts the chosen card in the middle of the screen.
+func _target_scroll() -> float:
+	return _index * (CARD.x + GAP) - (1920.0 - CARD.x) * 0.5
+
+
+func _place_cards() -> void:
+	for i in _cards.size():
+		_cards[i].position = Vector2(i * (CARD.x + GAP) - _scroll, 190)
 
 
 func open() -> void:
 	GameSettings.ensure_loaded()
 	_select(TrackList.index_of(GameSettings.track))
+	_scroll = _target_scroll()
+	_place_cards()
 
 
 func selected_id() -> String:
@@ -147,6 +161,10 @@ class TrackCard extends Control:
 		draw_line(a - side * 14.0, a + side * 14.0, MenuStyle.ACCENT, 5.0)
 		draw_colored_polygon(PackedVector2Array([b + dir * 22.0, b + side * 9.0, b - side * 9.0]), MenuStyle.ACCENT)
 		var y := 420.0
+		if t.get("real", false):
+			var tag := Rect2(Vector2(size.x - 150, 20), Vector2(130, 34))
+			draw_rect(tag, Color(0.85, 0.1, 0.1, 0.9))
+			draw_string(font, tag.position + Vector2(0, 25), "F1 CIRCUIT", HORIZONTAL_ALIGNMENT_CENTER, tag.size.x, 18, MenuStyle.TEXT)
 		draw_string_outline(font, Vector2(30, y), t.name, HORIZONTAL_ALIGNMENT_LEFT, size.x - 60, 34, 6, Color(0, 0, 0, 0.8))
 		draw_string(font, Vector2(30, y), t.name, HORIZONTAL_ALIGNMENT_LEFT, size.x - 60, 34,
 				MenuStyle.ACCENT if selected else MenuStyle.TEXT)

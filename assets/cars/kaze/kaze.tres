@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 1.2
-display_name = "Kaze Sora 16i"
+display_name = "Honda Civic 1.6 i-VTEC"
 mass = 1280
 center_of_mass = Vector3(0.0, 0.45, -0.25)
 inertia_box_size = Vector3(1.8, 1.3, 4.63)

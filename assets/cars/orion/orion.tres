@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 1.5
-display_name = "Orion Arc 6"
+display_name = "Hyundai Ioniq 6"
 mass = 1800
 center_of_mass = Vector3(0.0, 0.42, 0.05)
 inertia_box_size = Vector3(1.88, 1.2, 4.86)

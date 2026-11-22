@@ -56,7 +56,10 @@ func _physics_process(delta: float) -> void:
 			if w._dirt and w._dirt._chunks.emitting:
 				_dirt_seen = true
 	var all_done := _race.car_count() > 0 and _race.finish_order.size() == _race.car_count()
-	if all_done or _t > 120.0 * _laps:
+	# Allow ~1 minute per kilometre per lap (+ the countdown).
+	var circuit := get_tree().get_first_node_in_group("circuit") as Circuit
+	var per_lap := maxf(120.0, circuit.length / 1000.0 * 60.0) if circuit else 120.0
+	if all_done or _t > 10.0 + per_lap * _laps:
 		print("  cars in race           %d" % _race.car_count())
 		print("  countdown held cars    %s (max rolling speed %.2f m/s)" % [str(_started and _moved_in_countdown < 0.6), _moved_in_countdown])
 		print("  everyone finished      %s" % str(all_done))

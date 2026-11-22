@@ -6,8 +6,8 @@ Optional: set CARS_ONLY = ["kartal"] before exec() to rebuild only some cars.
 
 Each car is lofted from cross-sections along its length, driven by a few
 measurements (length, width, roof line, hood/deck heights, wheelbase...)
-plus style choices for the grille, lights and wheels. The cars are inspired
-by real models but are original designs with fictional names.
+plus style choices for the grille, lights and wheels. Game versions of real
+cars (names in car_roster.gd).
 
 Conventions (design concept §15): metres, +Y forward, +X right, origin on the
 ground between the axles. Each car exports to assets/cars/<id>/<id>.glb with
@@ -39,7 +39,7 @@ CARS = {
         handles=[2.4, 3.0], plate="34 AN 77", reverse_lights=[(-0.36, 0.66), (0.36, 0.66)],
         livery=dict(style="rally", stripe="white", accent="black", number="77", number_s=2.1, number_z=0.62,
                     sponsor="TURBO OIL", sponsor_bg=(0.95, 0.78, 0.1), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.8,
-                    sponsor_z=0.62, sponsor_w=0.5, banner="KARTAL RACING")),
+                    sponsor_z=0.62, sponsor_w=0.5, banner="ANADOL RACING")),
     "ashford": dict(  # British V12 grand tourer (Aston Martin DB11 inspired)
         L=4.74, W=1.95, H=1.28, wb=2.80, r=0.35, tw=0.25, fo=0.95, rocker=0.18,
         belt=0.82, nose=0.66, cowl=0.92, deck=0.95, tail=0.98,
@@ -52,7 +52,7 @@ CARS = {
         livery=dict(style="muscle", stripe_set=[(-0.2, 0.2, "white"), (-0.25, -0.22, "red"), (0.22, 0.25, "red")],
                     side_stripe=False, stripe="white", accent="red", number="12", number_s=2.55, number_z=0.5,
                     sponsor="VOLTA OIL", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=1.55, sponsor_z=0.73, sponsor_w=0.5,
-                    banner="ASHFORD GT TEAM")),
+                    banner="ASTON MARTIN GT")),
     "quadra": dict(  # compact diesel sedan (Audi A3 Sedan inspired)
         L=4.46, W=1.80, H=1.42, wb=2.64, r=0.32, tw=0.22, fo=0.88, rocker=0.20,
         belt=0.98, nose=0.76, cowl=1.00, deck=1.03, tail=1.00,
@@ -64,7 +64,7 @@ CARS = {
         plate="06 QDR 16", reverse_lights=[(-0.42, 0.76), (0.42, 0.76)],
         livery=dict(style="rally", stripe="white", accent="red", number="16", number_s=2.05, number_z=0.59,
                     sponsor="RRS RACING", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.88, sponsor_z=0.59, sponsor_w=0.5,
-                    banner="QUADRA MOTORSPORT")),
+                    banner="AUDI MOTORSPORT")),
     "bellmont": dict(  # V8 luxury limousine (Bentley Flying Spur inspired)
         L=5.32, W=1.98, H=1.48, wb=3.19, r=0.37, tw=0.26, fo=1.00, rocker=0.22,
         belt=1.05, nose=0.92, cowl=1.06, deck=1.09, tail=1.04,
@@ -77,7 +77,7 @@ CARS = {
         livery=dict(style="muscle", stripe_set=[(-0.3, -0.26, "white"), (0.26, 0.3, "white")], stripe="white",
                     accent="white", number="08", number_s=2.45, number_z=0.63, sponsor="ROYAL OIL",
                     sponsor_bg=(0.95, 0.95, 0.93), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=3.42, sponsor_z=0.63,
-                    sponsor_w=0.5, banner="BELLMONT")),
+                    sponsor_w=0.5, banner="BENTLEY")),
     "romola": dict(  # Italian diesel hatchback (Alfa Romeo Giulietta inspired)
         L=4.35, W=1.80, H=1.46, wb=2.63, r=0.32, tw=0.23, fo=0.88, rocker=0.20,
         belt=0.98, nose=0.74, cowl=1.00, deck=1.10, tail=1.02,
@@ -89,7 +89,7 @@ CARS = {
         reverse_lights=[(-0.3, 0.4), (0.3, 0.4)],
         livery=dict(style="rally", stripe="red", accent="green", number="47", number_s=2.0, number_z=0.59,
                     sponsor="NOVA TYRES", sponsor_bg=(0.0, 0.42, 0.2), sponsor_s=2.9, sponsor_z=0.59, sponsor_w=0.5,
-                    banner="ROMOLA CORSE")),
+                    banner="ALFA ROMEO CORSE")),
     "bavaro": dict(  # 4-door fastback coupe (BMW 4 Series Gran Coupe inspired)
         L=4.78, W=1.85, H=1.44, wb=2.86, r=0.34, tw=0.24, fo=0.88, rocker=0.20,
         belt=0.98, nose=0.78, cowl=1.00, deck=1.03, tail=1.02,
@@ -101,7 +101,7 @@ CARS = {
         plate="34 BV 420", reverse_lights=[(-0.35, 0.45), (0.35, 0.45)],
         livery=dict(style="muscle", stripe_set=[(-0.26, -0.17, "lightblue"), (-0.15, -0.06, "blue"), (-0.04, 0.05, "red")],
                     stripe="blue", accent="red", number="20", number_s=2.12, number_z=0.59, sponsor="RRS RACING",
-                    sponsor_bg=(0.05, 0.22, 0.75), sponsor_s=2.97, sponsor_z=0.59, sponsor_w=0.5, banner="BAVARO MOTORSPORT")),
+                    sponsor_bg=(0.05, 0.22, 0.75), sponsor_s=2.97, sponsor_z=0.59, sponsor_w=0.5, banner="BMW MOTORSPORT")),
     "hanlong": dict(  # electric fastback sedan (BYD Han inspired)
         L=4.99, W=1.91, H=1.50, wb=2.92, r=0.35, tw=0.25, fo=0.95, rocker=0.20,
         belt=0.98, nose=0.72, cowl=0.98, deck=1.0, tail=0.98,
@@ -113,7 +113,7 @@ CARS = {
         handle_mat="trim", plate="06 HNL 90", reverse_lights=[(-0.35, 0.45), (0.35, 0.45)],
         livery=dict(style="rally", stripe="red", accent="white", number="88", number_s=2.12, number_z=0.59,
                     sponsor="VOLTA EV", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=3.0, sponsor_z=0.59, sponsor_w=0.5,
-                    banner="HANLONG E-TEAM")),
+                    banner="BYD E-TEAM")),
     # --- second wave -----------------------------------------------------------------
     "orion": dict(  # electric streamliner sedan (Hyundai Ioniq 6 inspired)
         L=4.86, W=1.88, H=1.49, wb=2.95, r=0.34, tw=0.23, fo=0.90, rocker=0.22,
@@ -127,7 +127,7 @@ CARS = {
         handle_mat="trim", plate="34 EV 06", reverse_lights=[(-0.35, 0.42), (0.35, 0.42)],
         livery=dict(style="rally", stripe="teal", accent="white", stripe_zones=("hood",), number="06", number_s=1.9,
                     number_z=0.57, sponsor="VOLTA EV", sponsor_bg=(0.0, 0.55, 0.55), sponsor_s=2.85, sponsor_z=0.57,
-                    sponsor_w=0.5, banner="ORION E-RACING")),
+                    sponsor_w=0.5, banner="IONIQ E-RACING")),
     "braxton": dict(  # American muscle coupe (Dodge Challenger inspired)
         L=5.02, W=1.92, H=1.45, wb=2.95, r=0.36, tw=0.26, fo=0.98, rocker=0.24,
         belt=1.0, nose=0.86, cowl=1.0, deck=1.06, tail=1.05,
@@ -140,7 +140,7 @@ CARS = {
         plate_front_z=0.47,
         livery=dict(style="muscle", stripe="white", accent="orange", number="07", number_s=2.6,
                     sponsor="VOLTA OIL", sponsor_bg=(1.0, 0.42, 0.03), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=3.45,
-                    banner="BRAXTON RACING")),
+                    banner="DODGE RACING")),
     "kaze": dict(  # Japanese compact sedan (Honda Civic sedan inspired)
         L=4.63, W=1.80, H=1.42, wb=2.70, r=0.33, tw=0.22, fo=0.92, rocker=0.20,
         belt=0.96, nose=0.72, cowl=0.98, deck=1.04, tail=1.02,
@@ -152,7 +152,7 @@ CARS = {
         plate="16 KZE 19", reverse_lights=[(-0.4, 0.68), (0.4, 0.68)],
         livery=dict(style="rally", stripe="red", accent="white", number="19", number_s=2.0, number_z=0.58,
                     sponsor="KAZE SPORT", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.88, sponsor_z=0.58, sponsor_w=0.5,
-                    banner="KAZE RACING")),
+                    banner="HONDA RACING")),
     "atmaca": dict(  # slammed 1990 Turkish saloon (Tofas Sahin inspired)
         L=4.26, W=1.65, H=1.30, wb=2.49, r=0.30, tw=0.21, fo=0.82, rocker=0.13,
         belt=0.82, nose=0.74, cowl=0.80, deck=0.86, tail=0.84,
@@ -164,7 +164,7 @@ CARS = {
         plate="15 ATM 90", reverse_lights=[(-0.15, 0.65), (0.15, 0.65)], antenna=(0.25, -1), rub_strip=True,
         livery=dict(style="rally", stripe="red", accent="blue", number="15", number_s=2.05, number_z=0.62,
                     sponsor="NOVA TYRES", sponsor_bg=(0.05, 0.22, 0.75), sponsor_s=2.75, sponsor_z=0.62, sponsor_w=0.5,
-                    banner="ATMACA RALLY TEAM")),
+                    banner="TOFAS RALLY TEAM")),
     "mirelle": dict(  # French supermini (Renault Clio IV inspired)
         L=4.06, W=1.73, H=1.45, wb=2.59, r=0.31, tw=0.20, fo=0.82, rocker=0.20,
         belt=0.98, nose=0.72, cowl=1.0, deck=1.08, tail=1.0,
@@ -176,7 +176,7 @@ CARS = {
         reverse_lights=[(-0.3, 0.4), (0.3, 0.4)],
         livery=dict(style="rally", stripe="yellow", accent="black", number="08", number_s=1.86, number_z=0.59,
                     sponsor="VOLTA OIL", sponsor_bg=(1.0, 0.78, 0.08), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.75,
-                    sponsor_z=0.59, sponsor_w=0.5, banner="MIRELLE CUP")),
+                    sponsor_z=0.59, sponsor_w=0.5, banner="CLIO CUP")),
     "kerkenez": dict(  # 1998 Turkish saloon (Tofas Dogan SLX inspired)
         L=4.30, W=1.65, H=1.38, wb=2.49, r=0.30, tw=0.18, fo=0.86, rocker=0.22,
         belt=0.86, nose=0.72, cowl=0.84, deck=0.90, tail=0.88,
@@ -189,7 +189,7 @@ CARS = {
         reverse_lights=[(-0.18, 0.68), (0.18, 0.68)], antenna=(3.2, 1),
         livery=dict(style="rally", stripe="yellow", accent="white", number="61", number_s=2.1, number_z=0.7,
                     sponsor="RRS RALLY", sponsor_bg=(0.95, 0.95, 0.93), sponsor_fg=(0.4, 0.04, 0.07), sponsor_s=2.8,
-                    sponsor_z=0.7, sponsor_w=0.5, banner="KERKENEZ RALLY")),
+                    sponsor_z=0.7, sponsor_w=0.5, banner="DOGAN RALLY")),
     "piccolo": dict(  # retro city hatch (2006 Mini Cooper inspired)
         L=3.63, W=1.69, H=1.41, wb=2.47, r=0.30, tw=0.20, fo=0.62, rocker=0.22,
         belt=0.98, nose=0.78, cowl=0.98, deck=1.06, tail=1.0,
@@ -203,7 +203,7 @@ CARS = {
         livery=dict(style="muscle", stripes=((-0.3, -0.08), (0.08, 0.3)), stripe_zones=("hood",), side_stripe=False,
                     stripe="white", accent="red", number="16", number_s=1.6, number_z=0.62,
                     sponsor="NOVA TYRES", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=2.08, sponsor_z=0.62, sponsor_w=0.5,
-                    banner="PICCOLO WORKS")),
+                    banner="MINI WORKS")),
     "mammoth": dict(  # double-cab pickup (VW Amarok inspired)
         L=5.35, W=1.95, H=1.88, wb=3.27, r=0.40, tw=0.29, fo=0.95, rocker=0.50,
         belt=1.30, nose=1.12, cowl=1.22, deck=1.28, tail=1.28,
@@ -217,7 +217,7 @@ CARS = {
         plate="55 AMK 23", plate_rear_z=0.72, reverse_lights=[(-0.89, 0.84), (0.89, 0.84)],
         livery=dict(style="rally", stripe="yellow", accent="black", stripe_zones=("hood",), side_z=0.66, number="23",
                     number_s=2.1, number_z=1.06, sponsor="RRS RAID", sponsor_bg=(1.0, 0.78, 0.08),
-                    sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.98, sponsor_z=1.06, sponsor_w=0.5, banner="MAMMOTH RAID")),
+                    sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.98, sponsor_z=1.06, sponsor_w=0.5, banner="AMAROK RAID")),
     "bastion": dict(  # boxy off-road icon (Mercedes G-Class inspired)
         L=4.56, W=1.86, H=1.95, wb=2.85, r=0.38, tw=0.28, fo=0.78, rocker=0.42,
         belt=1.38, nose=1.10, cowl=1.18, deck=1.86, tail=1.86,
@@ -241,7 +241,7 @@ CARS = {
         handle_mat="black", plate="07 DNG 22", reverse_lights=[(-0.5, 1.0), (0.5, 1.0)],
         livery=dict(style="rally", stripe="orange", accent="black", side_z=0.52, number="22", number_s=1.9, number_z=0.85,
                     sponsor="TRAIL OIL", sponsor_bg=(1.0, 0.42, 0.03), sponsor_fg=(0.03, 0.03, 0.03), sponsor_s=2.75,
-                    sponsor_z=0.85, sponsor_w=0.5, banner="DINGO OFFROAD")),
+                    sponsor_z=0.85, sponsor_w=0.5, banner="RENEGADE OFFROAD")),
     "harcourt": dict(  # British executive saloon (Jaguar X-Type inspired)
         L=4.67, W=1.79, H=1.39, wb=2.71, r=0.33, tw=0.21, fo=0.88, rocker=0.21,
         belt=0.92, nose=0.70, cowl=0.92, deck=0.98, tail=0.94,
@@ -254,7 +254,7 @@ CARS = {
         plate="34 HRC 08", reverse_lights=[(-0.35, 0.62), (0.35, 0.62)],
         livery=dict(style="muscle", stripe_set=[(-0.16, 0.16, "white")], side_stripe=False, stripe="white",
                     accent="white", number="05", number_s=2.12, number_z=0.56, sponsor="ROYAL OIL",
-                    sponsor_bg=(0.05, 0.3, 0.15), sponsor_s=2.95, sponsor_z=0.56, sponsor_w=0.5, banner="HARCOURT RACING")),
+                    sponsor_bg=(0.05, 0.3, 0.15), sponsor_s=2.95, sponsor_z=0.56, sponsor_w=0.5, banner="JAGUAR RACING")),
 }
 
 SHARED = {
@@ -1311,6 +1311,7 @@ PIXEL_FONT.update({
     "P": ["111", "101", "111", "100", "100"], "U": ["101", "101", "101", "101", "111"],
     "V": ["101", "101", "101", "101", "010"], "Y": ["101", "101", "010", "010", "010"],
     "W": ["101", "101", "111", "111", "101"], "-": ["000", "000", "111", "000", "000"],
+    "J": ["001", "001", "001", "101", "111"],
 })
 
 

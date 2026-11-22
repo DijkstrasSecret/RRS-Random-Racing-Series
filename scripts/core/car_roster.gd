@@ -1,32 +1,32 @@
 class_name CarRoster
 extends RefCounted
-## Every car in the game, with the info the garage shows. Cars are original
-## designs (fictional names) inspired by real models.
+## Every car in the game, with the info the garage shows. Low-poly game
+## versions of real cars, under their real make and model names.
 ## apply() turns any Vehicle instance into the chosen car before it is ready.
 
 ## Sorted by class (D slowest ... A fastest), then roughly by pace.
 const CARS: Array[Dictionary] = [
-	{"id": "kartal", "tier": 0, "livery": true, "name": "KARTAL 77 SL", "tagline": "1977 rear-drive classic. Light, slow, loves to slide."},
-	{"id": "mirelle", "tier": 0, "livery": true, "name": "MIRELLE 15D", "tagline": "French diesel supermini. Frugal, light and forgiving."},
-	{"id": "kerkenez", "tier": 0, "livery": true, "name": "KERKENEZ 98 SX", "tagline": "90s rear-drive saloon. Soft, simple, happy sideways."},
-	{"id": "atmaca", "tier": 0, "livery": true, "name": "ATMACA 90 STANCE", "tagline": "Slammed on air ride. Stiff, low and tail-happy."},
-	{"id": "quadra", "tier": 1, "livery": true, "name": "QUADRA 16D", "tagline": "Compact diesel sedan. Easy and composed."},
-	{"id": "romola", "tier": 1, "livery": true, "name": "ROMOLA STELLA 16D", "tagline": "Italian diesel hatch. Nimble and playful."},
-	{"id": "kaze", "tier": 1, "livery": true, "name": "KAZE SORA 16I", "tagline": "Rev-happy petrol sedan. Sharp and dependable."},
-	{"id": "dingo", "tier": 1, "livery": true, "name": "DINGO 13T", "tagline": "Boxy little turbo SUV. Tall, but surprisingly brisk."},
-	{"id": "piccolo", "tier": 1, "livery": true, "name": "PICCOLO 16", "tagline": "Retro city hatch. Go-kart steering."},
-	{"id": "harcourt", "tier": 1, "livery": true, "name": "HARCOURT X21", "tagline": "V6 executive saloon. Smooth and refined."},
-	{"id": "psx_hatch", "tier": 1, "name": "RETRO HATCH", "tagline": "Lively little 80s hatchback.",
+	{"id": "kartal", "tier": 0, "livery": true, "name": "ANADOL A2 SL", "short": "A2 SL", "tagline": "1977 rear-drive classic. Light, slow, loves to slide."},
+	{"id": "mirelle", "tier": 0, "livery": true, "name": "RENAULT CLIO 1.5 dCi", "short": "CLIO", "tagline": "French diesel supermini. Frugal, light and forgiving."},
+	{"id": "kerkenez", "tier": 0, "livery": true, "name": "TOFAŞ DOĞAN SLX", "short": "DOĞAN SLX", "tagline": "90s rear-drive saloon. Soft, simple, happy sideways."},
+	{"id": "atmaca", "tier": 0, "livery": true, "name": "TOFAŞ ŞAHİN STANCE", "short": "ŞAHİN", "tagline": "Slammed on air ride. Stiff, low and tail-happy."},
+	{"id": "quadra", "tier": 1, "livery": true, "name": "AUDI A3 SEDAN 1.6 TDI", "short": "A3 SEDAN", "tagline": "Compact diesel sedan. Easy and composed."},
+	{"id": "romola", "tier": 1, "livery": true, "name": "ALFA ROMEO GIULIETTA", "short": "GIULIETTA", "tagline": "Italian diesel hatch. Nimble and playful."},
+	{"id": "kaze", "tier": 1, "livery": true, "name": "HONDA CIVIC 1.6 i-VTEC", "short": "CIVIC", "tagline": "Rev-happy petrol sedan. Sharp and dependable."},
+	{"id": "dingo", "tier": 1, "livery": true, "name": "JEEP RENEGADE 1.3T", "short": "RENEGADE", "tagline": "Boxy little turbo SUV. Tall, but surprisingly brisk."},
+	{"id": "piccolo", "tier": 1, "livery": true, "name": "MINI COOPER", "short": "COOPER", "tagline": "Retro city hatch. Go-kart steering."},
+	{"id": "harcourt", "tier": 1, "livery": true, "name": "JAGUAR X-TYPE 2.1 V6", "short": "X-TYPE", "tagline": "V6 executive saloon. Smooth and refined."},
+	{"id": "psx_hatch", "tier": 1, "name": "RETRO HATCH", "short": "RETRO", "tagline": "Lively little 80s hatchback.",
 		"model": "res://assets/cars/psx_hatch/psx_hatch.glb", "config": "res://assets/cars/psx_hatch/psx_hatch.tres",
 		"paint_reference": "res://assets/cars/psx_hatch/psx_hatch_red.png"},
-	{"id": "mammoth", "tier": 2, "livery": true, "name": "MAMMOTH 20TD", "tagline": "Twin-turbo diesel pickup. Heavy, tall, unstoppable."},
-	{"id": "orion", "tier": 2, "livery": true, "name": "ORION ARC 6", "tagline": "Electric streamliner. Rear-drive, slippery and silent."},
-	{"id": "bastion", "tier": 2, "name": "BASTION 350D", "tagline": "Off-road icon. A brick with a big diesel heart."},
-	{"id": "bavaro", "tier": 2, "livery": true, "name": "BAVARO 4 GRAN", "tagline": "Rear-drive four-door coupe. Balanced and quick."},
-	{"id": "braxton", "tier": 2, "livery": true, "name": "BRAXTON BRAWLER V6", "tagline": "American muscle. Big, loud and loose at the rear."},
-	{"id": "ashford", "tier": 3, "livery": true, "name": "ASHFORD GT12", "tagline": "V12 grand tourer. Rear-drive, handle with care."},
-	{"id": "bellmont", "tier": 3, "livery": true, "name": "BELLMONT WINGSPAN V8", "tagline": "Luxury express. All-wheel drive, V8, huge brakes."},
-	{"id": "hanlong", "tier": 3, "livery": true, "name": "HANLONG E9", "tagline": "Electric, all-wheel drive. Brutal launch, silent speed."},
+	{"id": "mammoth", "tier": 2, "livery": true, "name": "VW AMAROK 2.0 TDI", "short": "AMAROK", "tagline": "Twin-turbo diesel pickup. Heavy, tall, unstoppable."},
+	{"id": "orion", "tier": 2, "livery": true, "name": "HYUNDAI IONIQ 6", "short": "IONIQ 6", "tagline": "Electric streamliner. Rear-drive, slippery and silent."},
+	{"id": "bastion", "tier": 2, "name": "MERCEDES-BENZ G 350 d", "short": "G 350 d", "tagline": "Off-road icon. A brick with a big diesel heart."},
+	{"id": "bavaro", "tier": 2, "livery": true, "name": "BMW 4 SERIES GRAN COUPE", "short": "4 SERIES", "tagline": "Rear-drive four-door coupe. Balanced and quick."},
+	{"id": "braxton", "tier": 2, "livery": true, "name": "DODGE CHALLENGER SXT", "short": "CHALLENGER", "tagline": "American muscle. Big, loud and loose at the rear."},
+	{"id": "ashford", "tier": 3, "livery": true, "name": "ASTON MARTIN DB11 V12", "short": "DB11", "tagline": "V12 grand tourer. Rear-drive, handle with care."},
+	{"id": "bellmont", "tier": 3, "livery": true, "name": "BENTLEY FLYING SPUR V8", "short": "FLYING SPUR", "tagline": "Luxury express. All-wheel drive, V8, huge brakes."},
+	{"id": "hanlong", "tier": 3, "livery": true, "name": "BYD HAN EV", "short": "HAN EV", "tagline": "Electric, all-wheel drive. Brutal launch, silent speed."},
 ]
 
 const DRIVE_NAMES: PackedStringArray = ["FRONT", "REAR", "ALL-WHEEL"]
@@ -59,6 +59,12 @@ static func ids() -> PackedStringArray:
 	for c in CARS:
 		out.append(c.id)
 	return out
+
+
+## Short label for the car grid tiles (the model).
+static func short_name(id: String) -> String:
+	var e := entry(id)
+	return String(e.get("short", String(e.name).split(" ")[0]))
 
 
 static func names() -> PackedStringArray:

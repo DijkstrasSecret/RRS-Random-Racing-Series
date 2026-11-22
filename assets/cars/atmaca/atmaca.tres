@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 0.9
-display_name = "Atmaca 90 Stance"
+display_name = "Tofaş Şahin Stance"
 mass = 950
 center_of_mass = Vector3(0.0, 0.42, -0.1)
 inertia_box_size = Vector3(1.65, 1.2, 4.26)

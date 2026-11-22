@@ -26,6 +26,11 @@ func _run() -> void:
 	var list := SHOTS
 	if "--quick" in OS.get_cmdline_user_args():
 		list = SHOTS.slice(0, 1)
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--tracks="):  # noon, clear, two shots per track
+			list = []
+			for id in arg.get_slice("=", 1).split(","):
+				list.append([id, 1, 0, [4.0, 14.0]])
 	for shot: Array in list:
 		GameSettings.track = shot[0]
 		GameSettings.time_of_day = shot[1]

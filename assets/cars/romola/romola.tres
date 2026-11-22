@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 1.2
-display_name = "Romola Stella 16d"
+display_name = "Alfa Romeo Giulietta"
 mass = 1370
 center_of_mass = Vector3(0.0, 0.45, -0.2)
 inertia_box_size = Vector3(1.8, 1.35, 4.35)

@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 1.6
-display_name = "Ashford GT12"
+display_name = "Aston Martin DB11 V12"
 mass = 1870
 center_of_mass = Vector3(0.0, 0.45, 0.1)
 inertia_box_size = Vector3(1.95, 1.2, 4.74)

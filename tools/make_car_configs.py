@@ -2,7 +2,7 @@
 
     python tools/make_car_configs.py
 
-Numbers are based on the real cars that inspired each design (power,
+Numbers are based on the real cars (power,
 weight, gearing, drivetrain), then tuned for the game's handling.
 Writes assets/cars/<id>/<id>.tres.
 """
@@ -15,7 +15,7 @@ FWD, RWD, AWD = 0, 1, 2
 CARS = {
     "kartal": dict(
         wheel_inertia=0.9,
-        display_name="Kartal 77 SL", mass=960, center_of_mass=(0, 0.46, -0.12), inertia_box_size=(1.62, 1.3, 4.2),
+        display_name="Anadol A2 SL", mass=960, center_of_mass=(0, 0.46, -0.12), inertia_box_size=(1.62, 1.3, 4.2),
         wheel_radius=0.30, wheel_width=0.17, tire_grip=1.0, tire_peak_slip_angle_deg=9.0, rear_grip_scale=0.95,
         front_spring_rate=24000, rear_spring_rate=20000, front_damper_bump=1900, front_damper_rebound=2500,
         rear_damper_bump=1700, rear_damper_rebound=2300, front_anti_roll=6000, rear_anti_roll=9000,
@@ -27,7 +27,7 @@ CARS = {
         drag_area=0.82, downforce_area=-0.05, engine_sound_pitch=1.0, engine_sound_gain_db=-1.0),
     "ashford": dict(
         wheel_inertia=1.6,
-        display_name="Ashford GT12", mass=1870, center_of_mass=(0, 0.45, 0.1), inertia_box_size=(1.95, 1.2, 4.74),
+        display_name="Aston Martin DB11 V12", mass=1870, center_of_mass=(0, 0.45, 0.1), inertia_box_size=(1.95, 1.2, 4.74),
         wheel_radius=0.35, wheel_width=0.25, tire_grip=1.28, tire_peak_slip_angle_deg=7.5, rear_grip_scale=0.97,
         front_spring_rate=52000, rear_spring_rate=56000, front_damper_bump=4200, front_damper_rebound=5600,
         rear_damper_bump=4400, rear_damper_rebound=5900, front_anti_roll=18000, rear_anti_roll=17000,
@@ -39,7 +39,7 @@ CARS = {
         drag_area=0.63, downforce_area=0.35, aero_balance=0.42, engine_sound_pitch=2.4, engine_sound_gain_db=2.0),
     "quadra": dict(
         wheel_inertia=1.2,
-        display_name="Quadra 16d", mass=1300, center_of_mass=(0, 0.45, -0.25), inertia_box_size=(1.8, 1.3, 4.46),
+        display_name="Audi A3 Sedan 1.6 TDI", mass=1300, center_of_mass=(0, 0.45, -0.25), inertia_box_size=(1.8, 1.3, 4.46),
         wheel_radius=0.32, wheel_width=0.22, tire_grip=1.1, rear_grip_scale=0.96,
         front_spring_rate=34000, rear_spring_rate=28000, front_damper_bump=2500, front_damper_rebound=3400,
         rear_damper_bump=2200, rear_damper_rebound=3000, front_anti_roll=11000, rear_anti_roll=12000,
@@ -51,7 +51,7 @@ CARS = {
         drag_area=0.64, downforce_area=0.1, engine_sound_pitch=0.85, engine_sound_gain_db=-1.0),
     "bellmont": dict(
         wheel_inertia=2.0,
-        display_name="Bellmont Wingspan V8", mass=2330, center_of_mass=(0, 0.5, -0.12), inertia_box_size=(1.98, 1.4, 5.32),
+        display_name="Bentley Flying Spur V8", mass=2330, center_of_mass=(0, 0.5, -0.12), inertia_box_size=(1.98, 1.4, 5.32),
         wheel_radius=0.37, wheel_width=0.27, tire_grip=1.2, rear_grip_scale=1.0,
         front_spring_rate=52000, rear_spring_rate=54000, front_damper_bump=4500, front_damper_rebound=6000,
         rear_damper_bump=4600, rear_damper_rebound=6200, front_anti_roll=18000, rear_anti_roll=11000,
@@ -63,7 +63,7 @@ CARS = {
         steer_rate=3.4, drag_area=0.72, downforce_area=0.1, engine_sound_pitch=1.7, engine_sound_gain_db=1.0),
     "romola": dict(
         wheel_inertia=1.2,
-        display_name="Romola Stella 16d", mass=1370, center_of_mass=(0, 0.45, -0.2), inertia_box_size=(1.8, 1.35, 4.35),
+        display_name="Alfa Romeo Giulietta", mass=1370, center_of_mass=(0, 0.45, -0.2), inertia_box_size=(1.8, 1.35, 4.35),
         wheel_radius=0.32, wheel_width=0.23, tire_grip=1.14, rear_grip_scale=0.94,
         front_spring_rate=36000, rear_spring_rate=30000, front_damper_bump=2600, front_damper_rebound=3500,
         rear_damper_bump=2300, rear_damper_rebound=3100, front_anti_roll=10000, rear_anti_roll=15000,
@@ -75,7 +75,7 @@ CARS = {
         drag_area=0.66, downforce_area=0.1, engine_sound_pitch=0.85, engine_sound_gain_db=-1.0),
     "bavaro": dict(
         wheel_inertia=1.4,
-        display_name="Bavaro 4 Gran", mass=1600, center_of_mass=(0, 0.46, 0.05), inertia_box_size=(1.85, 1.35, 4.78),
+        display_name="BMW 4 Series Gran Coupe", mass=1600, center_of_mass=(0, 0.46, 0.05), inertia_box_size=(1.85, 1.35, 4.78),
         wheel_radius=0.34, wheel_width=0.24, tire_grip=1.16, rear_grip_scale=0.95,
         front_spring_rate=40000, rear_spring_rate=42000, front_damper_bump=3000, front_damper_rebound=4000,
         rear_damper_bump=3100, rear_damper_rebound=4200, front_anti_roll=13000, rear_anti_roll=14000,
@@ -87,7 +87,7 @@ CARS = {
         drag_area=0.57, downforce_area=0.15, engine_sound_pitch=1.05, engine_sound_gain_db=0.0),
     "hanlong": dict(
         wheel_inertia=1.7,
-        display_name="Hanlong E9", mass=2250, center_of_mass=(0, 0.42, 0.0), inertia_box_size=(1.91, 1.2, 4.99),
+        display_name="BYD Han EV", mass=2250, center_of_mass=(0, 0.42, 0.0), inertia_box_size=(1.91, 1.2, 4.99),
         wheel_radius=0.35, wheel_width=0.25, tire_grip=1.18, rear_grip_scale=0.97,
         front_spring_rate=50000, rear_spring_rate=52000, front_damper_bump=4300, front_damper_rebound=5800,
         rear_damper_bump=4400, rear_damper_rebound=6000, front_anti_roll=16000, rear_anti_roll=15000,
@@ -101,7 +101,7 @@ CARS = {
     # --- second wave -----------------------------------------------------------------
     "orion": dict(  # Ioniq 6 SR RWD: 111 kW, 350 Nm, 1800 kg
         wheel_inertia=1.5,
-        display_name="Orion Arc 6", mass=1800, center_of_mass=(0, 0.42, 0.05), inertia_box_size=(1.88, 1.2, 4.86),
+        display_name="Hyundai Ioniq 6", mass=1800, center_of_mass=(0, 0.42, 0.05), inertia_box_size=(1.88, 1.2, 4.86),
         wheel_radius=0.34, wheel_width=0.23, tire_grip=1.1, rear_grip_scale=0.95,
         front_spring_rate=42000, rear_spring_rate=44000, front_damper_bump=3500, front_damper_rebound=4700,
         rear_damper_bump=3600, rear_damper_rebound=4900, front_anti_roll=14000, rear_anti_roll=12000,
@@ -114,7 +114,7 @@ CARS = {
         electric=True, engine_sound_pitch=1.1, engine_sound_gain_db=-1.0),
     "braxton": dict(  # Challenger SXT 3.6 V6: 305 hp, 363 Nm, 1750 kg
         wheel_inertia=1.5,
-        display_name="Braxton Brawler V6", mass=1750, center_of_mass=(0, 0.48, -0.15), inertia_box_size=(1.92, 1.3, 5.02),
+        display_name="Dodge Challenger SXT", mass=1750, center_of_mass=(0, 0.48, -0.15), inertia_box_size=(1.92, 1.3, 5.02),
         wheel_radius=0.36, wheel_width=0.26, tire_grip=1.12, rear_grip_scale=0.94,
         front_spring_rate=42000, rear_spring_rate=40000, front_damper_bump=3300, front_damper_rebound=4400,
         rear_damper_bump=3200, rear_damper_rebound=4300, front_anti_roll=15000, rear_anti_roll=11000,
@@ -126,7 +126,7 @@ CARS = {
         drag_area=0.9, downforce_area=0.05, engine_sound_pitch=1.35, engine_sound_gain_db=1.5),
     "kaze": dict(  # Civic 1.6 i-VTEC sedan: 125 hp, 152 Nm, 1280 kg
         wheel_inertia=1.2,
-        display_name="Kaze Sora 16i", mass=1280, center_of_mass=(0, 0.45, -0.25), inertia_box_size=(1.8, 1.3, 4.63),
+        display_name="Honda Civic 1.6 i-VTEC", mass=1280, center_of_mass=(0, 0.45, -0.25), inertia_box_size=(1.8, 1.3, 4.63),
         wheel_radius=0.33, wheel_width=0.22, tire_grip=1.12, rear_grip_scale=0.96,
         front_spring_rate=34000, rear_spring_rate=30000, front_damper_bump=2500, front_damper_rebound=3400,
         rear_damper_bump=2300, rear_damper_rebound=3100, front_anti_roll=11000, rear_anti_roll=13000,
@@ -138,7 +138,7 @@ CARS = {
         drag_area=0.62, downforce_area=0.1, engine_sound_pitch=1.25, engine_sound_gain_db=-1.0),
     "atmaca": dict(  # slammed Sahin 1.6: 80 hp, 123 Nm, 950 kg, lowered and stiff
         wheel_inertia=0.9,
-        display_name="Atmaca 90 Stance", mass=950, center_of_mass=(0, 0.42, -0.1), inertia_box_size=(1.65, 1.2, 4.26),
+        display_name="Tofaş Şahin Stance", mass=950, center_of_mass=(0, 0.42, -0.1), inertia_box_size=(1.65, 1.2, 4.26),
         wheel_radius=0.30, wheel_width=0.21, tire_grip=1.04, tire_peak_slip_angle_deg=8.5, rear_grip_scale=0.94,
         front_spring_rate=30000, rear_spring_rate=26000, front_damper_bump=2300, front_damper_rebound=3000,
         rear_damper_bump=2100, rear_damper_rebound=2800, front_anti_roll=8000, rear_anti_roll=10000,
@@ -150,7 +150,7 @@ CARS = {
         drag_area=0.8, downforce_area=-0.03, engine_sound_pitch=1.05, engine_sound_gain_db=0.0),
     "mirelle": dict(  # Clio IV 1.5 dCi: 75 hp, 200 Nm, 1070 kg
         wheel_inertia=1.0,
-        display_name="Mirelle 15d", mass=1070, center_of_mass=(0, 0.44, -0.25), inertia_box_size=(1.73, 1.3, 4.06),
+        display_name="Renault Clio 1.5 dCi", mass=1070, center_of_mass=(0, 0.44, -0.25), inertia_box_size=(1.73, 1.3, 4.06),
         wheel_radius=0.31, wheel_width=0.2, tire_grip=1.08, rear_grip_scale=0.97,
         front_spring_rate=30000, rear_spring_rate=26000, front_damper_bump=2200, front_damper_rebound=3000,
         rear_damper_bump=2000, rear_damper_rebound=2700, front_anti_roll=9000, rear_anti_roll=11000,
@@ -162,7 +162,7 @@ CARS = {
         drag_area=0.62, downforce_area=0.05, engine_sound_pitch=0.85, engine_sound_gain_db=-1.5),
     "kerkenez": dict(  # Dogan SLX 1.6ie: 83 hp, 125 Nm, 1000 kg
         wheel_inertia=0.9,
-        display_name="Kerkenez 98 SX", mass=1000, center_of_mass=(0, 0.46, -0.1), inertia_box_size=(1.65, 1.3, 4.3),
+        display_name="Tofaş Doğan SLX", mass=1000, center_of_mass=(0, 0.46, -0.1), inertia_box_size=(1.65, 1.3, 4.3),
         wheel_radius=0.30, wheel_width=0.18, tire_grip=1.02, tire_peak_slip_angle_deg=9.0, rear_grip_scale=0.95,
         front_spring_rate=24000, rear_spring_rate=21000, front_damper_bump=1900, front_damper_rebound=2500,
         rear_damper_bump=1800, rear_damper_rebound=2400, front_anti_roll=6500, rear_anti_roll=9000,
@@ -174,7 +174,7 @@ CARS = {
         drag_area=0.82, downforce_area=-0.05, engine_sound_pitch=1.0, engine_sound_gain_db=-0.5),
     "piccolo": dict(  # Mini Cooper R50 1.6: 115 hp, 149 Nm, 1140 kg
         wheel_inertia=1.0,
-        display_name="Piccolo 16", mass=1140, center_of_mass=(0, 0.44, -0.2), inertia_box_size=(1.69, 1.3, 3.63),
+        display_name="Mini Cooper", mass=1140, center_of_mass=(0, 0.44, -0.2), inertia_box_size=(1.69, 1.3, 3.63),
         wheel_radius=0.30, wheel_width=0.2, tire_grip=1.15, rear_grip_scale=0.96,
         front_spring_rate=34000, rear_spring_rate=30000, front_damper_bump=2500, front_damper_rebound=3300,
         rear_damper_bump=2300, rear_damper_rebound=3100, front_anti_roll=10000, rear_anti_roll=14000,
@@ -186,7 +186,7 @@ CARS = {
         drag_area=0.63, downforce_area=0.05, engine_sound_pitch=1.2, engine_sound_gain_db=-1.0),
     "mammoth": dict(  # Amarok 2.0 TDI 4x4: 205 hp, 500 Nm, 2300 kg, 10-speed
         wheel_inertia=2.4,
-        display_name="Mammoth 20TD", mass=2300, center_of_mass=(0, 0.6, -0.1), inertia_box_size=(1.95, 1.7, 5.35),
+        display_name="VW Amarok 2.0 TDI", mass=2300, center_of_mass=(0, 0.6, -0.1), inertia_box_size=(1.95, 1.7, 5.35),
         wheel_radius=0.40, wheel_width=0.29, tire_grip=1.0, tire_peak_slip_angle_deg=9.0, rear_grip_scale=0.98,
         front_spring_rate=52000, rear_spring_rate=62000, front_damper_bump=4600, front_damper_rebound=6200,
         rear_damper_bump=4800, rear_damper_rebound=6500, front_anti_roll=20000, rear_anti_roll=12000,
@@ -199,7 +199,7 @@ CARS = {
         engine_sound_pitch=0.8, engine_sound_gain_db=2.0),
     "bastion": dict(  # G 350d: 245 hp, 600 Nm, 2500 kg, 7-speed, 4x4
         wheel_inertia=2.3,
-        display_name="Bastion 350D", mass=2500, center_of_mass=(0, 0.62, 0.0), inertia_box_size=(1.86, 1.8, 4.66),
+        display_name="Mercedes-Benz G 350 d", mass=2500, center_of_mass=(0, 0.62, 0.0), inertia_box_size=(1.86, 1.8, 4.66),
         wheel_radius=0.38, wheel_width=0.28, tire_grip=1.05, tire_peak_slip_angle_deg=8.5, rear_grip_scale=0.98,
         front_spring_rate=60000, rear_spring_rate=62000, front_damper_bump=5000, front_damper_rebound=6600,
         rear_damper_bump=5100, rear_damper_rebound=6800, front_anti_roll=22000, rear_anti_roll=13000,
@@ -211,7 +211,7 @@ CARS = {
         steer_rate=3.1, drag_area=1.55, downforce_area=-0.08, engine_sound_pitch=0.85, engine_sound_gain_db=2.0),
     "dingo": dict(  # Renegade 1.3T FWD: 150 hp, 270 Nm, 1400 kg
         wheel_inertia=1.3,
-        display_name="Dingo 13T", mass=1400, center_of_mass=(0, 0.55, -0.22), inertia_box_size=(1.81, 1.55, 4.24),
+        display_name="Jeep Renegade 1.3T", mass=1400, center_of_mass=(0, 0.55, -0.22), inertia_box_size=(1.81, 1.55, 4.24),
         wheel_radius=0.34, wheel_width=0.22, tire_grip=1.08, rear_grip_scale=0.97,
         front_spring_rate=36000, rear_spring_rate=32000, front_damper_bump=2700, front_damper_rebound=3600,
         rear_damper_bump=2500, rear_damper_rebound=3400, front_anti_roll=13000, rear_anti_roll=12000,
@@ -223,7 +223,7 @@ CARS = {
         drag_area=0.95, downforce_area=0.0, engine_sound_pitch=1.1, engine_sound_gain_db=-0.5),
     "harcourt": dict(  # X-Type 2.1 V6 FWD: 157 hp, 200 Nm, 1550 kg
         wheel_inertia=1.3,
-        display_name="Harcourt X21", mass=1550, center_of_mass=(0, 0.46, -0.22), inertia_box_size=(1.79, 1.3, 4.67),
+        display_name="Jaguar X-Type 2.1 V6", mass=1550, center_of_mass=(0, 0.46, -0.22), inertia_box_size=(1.79, 1.3, 4.67),
         wheel_radius=0.33, wheel_width=0.21, tire_grip=1.1, rear_grip_scale=0.97,
         front_spring_rate=34000, rear_spring_rate=30000, front_damper_bump=2600, front_damper_rebound=3500,
         rear_damper_bump=2400, rear_damper_rebound=3300, front_anti_roll=11000, rear_anti_roll=12000,

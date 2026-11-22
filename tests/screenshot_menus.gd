@@ -25,7 +25,7 @@ func _run() -> void:
 	var menu := current_scene
 	GameSettings.p1_car = "braxton"
 	GameSettings.p2_car = "atmaca"
-	GameSettings.track = "kestrel"
+	GameSettings.track = "spa"
 	menu._start_flow(1)
 	await _frames(90)
 	await _save("select_1p")

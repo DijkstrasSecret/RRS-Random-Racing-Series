@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 2.4
-display_name = "Mammoth 20TD"
+display_name = "VW Amarok 2.0 TDI"
 mass = 2300
 center_of_mass = Vector3(0.0, 0.6, -0.1)
 inertia_box_size = Vector3(1.95, 1.7, 5.35)

@@ -5,7 +5,7 @@
 [resource]
 script = ExtResource("1_cfg")
 wheel_inertia = 1.5
-display_name = "Braxton Brawler V6"
+display_name = "Dodge Challenger SXT"
 mass = 1750
 center_of_mass = Vector3(0.0, 0.48, -0.15)
 inertia_box_size = Vector3(1.92, 1.3, 5.02)
