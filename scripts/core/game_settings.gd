@@ -25,6 +25,8 @@ static var fullscreen: bool = false
 static var vibration: bool = true
 static var sound_volume: int = 8  ## 0..10, engines and effects
 static var music_volume: int = 6  ## 0..10
+static var p1_car: String = "bavaro"
+static var p2_car: String = "quadra"
 
 static var _loaded: bool = false
 
@@ -45,6 +47,8 @@ static func ensure_loaded() -> void:
 	vibration = cfg.get_value("car", "vibration", vibration)
 	sound_volume = cfg.get_value("audio", "sound", sound_volume)
 	music_volume = cfg.get_value("audio", "music", music_volume)
+	p1_car = cfg.get_value("garage", "p1_car", p1_car)
+	p2_car = cfg.get_value("garage", "p2_car", p2_car)
 	look = cfg.get_value("video", "look", look)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	if fullscreen:
@@ -68,6 +72,8 @@ static func save() -> void:
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("audio", "sound", sound_volume)
 	cfg.set_value("audio", "music", music_volume)
+	cfg.set_value("garage", "p1_car", p1_car)
+	cfg.set_value("garage", "p2_car", p2_car)
 	cfg.save(PATH)
 
 

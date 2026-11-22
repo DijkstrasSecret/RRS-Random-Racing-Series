@@ -59,11 +59,23 @@ func _build() -> void:
 	# Faster drivers start further back, so there is racing to do.
 	skills.shuffle()
 
+	# Opponents drive a shuffled mix of the roster; a car that is already
+	# on the grid gets a different paint so everyone can be told apart.
+	var roster := Array(CarRoster.ids())
+	roster.shuffle()
+	var used: Array[String] = []
+	for path in player_paths:
+		var p := get_node_or_null(path) as Vehicle
+		if p and p.has_meta(&"car_id"):
+			used.append(p.get_meta(&"car_id"))
 	var slot := 0
 	for i in ai_count:
 		var car := car_scene.instantiate() as Vehicle
 		car.name = "AI_%s" % names[i]
-		car.paint_color = AI_COLORS[i % AI_COLORS.size()]
+		var car_id: String = roster[i % roster.size()]
+		var paint := AI_COLORS[i % AI_COLORS.size()] if car_id in used else Color(0, 0, 0, 0)
+		used.append(car_id)
+		CarRoster.apply(car, car_id, paint)
 		var player_input := car.get_node_or_null("PlayerInput")
 		if player_input:
 			car.remove_child(player_input)
@@ -82,6 +94,7 @@ func _build() -> void:
 		timer.setup(circuit, car)
 		if director:
 			director.add_racer(car, timer, names[i], AI_COLORS[i % AI_COLORS.size()], false)
+			car.set_meta(&"driver_name", names[i])
 		ai_vehicles.append(car)
 
 	for i in player_paths.size():

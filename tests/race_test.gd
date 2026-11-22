@@ -62,8 +62,8 @@ func _physics_process(delta: float) -> void:
 			var car := _race.vehicle_at(i)
 			var ai := car.get_node_or_null("AIDriver") as AIDriver
 			var time := LapTimer.format_time(_race.finish_times[i]) if _race.finish_times.has(i) else "DNF"
-			print("  %-4s %-9s %s   skill %.2f  resets %d" % [RaceDirector.ordinal(_race.position_of(i)),
-				_race.name_at(i), time, ai.skill if ai else 0.0, ai.resets if ai else 0])
+			print("  %-4s %-9s %-22s %s   skill %.2f  resets %d" % [RaceDirector.ordinal(_race.position_of(i)),
+				_race.name_at(i), car.config.display_name, time, ai.skill if ai else 0.0, ai.resets if ai else 0])
 		print("  dirt effect seen       %s" % str(_dirt_seen))
 		print("race_test done, %.1f s sim time" % _t)
 		set_physics_process(false)

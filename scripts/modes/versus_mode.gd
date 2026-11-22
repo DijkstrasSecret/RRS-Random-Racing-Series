@@ -11,6 +11,14 @@ extends Node3D
 func _enter_tree() -> void:
 	InputActions.ensure()
 	GameSettings.ensure_loaded()
+	# Before the cars are ready: each player's garage choice.
+	var picks := [GameSettings.p1_car, GameSettings.p2_car]
+	for i in mini(car_paths.size(), 2):
+		var car := get_node_or_null(car_paths[i]) as Vehicle
+		if car:
+			# Same car for both players: player 2 gets red paint.
+			var paint := Color(0.85, 0.12, 0.1) if i == 1 and picks[0] == picks[1] else Color(0, 0, 0, 0)
+			CarRoster.apply(car, picks[i], paint)
 
 
 func _ready() -> void:

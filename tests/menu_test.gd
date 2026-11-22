@@ -26,8 +26,8 @@ func _run() -> void:
 	var focused := root.gui_get_focus_owner() as Button
 	_check("RACE is selected first", focused != null and focused.text == "RACE")
 
-	# Down 4 times to SETTINGS, then select it.
-	for i in 4:
+	# Down 5 times to SETTINGS, then select it.
+	for i in 5:
 		await _action("ui_down")
 	focused = root.gui_get_focus_owner() as Button
 	_check("arrow keys move the selection (now %s)" % (focused.text if focused else "nothing"),

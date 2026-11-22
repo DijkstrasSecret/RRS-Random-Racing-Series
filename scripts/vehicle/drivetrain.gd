@@ -44,6 +44,8 @@ func gear_label() -> String:
 		return "R"
 	if gear == 0:
 		return "N"
+	if config.electric:
+		return "D"
 	return str(gear)
 
 

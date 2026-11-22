@@ -99,7 +99,9 @@ func _setup() -> bool:
 	# AI cars use the Arcade assists (stability and counter-steer help); this
 	# changes how the car is driven, not how much grip it has.
 	_vehicle.set_handling_profile(HandlingAssists.Profile.ARCADE)
-	var grip := _vehicle.config.tire_grip * 9.81
+	# Heavy cars lose grip under load (tyre load sensitivity): plan for it.
+	var heavy := clampf(1.0 - (_vehicle.config.mass - 1300.0) / 9000.0, 0.85, 1.05)
+	var grip := _vehicle.config.tire_grip * heavy * 9.81
 	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill),
 			grip * lerpf(0.42, 0.58, skill), 95.0)
 	return true

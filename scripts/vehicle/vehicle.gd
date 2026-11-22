@@ -231,7 +231,7 @@ func _physics_process(delta: float) -> void:
 	for w in wheels:
 		w.prepare_tire(b, velocity_at_point(w.contact_point))
 
-	var tc := assists.traction_factor(driven_wheels, config.tire_peak_slip_ratio)
+	var tc := assists.traction_factor(driven_wheels, config.tire_peak_slip_ratio, forward_speed)
 	throttle_out = thr * tc
 	tc_active = thr > 0.05 and tc < 0.95
 	var wheel_torque := drivetrain.update(_driven_mean_omega(), throttle_out, delta)
@@ -481,7 +481,8 @@ func _attach_model() -> void:
 		greybox.visible = false
 	for w in wheels:
 		var key := String(w.name).trim_prefix("Wheel")
-		var src := _model.find_child("wheel_" + key, true, false) as Node3D
+		# "wheel_FL" (Blender may add a suffix such as "wheel_FL.001").
+		var src := _model.find_child("wheel_" + key + "*", true, false) as Node3D
 		if src == null:
 			push_warning("%s: model has no wheel_%s" % [name, key])
 			continue
@@ -492,7 +493,34 @@ func _attach_model() -> void:
 			var rate := config.front_spring_rate if w.is_front else config.rear_spring_rate
 			w.position = Vector3(hub.x, hub.y + config.rest_length - corner_load / rate, hub.z)
 		w.custom_visual = src
+	_fit_collision_to_model()
 	_collect_retro_surfaces(_model)
+
+
+## Size the collision boxes to the model's body (lower body + cabin).
+func _fit_collision_to_model() -> void:
+	var body := _model.find_child("body*", true, false) as MeshInstance3D
+	if body == null:
+		return
+	var box := body.mesh.get_aabb()
+	var origin := to_local(body.global_transform * box.position)
+	var size := box.size
+	var bottom := 0.32
+	var belt := origin.y + size.y * 0.62
+	var top := origin.y + size.y
+	var centre := Vector3(origin.x + size.x * 0.5, 0.0, origin.z + size.z * 0.5)
+	var lower := get_node_or_null("CollisionBody") as CollisionShape3D
+	if lower:
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(size.x * 0.96, belt - bottom, size.z * 0.97)
+		lower.shape = shape
+		lower.position = centre + Vector3(0.0, (belt + bottom) * 0.5, 0.0)
+	var cabin := get_node_or_null("CollisionCabin") as CollisionShape3D
+	if cabin:
+		var shape := BoxShape3D.new()
+		shape.size = Vector3(size.x * 0.8, maxf(top - belt, 0.2), size.z * 0.48)
+		cabin.shape = shape
+		cabin.position = centre + Vector3(0.0, (belt + top) * 0.5, size.z * 0.04)
 
 
 func _collect_retro_surfaces(node: Node) -> void:
@@ -509,6 +537,11 @@ func _collect_retro_surfaces(node: Node) -> void:
 					var painted := original.duplicate() as BaseMaterial3D
 					painted.albedo_texture = tex
 					original = painted
+				elif paint_color.a > 0.0 and original.resource_name.contains("paint"):
+					# Flat-colour models: the paint material just changes colour.
+					var recolored := original.duplicate() as BaseMaterial3D
+					recolored.albedo_color = paint_color
+					original = recolored
 			var retro := ShaderMaterial.new()
 			retro.shader = PSX_SHADER
 			var ps2: Material = null

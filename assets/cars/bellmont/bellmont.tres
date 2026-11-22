@@ -1,0 +1,46 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 2.0
+display_name = "Bellmont Wingspan V8"
+mass = 2330
+center_of_mass = Vector3(0.0, 0.5, -0.12)
+inertia_box_size = Vector3(1.98, 1.4, 5.32)
+wheel_radius = 0.37
+wheel_width = 0.27
+tire_grip = 1.2
+rear_grip_scale = 1.0
+front_spring_rate = 52000
+rear_spring_rate = 54000
+front_damper_bump = 4500
+front_damper_rebound = 6000
+rear_damper_bump = 4600
+rear_damper_rebound = 6200
+front_anti_roll = 18000
+rear_anti_roll = 11000
+idle_rpm = 650
+redline_rpm = 6500
+launch_rpm = 2600
+max_torque = 770
+torque_curve = PackedVector2Array(1000.0, 0.75, 2000.0, 1.0, 4500.0, 1.0, 5500.0, 0.9, 6600.0, 0.75)
+engine_brake_torque = 130
+gear_ratios = PackedFloat32Array(4.7, 3.1, 2.1, 1.67, 1.29, 1.0, 0.84, 0.67)
+reverse_ratio = 3.3
+final_drive = 2.85
+auto_upshift_rpm = 6100
+auto_downshift_rpm = 2500
+drive_type = 2
+diff_lock = 0.4
+awd_front_split = 0.4
+brake_torque = 12500
+brake_bias = 0.7
+handbrake_torque = 3500
+max_steer_deg = 31
+steer_rate = 3.4
+drag_area = 0.72
+downforce_area = 0.1
+engine_sound_pitch = 1.7
+engine_sound_gain_db = 1.0

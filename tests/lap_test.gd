@@ -31,6 +31,8 @@ func _ready() -> void:
 			_trace_from = float(parts[0])
 			_trace_to = float(parts[1])
 			_trace_step = float(parts[2]) if parts.size() > 2 else 0.25
+		if arg.begins_with("--car="):
+			GameSettings.p1_car = arg.get_slice("=", 1)
 		if arg.begins_with("--laps="):
 			_laps_wanted = int(arg.get_slice("=", 1))
 	_scene = load("res://scenes/modes/circuit_practice.tscn").instantiate()
@@ -41,6 +43,8 @@ func _ready() -> void:
 	_ai = AIDriver.new()
 	_ai.name = "AIDriver"
 	_car.add_child(_ai)
+	_car.contact_monitor = true
+	_car.max_contacts_reported = 8
 	add_child(_scene)
 	_timer = _scene.get_node("LapTimer")
 	_circuit = _scene.get_node("Circuit")
@@ -70,6 +74,9 @@ func _physics_process(delta: float) -> void:
 			_car.forward_speed * 3.6, _ai.target_speed * 3.6,
 			_ai.steer, _ai.throttle, _ai.brake, beta, _car.angular_velocity.y, _car.drivetrain.gear_label(),
 			"".join(_car.wheels.map(func(w): return "%.0f " % (w.grip_usage * 100.0)))])
+		if OS.get_cmdline_user_args().has("--contacts"):
+			print("      touching: %s  y %.2f  rpm %.0f thr_out %.2f clutch %s shift %.2f omega %s loads %s" % [str(_car.get_colliding_bodies().map(func(b): return b.name)),
+				_car.global_position.y, _car.drivetrain.rpm, _car.throttle_out, str(_car.drivetrain.clutch_slipping), _car.drivetrain.shift_timer, str(_car.wheels.map(func(w): return "%.1f/%.2f/%.2f/%d/%d" % [w.omega, w.v_long, w.slip_ratio, roundi(w.force_long), roundi(w.drive_torque)])), str(_car.wheels.map(func(w): return roundi(w.tire_load)))])
 	if _laps.size() >= _laps_wanted or _t > 150.0 * _laps_wanted:
 		print("  laps completed        %d / %d" % [_laps.size(), _laps_wanted])
 		print("  top speed             %.0f km/h" % _top_speed)

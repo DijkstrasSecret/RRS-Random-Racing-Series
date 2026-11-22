@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 1.7
+display_name = "Hanlong E9"
+mass = 2250
+center_of_mass = Vector3(0.0, 0.42, 0.0)
+inertia_box_size = Vector3(1.91, 1.2, 4.99)
+wheel_radius = 0.35
+wheel_width = 0.25
+tire_grip = 1.18
+rear_grip_scale = 0.97
+front_spring_rate = 50000
+rear_spring_rate = 52000
+front_damper_bump = 4300
+front_damper_rebound = 5800
+rear_damper_bump = 4400
+rear_damper_rebound = 6000
+front_anti_roll = 16000
+rear_anti_roll = 15000
+idle_rpm = 50
+redline_rpm = 13300
+launch_rpm = 100
+max_torque = 700
+torque_curve = PackedVector2Array(0.0, 1.0, 6000.0, 1.0, 8000.0, 0.75, 10000.0, 0.6, 12000.0, 0.5, 13400.0, 0.45)
+engine_brake_torque = 60
+gear_ratios = PackedFloat32Array(1.0)
+reverse_ratio = 1.0
+final_drive = 9.5
+drivetrain_efficiency = 0.95
+shift_time = 0.0
+auto_upshift_rpm = 99999
+auto_downshift_rpm = 0
+drive_type = 2
+diff_lock = 0.3
+awd_front_split = 0.45
+brake_torque = 12000
+brake_bias = 0.63
+handbrake_torque = 3500
+max_steer_deg = 32
+steer_rate = 3.8
+drag_area = 0.58
+downforce_area = 0.12
+electric = true
+engine_sound_pitch = 1.0
+engine_sound_gain_db = 0.0

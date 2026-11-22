@@ -24,6 +24,9 @@ var _squeal: AudioStreamPlayer3D
 var _dirt: AudioStreamPlayer3D
 var _wind: AudioStreamPlayer3D
 var _impact: AudioStreamPlayer3D
+var _whine: AudioStreamPlayer3D
+var _pitch_mult: float = 1.0
+var _electric: bool = false
 var _load: float = 0.0
 var _squeal_level: float = 0.0
 var _prev_velocity := Vector3.ZERO
@@ -41,6 +44,11 @@ func _ready() -> void:
 	_dirt = _player("dirt_rumble", 9.0)
 	_wind = _player("wind", 6.0)
 	_impact = _player("impact", 14.0, false)
+	_electric = _vehicle.config.electric
+	_pitch_mult = _vehicle.config.engine_sound_pitch
+	gain_db += _vehicle.config.engine_sound_gain_db
+	if _electric:
+		_whine = _player("ev_whine", 12.0)
 
 
 func set_gain(db: float) -> void:
@@ -75,10 +83,18 @@ func _physics_process(delta: float) -> void:
 	var w_low := cos(x * PI * 0.5)
 	var on := 0.3 + 0.7 * _load
 	var off := (1.0 - _load) * 0.6
-	_level(_low_on, w_low * on, rpm / LOW_RPM)
-	_level(_low_off, w_low * off, rpm / LOW_RPM)
-	_level(_high_on, w_high * on, rpm / HIGH_RPM)
-	_level(_high_off, w_high * off, rpm / HIGH_RPM)
+	if _electric:
+		# Motor whine rises with motor speed; louder under load.
+		var motor := clampf(rpm / 13000.0, 0.0, 1.0)
+		_level(_whine, (0.15 + 0.6 * _load) * clampf(motor * 4.0, 0.0, 1.0), 0.35 + motor * 1.9)
+		for p in [_low_on, _low_off, _high_on, _high_off]:
+			_level(p, 0.0, 1.0)
+	else:
+		# Cylinder count raises the note (V8 x2, V12 x3 vs. a 4-cylinder).
+		_level(_low_on, w_low * on, rpm / LOW_RPM * _pitch_mult)
+		_level(_low_off, w_low * off, rpm / LOW_RPM * _pitch_mult)
+		_level(_high_on, w_high * on, rpm / HIGH_RPM * _pitch_mult)
+		_level(_high_off, w_high * off, rpm / HIGH_RPM * _pitch_mult)
 
 	# --- Tyres: squeal on tarmac when sliding or spinning, rumble off-road.
 	var squeal := 0.0
@@ -112,4 +128,4 @@ func _physics_process(delta: float) -> void:
 
 func _level(p: AudioStreamPlayer3D, amplitude: float, pitch: float) -> void:
 	p.volume_db = linear_to_db(maxf(amplitude, 0.0001)) + gain_db
-	p.pitch_scale = clampf(pitch, 0.3, 3.0)
+	p.pitch_scale = clampf(pitch, 0.3, 4.0)

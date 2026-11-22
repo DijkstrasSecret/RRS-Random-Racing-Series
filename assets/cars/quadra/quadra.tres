@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 1.2
+display_name = "Quadra 16d"
+mass = 1300
+center_of_mass = Vector3(0.0, 0.45, -0.25)
+inertia_box_size = Vector3(1.8, 1.3, 4.46)
+wheel_radius = 0.32
+wheel_width = 0.22
+tire_grip = 1.1
+rear_grip_scale = 0.96
+front_spring_rate = 34000
+rear_spring_rate = 28000
+front_damper_bump = 2500
+front_damper_rebound = 3400
+rear_damper_bump = 2200
+rear_damper_rebound = 3000
+front_anti_roll = 11000
+rear_anti_roll = 12000
+idle_rpm = 800
+redline_rpm = 4600
+launch_rpm = 2200
+max_torque = 250
+torque_curve = PackedVector2Array(1000.0, 0.55, 1500.0, 0.95, 2000.0, 1.0, 3000.0, 0.95, 4000.0, 0.7, 4700.0, 0.5)
+engine_brake_torque = 60
+gear_ratios = PackedFloat32Array(3.8, 2.12, 1.27, 0.86, 0.66, 0.55)
+reverse_ratio = 3.6
+final_drive = 3.4
+auto_upshift_rpm = 4200
+auto_downshift_rpm = 1700
+drive_type = 0
+diff_lock = 0.1
+brake_torque = 5200
+brake_bias = 0.68
+handbrake_torque = 2400
+max_steer_deg = 33
+steer_rate = 3.8
+drag_area = 0.64
+downforce_area = 0.1
+engine_sound_pitch = 0.85
+engine_sound_gain_db = -1.0

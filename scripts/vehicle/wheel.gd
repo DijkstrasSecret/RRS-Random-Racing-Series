@@ -175,7 +175,13 @@ func substep(h: float) -> void:
 			fx = f * sx / rho
 			fy = -f * sy / rho
 			var c2 := (sx * sx) / (rho * rho)
+			# Around the grip peak the true slope drops to zero, which would let
+			# the wheel speed overshoot each substep (heavy cars at low speed
+			# chatter instead of driving). Keep the pre-peak stiffness until
+			# the tyre is clearly spinning, then let it go.
 			var slope := maxf(TireModel.curve_slope(rho, tire_shape), 0.0)
+			var stiff := TireModel.curve_slope(0.0, tire_shape) * clampf(2.0 - rho, 0.0, 1.0)
+			slope = maxf(slope, stiff)
 			dfx_dsx = mu_load * (slope * c2 + f_norm / rho * (1.0 - c2))
 		else:
 			dfx_dsx = mu_load * TireModel.curve_slope(0.0, tire_shape)

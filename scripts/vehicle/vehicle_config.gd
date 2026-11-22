@@ -20,14 +20,14 @@ enum DriveType { FWD, RWD, AWD }
 @export var wheel_width: float = 0.22
 @export var wheel_inertia: float = 1.1
 ## Peak friction coefficient (road tyres ≈ 1.0, slicks ≈ 1.4).
-@export var tire_grip: float = 1.1
+@export var tire_grip: float = 1.16
 @export var tire_peak_slip_ratio: float = 0.10
 @export var tire_peak_slip_angle_deg: float = 8.0
 ## How much grip per Newton drops as load rises (0 = none).
 @export var tire_load_sensitivity: float = 0.12
 ## Rear grip relative to the front. Below 1 lets the rear step out when
 ## the car is pushed too hard (lift-off and high-speed oversteer).
-@export var rear_grip_scale: float = 0.98
+@export var rear_grip_scale: float = 0.95
 @export var rolling_resistance: float = 0.015
 
 @export_group("Suspension")
@@ -42,7 +42,7 @@ enum DriveType { FWD, RWD, AWD }
 @export var rear_damper_bump: float = 2150.0
 @export var rear_damper_rebound: float = 2900.0
 @export var front_anti_roll: float = 10000.0
-@export var rear_anti_roll: float = 11000.0
+@export var rear_anti_roll: float = 13000.0
 
 @export_group("Engine")
 @export var idle_rpm: float = 900.0
@@ -81,6 +81,13 @@ enum DriveType { FWD, RWD, AWD }
 @export var max_steer_deg: float = 33.0
 ## How fast the front wheels can turn, in radians per second.
 @export var steer_rate: float = 4.0
+
+@export_group("Sound")
+## Electric motor: one gear, whine instead of engine sound.
+@export var electric: bool = false
+## Engine note relative to a 4-cylinder (V8 = 2, V12 = 3, diesel ~0.85).
+@export var engine_sound_pitch: float = 1.0
+@export var engine_sound_gain_db: float = 0.0
 
 @export_group("Aero")
 ## Drag coefficient × frontal area (m²).

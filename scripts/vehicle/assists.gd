@@ -27,12 +27,12 @@ func set_profile(p: int) -> void:
 	profile = p
 	match p:
 		Profile.ARCADE:
-			_apply(1.3, 0.55, 0.6, 1.0, 1.0, 0.9, 1.0)
+			_apply(1.3, 0.6, 0.6, 1.0, 1.0, 0.92, 1.0)
 		Profile.SIM:
 			_apply(2.3, 0.0, 0.0, 0.0, 1.0, 0.7, 0.0)
 		_:
 			profile = Profile.SPORT
-			_apply(1.8, 0.3, 0.3, 0.5, 0.8, 0.85, 0.5)
+			_apply(1.8, 0.45, 0.25, 0.5, 0.8, 0.88, 0.5)
 
 
 func profile_name() -> String:
@@ -75,7 +75,7 @@ func steer_limit(v_long: float, max_steer: float, wheelbase: float, grip: float)
 
 
 ## Throttle multiplier (0..1) from the driven wheels' slip last tick.
-func traction_factor(driven: Array, peak_slip: float) -> float:
+func traction_factor(driven: Array, peak_slip: float, speed: float = 99.0) -> float:
 	var target := 1.0
 	if traction_control > 0.0:
 		var worst := 0.0
@@ -83,6 +83,9 @@ func traction_factor(driven: Array, peak_slip: float) -> float:
 			worst = maxf(worst, absf(w.slip_ratio))
 		var excess := clampf((worst - peak_slip * 1.3) / (peak_slip * 1.5), 0.0, 1.0)
 		target = 1.0 - excess * traction_control * 0.9
+		# Pulling away: never strangle the engine (slip readings are rough here).
+		if absf(speed) < 3.0:
+			target = maxf(target, 0.6)
 	_tc_factor = lerpf(_tc_factor, target, 0.35)
 	return _tc_factor
 

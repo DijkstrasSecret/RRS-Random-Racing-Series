@@ -10,6 +10,8 @@ var _setup: RaceSetup
 var _main: VBoxContainer
 var _settings: SettingsPanel
 var _controls: ControlsPanel
+var _garage: GaragePanel
+var _preview: CarPreview
 var _summary: Label
 var _title: VBoxContainer
 var _showcase_index: int = -1
@@ -92,6 +94,7 @@ func _build_ui() -> void:
 	_main = VBoxContainer.new()
 	_main.add_child(MenuStyle.button("RACE", func() -> void: _go(GameSettings.RACE)))
 	_main.add_child(MenuStyle.button("SPLIT SCREEN", func() -> void: _go(GameSettings.VERSUS)))
+	_main.add_child(MenuStyle.button("GARAGE", _show_garage))
 	_main.add_child(MenuStyle.button("PRACTICE", func() -> void: _go(GameSettings.PRACTICE)))
 	_main.add_child(MenuStyle.button("TEST TRACK", func() -> void: _go(GameSettings.TEST_TRACK)))
 	_main.add_child(MenuStyle.button("SETTINGS", _show_settings))
@@ -112,6 +115,19 @@ func _build_ui() -> void:
 	_controls.visible = false
 	_controls.closed.connect(_show_main)
 	column.add_child(_controls)
+	_garage = GaragePanel.new()
+	_garage.visible = false
+	_garage.closed.connect(_show_main)
+	column.add_child(_garage)
+	_preview = CarPreview.new()
+	_preview.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
+	_preview.anchor_left = 0.42
+	_preview.offset_left = 0
+	_preview.offset_top = 120
+	_preview.offset_bottom = -120
+	_preview.visible = false
+	root.add_child(_preview)
+	_garage.car_shown.connect(_preview.show_car)
 
 	var hint := MenuStyle.label("Arrows / D-pad: choose      Enter / A: select      Esc / B: back", 18, MenuStyle.DIM)
 	hint.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -131,11 +147,13 @@ func _build_ui() -> void:
 func _show_main() -> void:
 	_settings.visible = false
 	_controls.visible = false
+	_garage.visible = false
+	_preview.visible = false
 	_main.visible = true
 	_title.visible = true
 	_summary.visible = true
-	_summary.text = "%d laps  ·  %d AI opponents (%s)  ·  %s handling" % [
-		GameSettings.laps, GameSettings.ai_count,
+	_summary.text = "%s  ·  %d laps  ·  %d AI opponents (%s)  ·  %s handling" % [
+		CarRoster.entry(GameSettings.p1_car).name.capitalize(), GameSettings.laps, GameSettings.ai_count,
 		GameSettings.DIFFICULTY_NAMES[GameSettings.ai_difficulty].to_lower(),
 		HandlingAssists.PROFILE_NAMES[GameSettings.handling_profile]]
 	MenuStyle.focus_first(_main)
@@ -147,6 +165,15 @@ func _show_settings() -> void:
 	_summary.visible = false
 	_settings.visible = true
 	_settings.focus_first()
+
+
+func _show_garage() -> void:
+	_main.visible = false
+	_title.visible = false
+	_summary.visible = false
+	_garage.visible = true
+	_preview.visible = true
+	_garage.focus_first()
 
 
 func _show_controls() -> void:

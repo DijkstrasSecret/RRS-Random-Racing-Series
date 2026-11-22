@@ -1,0 +1,45 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 1.2
+display_name = "Romola Stella 16d"
+mass = 1370
+center_of_mass = Vector3(0.0, 0.45, -0.2)
+inertia_box_size = Vector3(1.8, 1.35, 4.35)
+wheel_radius = 0.32
+wheel_width = 0.23
+tire_grip = 1.14
+rear_grip_scale = 0.94
+front_spring_rate = 36000
+rear_spring_rate = 30000
+front_damper_bump = 2600
+front_damper_rebound = 3500
+rear_damper_bump = 2300
+rear_damper_rebound = 3100
+front_anti_roll = 10000
+rear_anti_roll = 15000
+idle_rpm = 800
+redline_rpm = 4700
+launch_rpm = 2300
+max_torque = 320
+torque_curve = PackedVector2Array(1000.0, 0.5, 1750.0, 1.0, 2500.0, 1.0, 3500.0, 0.8, 4700.0, 0.5)
+engine_brake_torque = 65
+gear_ratios = PackedFloat32Array(3.82, 2.16, 1.37, 0.97, 0.76, 0.63)
+reverse_ratio = 3.6
+final_drive = 3.35
+auto_upshift_rpm = 4300
+auto_downshift_rpm = 1700
+drive_type = 0
+diff_lock = 0.2
+brake_torque = 5400
+brake_bias = 0.66
+handbrake_torque = 2600
+max_steer_deg = 34
+steer_rate = 4.5
+drag_area = 0.66
+downforce_area = 0.1
+engine_sound_pitch = 0.85
+engine_sound_gain_db = -1.0

@@ -179,6 +179,22 @@ def impact(seconds=0.45, seed=9):
     return soft_clip(out, 2.0)
 
 
+def ev_whine(seconds=2.0, seed=15):
+    """Electric motor at a fixed speed: motor orders plus inverter whine."""
+    rng = random.Random(seed)
+    base = 200.0  # integer cycles per loop
+    orders = [(1, 0.5), (2, 0.25), (3, 1.0), (6, 0.35), (9, 0.18), (12, 0.08)]
+    hiss = Biquad("bp", 3200, 1.2)
+    out = []
+    for i in range(int(RATE * seconds) + 2000):
+        t = i / RATE
+        s = sum(a * math.sin(TAU * base * k * t) for k, a in orders)
+        s += 0.25 * math.sin(TAU * 1600.0 * t) * (0.6 + 0.4 * math.sin(TAU * 3.0 / seconds * t))
+        s += 0.15 * hiss(rng.uniform(-1, 1)) * 3.0
+        out.append(s)
+    return loop_crossfade(out, 2000)
+
+
 if __name__ == "__main__":
     os.makedirs(OUT, exist_ok=True)
     # 50 Hz = 1500 rpm, 150 Hz = 4500 rpm (2 s loops hold whole cycles).
@@ -190,3 +206,4 @@ if __name__ == "__main__":
     write_wav("dirt_rumble.wav", dirt_rumble(), True)
     write_wav("wind.wav", wind(), True)
     write_wav("impact.wav", impact(), False)
+    write_wav("ev_whine.wav", ev_whine(), True)

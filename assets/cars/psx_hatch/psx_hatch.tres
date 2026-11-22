@@ -4,6 +4,18 @@
 
 [resource]
 script = ExtResource("1_cfg")
-display_name = "PSX Hatch (look test)"
+display_name = "Retro Hatch"
+mass = 900.0
+inertia_box_size = Vector3(1.66, 1.2, 3.82)
 wheel_radius = 0.315
 wheel_width = 0.18
+tire_grip = 1.08
+max_torque = 165.0
+redline_rpm = 6800.0
+auto_upshift_rpm = 6400.0
+front_spring_rate = 26000.0
+rear_spring_rate = 22000.0
+front_anti_roll = 8000.0
+rear_anti_roll = 11000.0
+brake_torque = 3800.0
+drag_area = 0.7

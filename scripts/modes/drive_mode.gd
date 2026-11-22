@@ -13,6 +13,10 @@ extends Node3D
 func _enter_tree() -> void:
 	InputActions.ensure()
 	GameSettings.ensure_loaded()
+	# Before the car is ready: make it the car chosen in the garage.
+	var car := get_node_or_null(vehicle_path) as Vehicle
+	if car:
+		CarRoster.apply(car, GameSettings.p1_car)
 
 
 func _ready() -> void:
