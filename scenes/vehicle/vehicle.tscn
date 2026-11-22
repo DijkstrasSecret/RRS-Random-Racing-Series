@@ -1,0 +1,123 @@
+[gd_scene load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle.gd" id="1_vehicle"]
+[ext_resource type="Resource" path="res://assets/cars/hot_hatch/hot_hatch.tres" id="2_config"]
+[ext_resource type="Script" path="res://scripts/vehicle/wheel.gd" id="3_wheel"]
+[ext_resource type="Script" path="res://scripts/input/player_input.gd" id="4_input"]
+
+[sub_resource type="BoxShape3D" id="Shape_body"]
+size = Vector3(1.76, 0.62, 4.1)
+
+[sub_resource type="BoxShape3D" id="Shape_cabin"]
+size = Vector3(1.5, 0.55, 2.1)
+
+[sub_resource type="StandardMaterial3D" id="Mat_paint"]
+albedo_color = Color(0.86, 0.14, 0.1, 1)
+metallic = 0.35
+roughness = 0.35
+
+[sub_resource type="StandardMaterial3D" id="Mat_glass"]
+albedo_color = Color(0.12, 0.16, 0.22, 1)
+metallic = 0.6
+roughness = 0.15
+
+[sub_resource type="StandardMaterial3D" id="Mat_headlight"]
+albedo_color = Color(1, 0.97, 0.85, 1)
+emission_enabled = true
+emission = Color(1, 0.95, 0.8, 1)
+emission_energy_multiplier = 2.0
+
+[sub_resource type="StandardMaterial3D" id="Mat_taillight"]
+albedo_color = Color(0.9, 0.05, 0.05, 1)
+emission_enabled = true
+emission = Color(1, 0.05, 0.05, 1)
+emission_energy_multiplier = 1.5
+
+[sub_resource type="BoxMesh" id="Mesh_body"]
+material = SubResource("Mat_paint")
+size = Vector3(1.6, 0.62, 4.1)
+
+[sub_resource type="BoxMesh" id="Mesh_cabin"]
+material = SubResource("Mat_glass")
+size = Vector3(1.38, 0.55, 2.1)
+
+[sub_resource type="BoxMesh" id="Mesh_headlight"]
+material = SubResource("Mat_headlight")
+size = Vector3(0.36, 0.12, 0.04)
+
+[sub_resource type="BoxMesh" id="Mesh_taillight"]
+material = SubResource("Mat_taillight")
+size = Vector3(0.36, 0.12, 0.04)
+
+[sub_resource type="BoxMesh" id="Mesh_spoiler"]
+material = SubResource("Mat_paint")
+size = Vector3(1.4, 0.06, 0.3)
+
+[node name="Vehicle" type="RigidBody3D"]
+collision_layer = 2
+collision_mask = 7
+script = ExtResource("1_vehicle")
+config = ExtResource("2_config")
+
+[node name="CollisionBody" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.71, 0)
+shape = SubResource("Shape_body")
+
+[node name="CollisionCabin" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.295, 0.25)
+shape = SubResource("Shape_cabin")
+
+[node name="Body" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.71, 0)
+mesh = SubResource("Mesh_body")
+
+[node name="Cabin" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.295, 0.25)
+mesh = SubResource("Mesh_cabin")
+
+[node name="Spoiler" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 1.2)
+mesh = SubResource("Mesh_spoiler")
+
+[node name="HeadlightL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 0.82, -2.05)
+mesh = SubResource("Mesh_headlight")
+
+[node name="HeadlightR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.82, -2.05)
+mesh = SubResource("Mesh_headlight")
+
+[node name="TaillightL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 0.86, 2.05)
+mesh = SubResource("Mesh_taillight")
+
+[node name="TaillightR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.86, 2.05)
+mesh = SubResource("Mesh_taillight")
+
+[node name="WheelFL" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.78, 0.53, -1.28)
+script = ExtResource("3_wheel")
+is_front = true
+is_left = true
+
+[node name="WheelFR" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.78, 0.53, -1.28)
+script = ExtResource("3_wheel")
+is_front = true
+is_left = false
+
+[node name="WheelRL" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.78, 0.53, 1.25)
+script = ExtResource("3_wheel")
+is_front = false
+is_left = true
+
+[node name="WheelRR" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.78, 0.53, 1.25)
+script = ExtResource("3_wheel")
+is_front = false
+is_left = false
+
+[node name="PlayerInput" type="Node" parent="."]
+script = ExtResource("4_input")
