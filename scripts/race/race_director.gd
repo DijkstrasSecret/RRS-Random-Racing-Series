@@ -13,6 +13,8 @@ enum State { WAITING, COUNTDOWN, RACING, FINISHED }
 @export var circuit_path: NodePath
 ## Start the countdown by itself (off when a RaceSetup adds the racers).
 @export var auto_start: bool = true
+## Take the number of laps from the player's settings.
+@export var use_game_settings: bool = true
 @export var vehicle_paths: Array[NodePath] = []
 @export var lap_timer_paths: Array[NodePath] = []
 @export var player_names: PackedStringArray = ["PLAYER 1", "PLAYER 2"]
@@ -38,6 +40,9 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_font = ThemeDB.fallback_font
 	_circuit = get_node_or_null(circuit_path) as Circuit
+	if use_game_settings:
+		GameSettings.ensure_loaded()
+		laps = GameSettings.laps
 	for i in vehicle_paths.size():
 		add_racer(get_node(vehicle_paths[i]) as Vehicle, get_node(lap_timer_paths[i]) as LapTimer,
 				player_names[i] if i < player_names.size() else "PLAYER %d" % (i + 1),
@@ -216,7 +221,7 @@ func _draw_results(centre: Vector2) -> void:
 		_text_at(Vector2(panel.position.x + 60.0, y), label, 24, r.color)
 		_text_at(Vector2(panel.position.x + 400.0, y), time_text, 22, Color(1, 1, 1, 0.9))
 		y += row_h
-	_big(Vector2(centre.x, panel.end.y - 26.0), "Backspace = race again", 20, Color(1, 1, 1, 0.8))
+	_big(Vector2(centre.x, panel.end.y - 26.0), "Backspace = race again      Esc / Start = menu", 20, Color(1, 1, 1, 0.8))
 
 
 func _text_at(pos: Vector2, text: String, font_size: int, color: Color) -> void:

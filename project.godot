@@ -12,7 +12,7 @@ config_version=5
 
 config/name="RRS - Random Racing Series"
 config/description="Physics-based semi-realistic / semi-arcade racing game."
-run/main_scene="res://scenes/modes/circuit_race.tscn"
+run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
 [display]

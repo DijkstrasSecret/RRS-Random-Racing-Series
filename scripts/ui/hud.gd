@@ -49,7 +49,7 @@ const HELP_ACTIONS: PackedStringArray = [
 	"Switch mode  (race / practice / test track)",
 	"Two-player split screen race",
 	"Recover car     Backspace  Back to start",
-	"Hide help     Esc  Quit",
+	"Hide help     Esc / Start  Pause menu",
 ]
 
 

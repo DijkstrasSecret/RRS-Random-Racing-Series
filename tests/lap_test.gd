@@ -24,6 +24,7 @@ var _trace_step := 1.0
 
 
 func _ready() -> void:
+	GameSettings.use_defaults()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--trace="):
 			var parts := arg.get_slice("=", 1).split(",")

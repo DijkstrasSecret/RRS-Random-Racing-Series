@@ -15,6 +15,7 @@ var _done := false
 
 
 func _ready() -> void:
+	GameSettings.use_defaults()
 	DirAccess.make_dir_recursive_absolute(OUT)
 	_scene = load("res://scenes/modes/circuit_practice.tscn").instantiate()
 	var car: Vehicle = _scene.get_node("Vehicle")

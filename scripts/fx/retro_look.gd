@@ -31,6 +31,7 @@ static func resolution_for(look: int) -> Vector2:
 
 func _ready() -> void:
 	layer = 1
+	add_to_group("retro_look")
 	_material = ShaderMaterial.new()
 	_material.shader = load("res://assets/vfx/shaders/psx_post.gdshader")
 	_rect = ColorRect.new()
@@ -40,7 +41,8 @@ func _ready() -> void:
 	_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
 	add_child(_rect)
 	if not _initialised:
-		level = start_level
+		GameSettings.ensure_loaded()
+		level = GameSettings.look
 		_initialised = true
 	# Wait one frame so the track and vehicles have finished setting up.
 	_apply.call_deferred()
@@ -48,8 +50,14 @@ func _ready() -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("cycle_look"):
-		level = (level + 1) % LEVEL_NAMES.size()
-		_apply()
+		set_level((level + 1) % LEVEL_NAMES.size())
+		GameSettings.look = level
+		GameSettings.save()
+
+
+func set_level(new_level: int) -> void:
+	level = new_level
+	_apply()
 
 
 func _apply() -> void:

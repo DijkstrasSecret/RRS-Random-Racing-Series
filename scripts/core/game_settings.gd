@@ -1,0 +1,85 @@
+class_name GameSettings
+extends RefCounted
+## Player settings, shared by every scene and saved to user://settings.cfg.
+## Menus change them; races, cars and the visual style read them.
+
+const PATH := "user://settings.cfg"
+
+const MAIN_MENU := "res://scenes/ui/main_menu.tscn"
+const RACE := "res://scenes/modes/circuit_race.tscn"
+const VERSUS := "res://scenes/modes/versus_race.tscn"
+const PRACTICE := "res://scenes/modes/circuit_practice.tscn"
+const TEST_TRACK := "res://scenes/modes/free_roam.tscn"
+
+const LAP_CHOICES: PackedInt32Array = [1, 2, 3, 5, 10]
+const DIFFICULTY_NAMES: PackedStringArray = ["EASY", "NORMAL", "HARD"]
+## AI skill range (min, max) for each difficulty.
+const DIFFICULTY_SKILLS: Array[Vector2] = [Vector2(0.3, 0.6), Vector2(0.5, 0.82), Vector2(0.68, 0.95)]
+
+static var laps: int = 3
+static var ai_count: int = 5
+static var ai_difficulty: int = 1
+static var handling_profile: int = 1  ## 0 Arcade, 1 Sport, 2 Sim
+static var look: int = 1  ## 0 Modern, 1 PS2, 2 PS1
+static var fullscreen: bool = false
+static var vibration: bool = true
+
+static var _loaded: bool = false
+
+
+## Reads the saved settings once per run.
+static func ensure_loaded() -> void:
+	if _loaded:
+		return
+	_loaded = true
+	var cfg := ConfigFile.new()
+	if cfg.load(PATH) != OK:
+		return
+	laps = cfg.get_value("race", "laps", laps)
+	ai_count = cfg.get_value("race", "ai_count", ai_count)
+	ai_difficulty = cfg.get_value("race", "ai_difficulty", ai_difficulty)
+	handling_profile = cfg.get_value("car", "handling_profile", handling_profile)
+	vibration = cfg.get_value("car", "vibration", vibration)
+	look = cfg.get_value("video", "look", look)
+	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
+	if fullscreen:
+		apply_window()
+
+
+## Tests call this so the saved file doesn't change their results.
+static func use_defaults() -> void:
+	_loaded = true
+
+
+static func save() -> void:
+	var cfg := ConfigFile.new()
+	cfg.set_value("race", "laps", laps)
+	cfg.set_value("race", "ai_count", ai_count)
+	cfg.set_value("race", "ai_difficulty", ai_difficulty)
+	cfg.set_value("car", "handling_profile", handling_profile)
+	cfg.set_value("car", "vibration", vibration)
+	cfg.set_value("video", "look", look)
+	cfg.set_value("video", "fullscreen", fullscreen)
+	cfg.save(PATH)
+
+
+static func ai_skill_range() -> Vector2:
+	return DIFFICULTY_SKILLS[clampi(ai_difficulty, 0, DIFFICULTY_SKILLS.size() - 1)]
+
+
+static func apply_window() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	DisplayServer.window_set_mode(
+			DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_MAXIMIZED)
+
+
+## Applies the settings that can change mid-game (look, handling, window).
+static func apply_live(tree: SceneTree) -> void:
+	apply_window()
+	for node in tree.get_nodes_in_group("retro_look"):
+		node.set_level(look)
+	for node in tree.get_nodes_in_group("vehicles"):
+		var car := node as Vehicle
+		if car and car.input is PlayerInput:
+			car.set_handling_profile(handling_profile)

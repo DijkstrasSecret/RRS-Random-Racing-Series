@@ -28,6 +28,7 @@ var _max_hs_lat_g := 0.0
 
 
 func _ready() -> void:
+	GameSettings.use_defaults()
 	add_child(load("res://scenes/tracks/test_track.tscn").instantiate())
 	var car_path := "res://scenes/vehicle/vehicle.tscn"
 	for arg in OS.get_cmdline_user_args():

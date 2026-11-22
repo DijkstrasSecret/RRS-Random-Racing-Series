@@ -123,7 +123,8 @@ func _ready() -> void:
 	_wheelbase = maxf(absf(_rear_axle_z - _front_axle_z), 1.0)
 
 	drivetrain.setup(config)
-	set_handling_profile(handling_profile)
+	GameSettings.ensure_loaded()
+	set_handling_profile(GameSettings.handling_profile)
 	spawn_transform = global_transform
 
 
@@ -416,6 +417,8 @@ func _apply_air_control() -> void:
 func _handle_meta_inputs() -> bool:
 	if input.cycle_profile_pressed:
 		set_handling_profile((handling_profile + 1) % HandlingAssists.PROFILE_NAMES.size())
+		GameSettings.handling_profile = handling_profile
+		GameSettings.save()
 	if input.restart_pressed:
 		reset_to_start()
 		return true

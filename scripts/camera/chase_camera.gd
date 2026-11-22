@@ -53,6 +53,12 @@ func _unhandled_input(event: InputEvent) -> void:
 		snap()
 
 
+## Follow a different car.
+func set_target(target: RigidBody3D) -> void:
+	_target = target
+	snap()
+
+
 ## Jump straight to the resting position (after a reset or teleport).
 func snap() -> void:
 	if _target == null:

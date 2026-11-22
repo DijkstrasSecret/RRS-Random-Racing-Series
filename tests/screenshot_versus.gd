@@ -12,6 +12,7 @@ var _dirt_shot := false
 
 
 func _ready() -> void:
+	GameSettings.use_defaults()
 	DirAccess.make_dir_recursive_absolute(OUT)
 	_scene = load("res://scenes/modes/versus_race.tscn").instantiate()
 	_race = _scene.get_node("RaceLayer/RaceDirector")

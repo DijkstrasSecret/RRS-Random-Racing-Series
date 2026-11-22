@@ -1,0 +1,27 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/main_menu.gd" id="1_menu"]
+[ext_resource type="PackedScene" path="res://scenes/tracks/circuit.tscn" id="2_track"]
+[ext_resource type="PackedScene" path="res://scenes/vehicle/psx_hatch.tscn" id="3_car"]
+[ext_resource type="Script" path="res://scripts/race/race_setup.gd" id="4_setup"]
+[ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="5_camera"]
+[ext_resource type="Script" path="res://scripts/fx/retro_look.gd" id="6_retro"]
+
+[node name="MainMenu" type="Node3D"]
+script = ExtResource("1_menu")
+
+[node name="Circuit" parent="." instance=ExtResource("2_track")]
+
+[node name="RaceSetup" type="Node" parent="."]
+script = ExtResource("4_setup")
+circuit_path = NodePath("../Circuit")
+car_scene = ExtResource("3_car")
+ai_count = 5
+use_game_settings = false
+
+[node name="ChaseCamera" type="Camera3D" parent="."]
+current = true
+script = ExtResource("5_camera")
+
+[node name="RetroLook" type="CanvasLayer" parent="."]
+script = ExtResource("6_retro")

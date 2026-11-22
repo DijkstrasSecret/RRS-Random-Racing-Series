@@ -89,7 +89,7 @@ func poll(delta: float) -> void:
 ## Weak (high-frequency) motor = tyres sliding or spinning.
 ## Strong (low-frequency) motor = grass and landing impacts.
 func _update_rumble(delta: float) -> void:
-	if not rumble_enabled or not using_gamepad:
+	if not rumble_enabled or not GameSettings.vibration or not using_gamepad:
 		return
 	var car := get_parent() as Vehicle
 	if car == null:

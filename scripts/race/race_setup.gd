@@ -17,6 +17,8 @@ extends Node
 @export var ai_skill_min: float = 0.5
 @export var ai_skill_max: float = 0.82
 @export var random_seed: int = 0
+## Take the AI count and difficulty from the player's settings.
+@export var use_game_settings: bool = true
 
 const AI_NAMES: PackedStringArray = ["VEGA", "KATO", "MOREAU", "LIND", "OKAFOR", "RUIZ", "HALE", "NOVAK", "SATO"]
 const AI_COLORS: PackedColorArray = [
@@ -36,7 +38,14 @@ func _ready() -> void:
 
 func _build() -> void:
 	var circuit := get_node(circuit_path) as Circuit
-	var director := get_node(race_director_path) as RaceDirector
+	# No director = just cars driving round (opening menu background).
+	var director := get_node_or_null(race_director_path) as RaceDirector
+	if use_game_settings:
+		GameSettings.ensure_loaded()
+		ai_count = GameSettings.ai_count
+		var skills_range := GameSettings.ai_skill_range()
+		ai_skill_min = skills_range.x
+		ai_skill_max = skills_range.y
 	var root := get_parent()
 	var rng := RandomNumberGenerator.new()
 	if random_seed != 0:
@@ -71,7 +80,8 @@ func _build() -> void:
 		timer.name = "LapTimer_%s" % names[i]
 		root.add_child(timer)
 		timer.setup(circuit, car)
-		director.add_racer(car, timer, names[i], AI_COLORS[i % AI_COLORS.size()], false)
+		if director:
+			director.add_racer(car, timer, names[i], AI_COLORS[i % AI_COLORS.size()], false)
 		ai_vehicles.append(car)
 
 	for i in player_paths.size():
@@ -79,9 +89,12 @@ func _build() -> void:
 		_place(car, circuit, slot)
 		slot += 1
 		var timer := get_node(player_timer_paths[i]) as LapTimer
+		if director == null:
+			continue
 		director.add_racer(car, timer, player_names[i] if i < player_names.size() else "PLAYER %d" % (i + 1),
 				player_colors[i] if i < player_colors.size() else Color.WHITE, true)
-	director.begin()
+	if director:
+		director.begin()
 
 
 func _place(car: Vehicle, circuit: Circuit, slot: int) -> void:

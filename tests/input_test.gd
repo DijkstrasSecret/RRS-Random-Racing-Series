@@ -12,6 +12,7 @@ var _ok := true
 
 
 func _init() -> void:
+	GameSettings.use_defaults()
 	InputActions.ensure()
 	_solo = PlayerInput.new()
 	_p1 = PlayerInput.new()

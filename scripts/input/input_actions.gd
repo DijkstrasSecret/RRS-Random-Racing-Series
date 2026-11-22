@@ -27,6 +27,7 @@ static func ensure() -> void:
 	_add("cycle_look", [_key(KEY_V)])
 	_add("switch_track", [_key(KEY_F2)])
 	_add("versus_mode", [_key(KEY_F3)])
+	_add("pause", [_key(KEY_ESCAPE), _button(JOY_BUTTON_START)])
 
 	# Two-player split screen: each player has their own keys and gamepad.
 	# Player 1 = left side of the keyboard + first gamepad.

@@ -1,7 +1,8 @@
 extends Node3D
 ## A drivable scene: free roam on the test track, or laps on a circuit.
 ## If the track can give a spawn point (Circuit), the car starts there.
-## F2 switches to `other_scene`, F3 starts two-player split screen, Esc quits.
+## F2 switches to `other_scene`, F3 starts two-player split screen,
+## Esc / Start opens the pause menu.
 
 @export_file("*.tscn") var other_scene: String
 @export var track_path: NodePath
@@ -11,9 +12,11 @@ extends Node3D
 
 func _enter_tree() -> void:
 	InputActions.ensure()
+	GameSettings.ensure_loaded()
 
 
 func _ready() -> void:
+	add_child(PauseMenu.new())
 	var engine_name: String = ProjectSettings.get_setting("physics/3d/physics_engine")
 	print("RRS %s | Godot %s | physics: %s @ %d Hz" % [
 		name, Engine.get_version_info().string, engine_name, Engine.physics_ticks_per_second])
@@ -27,9 +30,7 @@ func _ready() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel"):
-		get_tree().quit()
-	elif event.is_action_pressed("switch_track") and not other_scene.is_empty():
+	if event.is_action_pressed("switch_track") and not other_scene.is_empty():
 		get_tree().change_scene_to_file(other_scene)
 	elif event.is_action_pressed("versus_mode") and not versus_scene.is_empty():
 		get_tree().change_scene_to_file(versus_scene)

@@ -17,6 +17,7 @@ var _started := false
 
 
 func _ready() -> void:
+	GameSettings.use_defaults()
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--laps="):
 			_laps = int(arg.get_slice("=", 1))
@@ -24,6 +25,7 @@ func _ready() -> void:
 			_scene_name = arg.get_slice("=", 1)
 	_scene = load("res://scenes/modes/%s.tscn" % _scene_name).instantiate()
 	_race = _scene.get_node("RaceLayer/RaceDirector")
+	_race.use_game_settings = false
 	_race.laps = _laps
 	# Replace the human players with AI drivers.
 	for node in _scene.get_children():
