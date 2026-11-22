@@ -23,8 +23,18 @@ var _checkpoints: int = 0
 
 func _ready() -> void:
 	add_to_group("lap_timer")
-	_circuit = get_node_or_null(circuit_path) as Circuit
-	_vehicle = get_node_or_null(vehicle_path) as Vehicle
+	if _circuit == null:
+		_circuit = get_node_or_null(circuit_path) as Circuit
+	if _vehicle == null:
+		setup(_circuit, get_node_or_null(vehicle_path) as Vehicle)
+
+
+## Use instead of the paths when creating a timer from code.
+func setup(circuit: Circuit, vehicle: Vehicle) -> void:
+	_circuit = circuit
+	if _vehicle == vehicle:
+		return
+	_vehicle = vehicle
 	if _vehicle:
 		_vehicle.reset_to_start_done.connect(reset)
 

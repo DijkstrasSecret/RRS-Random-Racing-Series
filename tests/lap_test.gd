@@ -32,7 +32,7 @@ func _ready() -> void:
 			_trace_step = float(parts[2]) if parts.size() > 2 else 0.25
 		if arg.begins_with("--laps="):
 			_laps_wanted = int(arg.get_slice("=", 1))
-	_scene = load("res://scenes/modes/circuit_race.tscn").instantiate()
+	_scene = load("res://scenes/modes/circuit_practice.tscn").instantiate()
 	_car = _scene.get_node("Vehicle")
 	var player := _car.get_node("PlayerInput")
 	_car.remove_child(player)

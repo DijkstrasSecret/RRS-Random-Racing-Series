@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scripts/modes/versus_mode.gd" id="1_mode"]
 [ext_resource type="PackedScene" path="res://scenes/tracks/circuit.tscn" id="2_track"]
@@ -9,6 +9,7 @@
 [ext_resource type="Script" path="res://scripts/race/lap_timer.gd" id="7_laps"]
 [ext_resource type="Script" path="res://scripts/race/race_director.gd" id="8_race"]
 [ext_resource type="Texture2D" path="res://assets/cars/psx_hatch/psx_hatch_red.png" id="9_red"]
+[ext_resource type="Script" path="res://scripts/race/race_setup.gd" id="10_setup"]
 
 [node name="VersusRace" type="Node3D"]
 script = ExtResource("1_mode")
@@ -37,6 +38,17 @@ vehicle_path = NodePath("../Car1")
 script = ExtResource("7_laps")
 circuit_path = NodePath("../Circuit")
 vehicle_path = NodePath("../Car2")
+
+[node name="RaceSetup" type="Node" parent="."]
+script = ExtResource("10_setup")
+circuit_path = NodePath("../Circuit")
+race_director_path = NodePath("../RaceLayer/RaceDirector")
+car_scene = ExtResource("3_car")
+ai_count = 4
+player_paths = Array[NodePath]([NodePath("../Car1"), NodePath("../Car2")])
+player_timer_paths = Array[NodePath]([NodePath("../LapTimer1"), NodePath("../LapTimer2")])
+player_names = PackedStringArray("PLAYER 1", "PLAYER 2")
+player_colors = PackedColorArray(0.35, 0.8, 1, 1, 1, 0.4, 0.35, 1)
 
 [node name="ScreensLayer" type="CanvasLayer" parent="."]
 layer = 0
@@ -143,5 +155,4 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("8_race")
 circuit_path = NodePath("../../Circuit")
-vehicle_paths = Array[NodePath]([NodePath("../../Car1"), NodePath("../../Car2")])
-lap_timer_paths = Array[NodePath]([NodePath("../../LapTimer1"), NodePath("../../LapTimer2")])
+auto_start = false

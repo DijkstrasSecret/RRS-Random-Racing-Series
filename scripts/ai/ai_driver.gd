@@ -1,95 +1,142 @@
 class_name AIDriver
 extends VehicleInput
-## Simple racing-line follower (first step toward design concept §9): steers
-## toward a point a little ahead on the circuit's centre line and brakes for
-## corners using the curvature further ahead. Drives through the same
-## VehicleInput as the player, so it gets no grip advantages.
+## AI racing driver (design concept §9). Drives through the same VehicleInput
+## as a player, so it gets no extra grip or power.
+## - Speed: a per-lap speed plan (corner limits + braking zones) built once
+##   from the circuit, scaled by `skill`.
+## - Line: drifts toward the inside of the coming corner, using the road width.
+## - Traffic: moves over to pass slower cars and brakes rather than ram them.
+## - If it ends up lost (off the road or facing the wrong way) for a few
+##   seconds, it is put back on the track like in most racing games.
 
-## Lateral grip (in g) the driver is willing to use in corners.
-@export var cornering_g: float = 0.7
-## Deceleration (m/s²) it plans its braking with.
-@export var braking_decel: float = 4.0
-@export var lookahead_base: float = 9.0
-@export var lookahead_per_mps: float = 0.45
+## 0 = cautious, 1 = right on the limit.
+@export_range(0.0, 1.0) var skill: float = 0.8
+## Personal preference for one side of the road (metres, + = right).
+@export var lane_bias: float = 0.0
+@export var lookahead_base: float = 8.0
+@export var lookahead_per_mps: float = 0.42
 ## Extra wheel angle on top of pure geometry, to cover tyre slip.
-@export var steer_gain: float = 1.4
-## Most steering input the AI uses (about the grip limit in Sport).
-@export var max_steer_input: float = 0.55
+@export var steer_gain: float = 1.3
+## Most steering input the AI uses.
+@export var max_steer_input: float = 1.0
 ## Seconds lost (off the road or facing the wrong way) before it resets.
-@export var reset_after: float = 2.5
+@export var reset_after: float = 3.0
 
 var resets: int = 0
-var _lost_time: float = 0.0
-
 var target_speed: float = 0.0
+var lane: float = 0.0
+
 var _vehicle: Vehicle
 var _circuit: Circuit
+var _profile := PackedFloat32Array()
+var _lost_time: float = 0.0
 
 
 func poll(delta: float) -> void:
-	if _circuit == null:
-		_circuit = get_tree().get_first_node_in_group("circuit") as Circuit
-		_vehicle = get_parent() as Vehicle
-		if _circuit == null or _vehicle == null:
-			return
+	if _circuit == null and not _setup():
+		return
 	var v := _vehicle.forward_speed
-	var off := _circuit.progress_at(_vehicle.global_position)
+	var pos := _vehicle.global_position
+	var off := _circuit.progress_at(pos)
+	var road_half := _circuit.road_width * 0.5 - 1.7
 
-	# Steering: aim at a point ahead on the line.
+	# --- Where on the road: inside of the next corner, plus traffic moves.
+	var curv_ahead := _circuit.curvature_at(off + 12.0 + maxf(v, 0.0) * 0.6)
+	var line := -clampf(curv_ahead * 220.0, -1.0, 1.0) * road_half * 0.75  # + curv = left turn
+	var traffic := _read_traffic(v)
+	var lane_target := clampf(line + lane_bias + traffic.x, -road_half, road_half)
+	lane = move_toward(lane, lane_target, 3.5 * delta)
+
+	# --- Steering: pure pursuit to a point ahead on that line.
 	var look := lookahead_base + maxf(v, 0.0) * lookahead_per_mps
-	var local := _vehicle.to_local(_circuit.point_at(off + look))
-	# Pure pursuit: the arc through the target point gives the curvature,
-	# which becomes a wheel angle, then a share of the current steering lock.
+	var target_point := _circuit.point_at(off + look) + _circuit.right_at(off + look) * lane
+	var local := _vehicle.to_local(target_point)
 	var dist_sq := maxf(local.x * local.x + local.z * local.z, 1.0)
 	var arc_curvature := 2.0 * local.x / dist_sq  # + = target to the right
 	var wheel_angle := atan(arc_curvature * _vehicle.wheelbase()) * steer_gain
 	steer = clampf(wheel_angle / _vehicle.current_steer_limit(), -max_steer_input, max_steer_input)
 
-	# Speed: the slowest corner within braking distance sets the target.
-	var horizon := 30.0 + v * v / (2.0 * braking_decel)
-	target_speed = 90.0
-	var d := 0.0
-	while d < horizon:
-		var curv := absf(_circuit.curvature_at(off + d))
-		var corner_v := sqrt(cornering_g * 9.81 / maxf(curv, 0.0005))
-		# Speed we may carry now and still slow to corner_v by distance d.
-		target_speed = minf(target_speed, sqrt(corner_v * corner_v + 2.0 * braking_decel * d))
-		d += 4.0
+	# --- Speed: follow the plan, respect traffic, back off when sliding.
+	target_speed = minf(_circuit.profile_speed(_profile, off + maxf(v, 0.0) * 0.3), traffic.y)
+	var slip := absf(atan2(_vehicle.lateral_speed, maxf(absf(v), 0.5)))
+	if v > 8.0 and slip > deg_to_rad(7.0):
+		target_speed = minf(target_speed, v - 2.0)
 
-	# Off the line (run wide, spun): slow right down and find the way back.
-	var off_line := _circuit.distance_from_centre(_vehicle.global_position) > _circuit.road_width * 0.9
+	var from_centre := _circuit.distance_from_centre(pos)
+	# Running wide toward the edge: ease off before it reaches the grass.
+	if from_centre > _circuit.road_width * 0.45:
+		target_speed = minf(target_speed, maxf(v - 1.5, 14.0))
+	var off_line := from_centre > _circuit.road_width * 0.75
 	if off_line:
-		target_speed = minf(target_speed, 12.0)
-	var track_dir := (_circuit.point_at(off + 2.0) - _circuit.point_at(off - 2.0)).normalized()
+		target_speed = minf(target_speed, 14.0)
+	var track_dir := _circuit.direction_at(off)
 	var wrong_way := (-_vehicle.global_basis.z).dot(track_dir) < -0.2
-	_lost_time = _lost_time + delta if (off_line or wrong_way) else 0.0
+	var stuck := absf(v) < 1.0 and not _vehicle.controls_locked
+	_lost_time = _lost_time + delta if (off_line or wrong_way or stuck) else 0.0
 	if _lost_time > reset_after:
 		_reset_onto_track(off, track_dir)
 		return
 
-	# Sliding: back off until the tyres hook up again.
-	var slip := absf(atan2(_vehicle.lateral_speed, maxf(absf(v), 0.5)))
-	if slip > deg_to_rad(6.0):
-		target_speed = minf(target_speed, v - 3.0)
-
-	# Smooth pedals: brake/throttle in proportion to the speed error, and
-	# go easy on both while turning hard (the front tyres need grip to steer).
+	# --- Pedals in proportion to the speed error; gentle while turning hard.
 	var err := v - target_speed
 	var turning := absf(steer) / maxf(max_steer_input, 0.01)
 	if err > 0.5:
 		throttle = 0.0
-		brake = clampf(err / 2.0, 0.2, 1.0) * (1.0 - turning * 0.5)
+		brake = clampf(err / 2.0, 0.2, 1.0) * (1.0 - turning * 0.4)
 	else:
 		brake = 0.0
-		throttle = clampf(-err / 4.0, 0.25, 1.0) * (1.0 - turning * 0.6)
+		# At full lock a front-drive car needs its front grip for turning.
+		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * 0.9, 0.08, 1.0)
 	handbrake = 0.0
 
 
-## Put the car back on the centre line, pointing the right way, like the
-## reset in most racing games.
+func _setup() -> bool:
+	_circuit = get_tree().get_first_node_in_group("circuit") as Circuit
+	_vehicle = get_parent() as Vehicle
+	if _circuit == null or _vehicle == null:
+		_circuit = null
+		return false
+	# AI cars use the Arcade assists (stability and counter-steer help); this
+	# changes how the car is driven, not how much grip it has.
+	_vehicle.set_handling_profile(HandlingAssists.Profile.ARCADE)
+	var grip := _vehicle.config.tire_grip * 9.81
+	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill),
+			grip * lerpf(0.42, 0.58, skill), 95.0)
+	return true
+
+
+## Returns (lane shift in metres, speed cap in m/s) caused by nearby cars.
+func _read_traffic(v: float) -> Vector2:
+	var shift := 0.0
+	var cap := 999.0
+	for node in get_tree().get_nodes_in_group("vehicles"):
+		var other := node as Vehicle
+		if other == null or other == _vehicle:
+			continue
+		var rel := _vehicle.to_local(other.global_position)
+		var ahead := -rel.z
+		var side := rel.x
+		if ahead > 0.0 and ahead < 28.0 and absf(side) < 2.8:
+			# Someone in our path: pass on the side with more room.
+			var closing := v - other.forward_speed
+			if closing > -1.0:
+				var go_right := side < 0.0
+				if absf(lane) > 2.0:
+					go_right = lane < 0.0  # already near one edge: use the other side
+				shift = 3.0 if go_right else -3.0
+			if ahead < 10.0 and closing > 0.0:
+				cap = minf(cap, other.forward_speed - 0.5)
+		elif absf(ahead) < 5.0 and absf(side) < 3.2:
+			# Side by side: give each other room.
+			shift = -signf(side) * 1.5
+	return Vector2(shift, cap)
+
+
+## Put the car back on the centre line, pointing the right way.
 func _reset_onto_track(off: float, track_dir: Vector3) -> void:
 	resets += 1
 	_lost_time = 0.0
+	lane = 0.0
 	var pos := _circuit.point_at(off) + Vector3.UP * 0.3
 	_vehicle.teleport(Transform3D(Basis.looking_at(track_dir, Vector3.UP), pos))
 	throttle = 0.0

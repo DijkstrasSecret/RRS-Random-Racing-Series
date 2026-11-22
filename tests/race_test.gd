@@ -1,57 +1,67 @@
 extends Node
-## Versus race smoke test: two AIDrivers race in the real split-screen scene.
-## Checks the countdown holds the cars, the race finishes with a winner and
-## the off-road dirt effect switches on. Run without a window:
+## Race smoke test: runs a full race with every car driven by an AIDriver
+## (the players' cars too). Checks the countdown holds the field, the race
+## finishes, prints the results, AI resets and whether the dirt effect ran.
+## Run without a window:
 ##   Godot_console.exe --headless --fixed-fps 120 --path . res://tests/race_test.tscn
-## Optional: -- --laps=N  (default 1)
+## Options:  -- --laps=N (default 2)  --scene=versus_race | circuit_race
 
 var _scene: Node
 var _race: RaceDirector
-var _cars: Array[Vehicle] = []
 var _t := 0.0
 var _moved_in_countdown := 0.0
 var _dirt_seen := false
-var _laps := 1
+var _laps := 2
+var _scene_name := "versus_race"
+var _started := false
 
 
 func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--laps="):
 			_laps = int(arg.get_slice("=", 1))
-	_scene = load("res://scenes/modes/versus_race.tscn").instantiate()
+		if arg.begins_with("--scene="):
+			_scene_name = arg.get_slice("=", 1)
+	_scene = load("res://scenes/modes/%s.tscn" % _scene_name).instantiate()
 	_race = _scene.get_node("RaceLayer/RaceDirector")
 	_race.laps = _laps
-	for car_name: String in ["Car1", "Car2"]:
-		var car: Vehicle = _scene.get_node(car_name)
-		var player := car.get_node("PlayerInput")
-		car.remove_child(player)
-		player.free()
-		var ai := AIDriver.new()
-		ai.name = "AIDriver"
-		# Make the second driver a little more careful so the race has a winner.
-		if car_name == "Car2":
-			ai.cornering_g = 0.62
-		car.add_child(ai)
-		_cars.append(car)
+	# Replace the human players with AI drivers.
+	for node in _scene.get_children():
+		if node is Vehicle:
+			var player := node.get_node_or_null("PlayerInput")
+			if player:
+				node.remove_child(player)
+				player.free()
+				var ai := AIDriver.new()
+				ai.name = "AIDriver"
+				ai.skill = 0.75
+				node.add_child(ai)
 	add_child(_scene)
-	print("race_test | %d lap(s)" % _laps)
+	print("race_test | %s | %d lap(s)" % [_scene_name, _laps])
 
 
 func _physics_process(delta: float) -> void:
 	_t += delta
 	if _race.state == RaceDirector.State.COUNTDOWN:
-		for car in _cars:
-			_moved_in_countdown = maxf(_moved_in_countdown, car.linear_velocity.length())
-	for car in _cars:
-		for w in car.wheels:
+		_started = true
+		for i in _race.car_count():
+			var v := _race.vehicle_at(i).linear_velocity
+			_moved_in_countdown = maxf(_moved_in_countdown, Vector2(v.x, v.z).length())
+	for i in _race.car_count():
+		for w in _race.vehicle_at(i).wheels:
 			if w._dirt and w._dirt._chunks.emitting:
 				_dirt_seen = true
-	if _race.state == RaceDirector.State.FINISHED or _t > 200.0 * _laps:
-		print("  countdown held cars    %s (max speed %.2f m/s)" % [str(_moved_in_countdown < 0.5), _moved_in_countdown])
-		print("  race finished          %s" % str(_race.state == RaceDirector.State.FINISHED))
-		for place in _race.finish_order.size():
-			var i: int = _race.finish_order[place]
-			print("  %s %s  %s" % [RaceDirector.ordinal(place + 1), _race.player_names[i], LapTimer.format_time(_race.finish_times[i])])
+	var all_done := _race.car_count() > 0 and _race.finish_order.size() == _race.car_count()
+	if all_done or _t > 120.0 * _laps:
+		print("  cars in race           %d" % _race.car_count())
+		print("  countdown held cars    %s (max rolling speed %.2f m/s)" % [str(_started and _moved_in_countdown < 0.6), _moved_in_countdown])
+		print("  everyone finished      %s" % str(all_done))
+		for i in _race.standings():
+			var car := _race.vehicle_at(i)
+			var ai := car.get_node_or_null("AIDriver") as AIDriver
+			var time := LapTimer.format_time(_race.finish_times[i]) if _race.finish_times.has(i) else "DNF"
+			print("  %-4s %-9s %s   skill %.2f  resets %d" % [RaceDirector.ordinal(_race.position_of(i)),
+				_race.name_at(i), time, ai.skill if ai else 0.0, ai.resets if ai else 0])
 		print("  dirt effect seen       %s" % str(_dirt_seen))
 		print("race_test done, %.1f s sim time" % _t)
 		set_physics_process(false)

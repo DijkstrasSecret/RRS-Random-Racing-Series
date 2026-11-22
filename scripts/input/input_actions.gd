@@ -4,11 +4,16 @@ extends RefCounted
 ## Actions already defined in Project Settings are left alone.
 
 
+## Stick drift is usually below 0.1; triggers rest at 0.
+const STICK_DEADZONE := 0.12
+const TRIGGER_DEADZONE := 0.04
+
+
 static func ensure() -> void:
-	_add("throttle", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)])
-	_add("brake", [_key(KEY_S), _key(KEY_DOWN), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)])
-	_add("steer_left", [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0)])
-	_add("steer_right", [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0)])
+	_add("throttle", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)], TRIGGER_DEADZONE)
+	_add("brake", [_key(KEY_S), _key(KEY_DOWN), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)], TRIGGER_DEADZONE)
+	_add("steer_left", [_key(KEY_A), _key(KEY_LEFT), _axis(JOY_AXIS_LEFT_X, -1.0), _button(JOY_BUTTON_DPAD_LEFT)], STICK_DEADZONE)
+	_add("steer_right", [_key(KEY_D), _key(KEY_RIGHT), _axis(JOY_AXIS_LEFT_X, 1.0), _button(JOY_BUTTON_DPAD_RIGHT)], STICK_DEADZONE)
 	_add("handbrake", [_key(KEY_SPACE), _button(JOY_BUTTON_A)])
 	_add("shift_up", [_key(KEY_E), _button(JOY_BUTTON_RIGHT_SHOULDER)])
 	_add("shift_down", [_key(KEY_Q), _button(JOY_BUTTON_LEFT_SHOULDER)])
@@ -43,8 +48,8 @@ static func _add_player(player: int, device: int, keys: Dictionary) -> void:
 	var pad := {
 		"throttle": [_axis(JOY_AXIS_TRIGGER_RIGHT, 1.0, device)],
 		"brake": [_axis(JOY_AXIS_TRIGGER_LEFT, 1.0, device)],
-		"steer_left": [_axis(JOY_AXIS_LEFT_X, -1.0, device)],
-		"steer_right": [_axis(JOY_AXIS_LEFT_X, 1.0, device)],
+		"steer_left": [_axis(JOY_AXIS_LEFT_X, -1.0, device), _button(JOY_BUTTON_DPAD_LEFT, device)],
+		"steer_right": [_axis(JOY_AXIS_LEFT_X, 1.0, device), _button(JOY_BUTTON_DPAD_RIGHT, device)],
 		"handbrake": [_button(JOY_BUTTON_A, device)],
 		"shift_up": [_button(JOY_BUTTON_RIGHT_SHOULDER, device)],
 		"shift_down": [_button(JOY_BUTTON_LEFT_SHOULDER, device)],
@@ -56,13 +61,23 @@ static func _add_player(player: int, device: int, keys: Dictionary) -> void:
 		for code: Key in keys[action]:
 			events.append(_key(code))
 		events.append_array(pad.get(action, []))
-		_add(StringName("p%d_%s" % [player, action]), events)
+		_add(StringName("p%d_%s" % [player, action]), events, _deadzone_for(action))
 
 
-static func _add(action: StringName, events: Array) -> void:
+static func _deadzone_for(action: String) -> float:
+	if action == "throttle" or action == "brake":
+		return TRIGGER_DEADZONE
+	if action.begins_with("steer"):
+		return STICK_DEADZONE
+	return 0.5
+
+
+## `deadzone` applies to analog sticks/triggers; Godot rescales what is left
+## to 0..1, so partial stick and trigger movement comes through smoothly.
+static func _add(action: StringName, events: Array, deadzone: float = 0.5) -> void:
 	if InputMap.has_action(action):
 		return
-	InputMap.add_action(action, 0.15)
+	InputMap.add_action(action, deadzone)
 	for e: InputEvent in events:
 		InputMap.action_add_event(action, e)
 

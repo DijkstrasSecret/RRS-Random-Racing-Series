@@ -33,7 +33,7 @@ const HOT := Color(1.0, 0.3, 0.25)
 
 ## Help panel: keys and what they do. The first five rows are driving.
 const HELP_KEYS: PackedStringArray = [
-	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "V", "C", "F1", "F2", "F3", "R", "H",
+	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "Gamepad", "P", "V", "C", "F1", "F2", "F3", "R", "H",
 ]
 const HELP_ACTIONS: PackedStringArray = [
 	"Throttle",
@@ -41,11 +41,12 @@ const HELP_ACTIONS: PackedStringArray = [
 	"Steer",
 	"Handbrake",
 	"Shift down / up  (M = back to auto)",
+	"Stick steer · RT / LT pedals · A handbrake · LB / RB shift",
 	"Handling profile  (Arcade / Sport / Sim)",
 	"Visual style  (Modern / PS2 / PS1)",
 	"Camera view",
 	"Telemetry",
-	"Switch track  (circuit / test track)",
+	"Switch mode  (race / practice / test track)",
 	"Two-player split screen race",
 	"Recover car     Backspace  Back to start",
 	"Hide help     Esc  Quit",
@@ -119,7 +120,8 @@ func _draw_laps(o: Vector2) -> void:
 		# Race: lap x of N, and a big position badge on the left.
 		_text(o + Vector2(18.0, 44.0), "LAP %d/%d" % [_race.current_lap(me), _race.laps], 22, ACCENT)
 		draw_rect(Rect2(o - Vector2(110.0, 0.0), Vector2(100.0, 66.0)), PANEL)
-		_text(o + Vector2(-100.0, 48.0), RaceDirector.ordinal(_race.position_of(me)), 38, player_color)
+		_text(o + Vector2(-100.0, 44.0), RaceDirector.ordinal(_race.position_of(me)), 36, player_color)
+		_text(o + Vector2(-100.0, 62.0), "of %d" % _race.car_count(), 14, DIM)
 	else:
 		_text(o + Vector2(18.0, 44.0), ("LAP %d" % lt.lap) if lt.running else "LAP -", 26, ACCENT)
 	_text(o + Vector2(130.0, 46.0), LapTimer.format_time(lt.lap_time if lt.running else -1.0), 34)
@@ -143,7 +145,7 @@ func _draw_minimap(rect: Rect2) -> void:
 			var other := _race.vehicle_at(i)
 			if other != _vehicle:
 				var op := other.global_position
-				draw_circle(_to_map(Vector2(op.x, op.z)), 4.5, _race.player_colors[i])
+				draw_circle(_to_map(Vector2(op.x, op.z)), 4.5, _race.color_at(i))
 	var p := _vehicle.global_position
 	var dot := _to_map(Vector2(p.x, p.z))
 	var fwd := -_vehicle.global_basis.z
@@ -217,11 +219,11 @@ func _draw_status(o: Vector2) -> void:
 
 func _draw_help(o: Vector2) -> void:
 	var line_h := 22.0
-	draw_rect(Rect2(o, Vector2(470.0, 20.0 + line_h * HELP_KEYS.size())), PANEL)
+	draw_rect(Rect2(o, Vector2(560.0, 20.0 + line_h * HELP_KEYS.size())), PANEL)
 	for i in HELP_KEYS.size():
 		var y := 26.0 + line_h * i
-		var col := TEXT if i < 5 else DIM
-		_text(o + Vector2(14.0, y), HELP_KEYS[i], 16, ACCENT if i < 5 else DIM)
+		var col := TEXT if i < 6 else DIM
+		_text(o + Vector2(14.0, y), HELP_KEYS[i], 16, ACCENT if i < 6 else DIM)
 		_text(o + Vector2(140.0, y), HELP_ACTIONS[i], 16, col)
 
 

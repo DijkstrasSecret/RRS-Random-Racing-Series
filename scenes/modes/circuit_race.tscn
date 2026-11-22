@@ -1,4 +1,4 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=10 format=3]
 
 [ext_resource type="Script" path="res://scripts/modes/drive_mode.gd" id="1_mode"]
 [ext_resource type="PackedScene" path="res://scenes/tracks/circuit.tscn" id="2_track"]
@@ -7,10 +7,12 @@
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5_hud"]
 [ext_resource type="Script" path="res://scripts/fx/retro_look.gd" id="6_retro"]
 [ext_resource type="Script" path="res://scripts/race/lap_timer.gd" id="7_laps"]
+[ext_resource type="Script" path="res://scripts/race/race_director.gd" id="8_race"]
+[ext_resource type="Script" path="res://scripts/race/race_setup.gd" id="9_setup"]
 
 [node name="CircuitRace" type="Node3D"]
 script = ExtResource("1_mode")
-other_scene = "res://scenes/modes/free_roam.tscn"
+other_scene = "res://scenes/modes/circuit_practice.tscn"
 track_path = NodePath("Circuit")
 vehicle_path = NodePath("Vehicle")
 
@@ -22,6 +24,17 @@ vehicle_path = NodePath("Vehicle")
 script = ExtResource("7_laps")
 circuit_path = NodePath("../Circuit")
 vehicle_path = NodePath("../Vehicle")
+
+[node name="RaceSetup" type="Node" parent="."]
+script = ExtResource("9_setup")
+circuit_path = NodePath("../Circuit")
+race_director_path = NodePath("../RaceLayer/RaceDirector")
+car_scene = ExtResource("3_vehicle")
+ai_count = 5
+player_paths = Array[NodePath]([NodePath("../Vehicle")])
+player_timer_paths = Array[NodePath]([NodePath("../LapTimer")])
+player_names = PackedStringArray("YOU")
+player_colors = PackedColorArray(0.35, 0.8, 1, 1)
 
 [node name="ChaseCamera" type="Camera3D" parent="."]
 current = true
@@ -44,3 +57,19 @@ grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("5_hud")
 vehicle_path = NodePath("../../Vehicle")
+lap_timer_path = NodePath("../../LapTimer")
+
+[node name="RaceLayer" type="CanvasLayer" parent="."]
+layer = 20
+
+[node name="RaceDirector" type="Control" parent="RaceLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("8_race")
+circuit_path = NodePath("../../Circuit")
+auto_start = false

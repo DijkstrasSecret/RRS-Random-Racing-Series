@@ -23,6 +23,10 @@ const FALL_RESET_Y := -30.0
 @export var align_wheels_to_model: bool = true
 ## Optional replacement texture for the model (e.g. another paint colour).
 @export var paint_texture: Texture2D
+## Repaint the car in this colour (alpha 0 = keep the model's own paint).
+@export var paint_color: Color = Color(0, 0, 0, 0)
+## A second colour variant of the model's texture, used to find the paint area.
+@export var paint_reference: Texture2D
 
 @export_group("Body motion (visual only)")
 ## Extra body tilt per g of acceleration/braking (nose up / nose dive).
@@ -81,6 +85,7 @@ const BODY_PIVOT := Vector3(0.0, 0.35, 0.0)
 
 func _ready() -> void:
 	add_to_group("retro_aware")
+	add_to_group("vehicles")
 	if config == null:
 		config = VehicleConfig.new()
 	_apply_config()
@@ -166,7 +171,7 @@ func _physics_process(delta: float) -> void:
 	input.poll(delta)
 	if controls_locked:
 		input.throttle = 0.0
-		input.brake = 0.0
+		input.brake = 1.0
 		input.steer = 0.0
 		input.handbrake = 1.0
 	if _handle_meta_inputs():
@@ -284,6 +289,12 @@ func _update_body_motion(delta: float) -> void:
 func _update_gears(delta: float) -> Vector2:
 	var thr := input.throttle
 	var brk := input.brake
+	if controls_locked:
+		# Held on the grid: brakes on, stay in first gear.
+		_reverse_timer = 0.0
+		if drivetrain.gear < 1:
+			drivetrain.set_gear(1)
+		return Vector2(0.0, 1.0)
 	if input.toggle_transmission_pressed:
 		drivetrain.automatic = not drivetrain.automatic
 	if input.shift_up_pressed:
@@ -480,10 +491,15 @@ func _collect_retro_surfaces(node: Node) -> void:
 		var mi := node as MeshInstance3D
 		for i in mi.mesh.get_surface_count():
 			var original := mi.get_active_material(i)
-			if paint_texture and original is BaseMaterial3D:
-				var painted := original.duplicate() as BaseMaterial3D
-				painted.albedo_texture = paint_texture
-				original = painted
+			if original is BaseMaterial3D:
+				var tex: Texture2D = paint_texture
+				var src := (original as BaseMaterial3D).albedo_texture
+				if paint_color.a > 0.0 and paint_reference and src:
+					tex = CarPaint.make(src, paint_reference, paint_color)
+				if tex:
+					var painted := original.duplicate() as BaseMaterial3D
+					painted.albedo_texture = tex
+					original = painted
 			var retro := ShaderMaterial.new()
 			retro.shader = PSX_SHADER
 			var ps2: Material = null

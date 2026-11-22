@@ -19,7 +19,8 @@ func _ready() -> void:
 		name, Engine.get_version_info().string, engine_name, Engine.physics_ticks_per_second])
 	var track := get_node_or_null(track_path)
 	var car := get_node_or_null(vehicle_path) as Vehicle
-	if track and car and track.has_method("get_spawn_transform"):
+	var has_race := get_tree().get_first_node_in_group("race_setup") != null
+	if track and car and track.has_method("get_spawn_transform") and not has_race:
 		var xf: Transform3D = track.get_spawn_transform()
 		car.spawn_transform = xf
 		car.teleport(xf)

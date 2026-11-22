@@ -65,7 +65,7 @@ func get_spawn_transform() -> Transform3D:
 ## Slot -1 = alone in the middle of the road.
 func get_grid_transform(slot: int) -> Transform3D:
 	var row := maxi(slot, 0)
-	var off := length - 22.0 - row * 9.0
+	var off := length - 16.0 - row * 7.0
 	var pos := curve.sample_baked(off, true)
 	var ahead := curve.sample_baked(fposmod(off + 2.0, length), true)
 	var dir := (ahead - pos).normalized()
@@ -81,11 +81,54 @@ func progress_at(world_pos: Vector3) -> float:
 
 
 ## Signed curvature (1/radius, + = left turn) of the centre line at `off`.
+## Looked up from the table built at start-up (fast enough for many AI cars).
 func curvature_at(off: float) -> float:
-	var pos := _at(off)
-	var t1 := (pos - _at(off - 8.0)).normalized()
-	var t2 := (_at(off + 8.0) - pos).normalized()
-	return t1.signed_angle_to(t2, Vector3.UP) / 16.0
+	var n := _samples.size()
+	var f := fposmod(off, length) / length * n
+	var i := int(f)
+	var a: float = _samples[i % n].curv
+	var b: float = _samples[(i + 1) % n].curv
+	return lerpf(a, b, f - i)
+
+
+## Unit vector pointing to the right of the driving direction at `off`.
+func right_at(off: float) -> Vector3:
+	var tangent := (_at(off + 1.0) - _at(off - 1.0)).normalized()
+	return global_transform.basis * tangent.cross(Vector3.UP).normalized()
+
+
+## Unit vector along the driving direction at `off`.
+func direction_at(off: float) -> Vector3:
+	return global_transform.basis * (_at(off + 1.0) - _at(off - 1.0)).normalized()
+
+
+## Fastest safe speed (m/s) at every `sample_step` round the lap for a car
+## that can corner at `lateral_accel` and brake at `brake_accel` (m/s²).
+## Corner limits first, then a backward pass so the car brakes in time.
+func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: float) -> PackedFloat32Array:
+	var n := _samples.size()
+	var v := PackedFloat32Array()
+	v.resize(n)
+	for i in n:
+		# Use the tightest curvature nearby, so the car is slow through the whole corner.
+		var k := 0.0
+		for j in range(-3, 4):
+			k = maxf(k, absf(_samples[(i + j + n) % n].curv))
+		v[i] = minf(sqrt(lateral_accel / maxf(k, 0.0001)), top_speed)
+	var step := length / n
+	# Two laps backwards so braking zones wrap past the start line.
+	for pass_i in 2:
+		for idx in range(n - 1, -1, -1):
+			var next := v[(idx + 1) % n]
+			v[idx] = minf(v[idx], sqrt(next * next + 2.0 * brake_accel * step))
+	return v
+
+
+func profile_speed(profile: PackedFloat32Array, off: float) -> float:
+	var n := profile.size()
+	var f := fposmod(off, length) / length * n
+	var i := int(f)
+	return lerpf(profile[i % n], profile[(i + 1) % n], f - i)
 
 
 ## World position on the centre line at distance `off` along the lap.

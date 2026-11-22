@@ -1,28 +1,31 @@
 class_name RaceDirector
 extends Control
-## Runs a race between several cars (design concept §14.2): countdown with
-## the cars held still, live positions, lap count, finish order and the
-## results screen. Backspace restarts the race. Draws its own overlay, so put
-## it full-screen in a CanvasLayer above the HUDs.
+## Runs a race (design concept §14.2): countdown with the cars held still,
+## live positions, lap count, finish order and the results screen.
+## Racers are added with add_racer() (RaceSetup does this) or listed in
+## vehicle_paths / lap_timer_paths. Backspace restarts the race.
+## Draws its own overlay, so put it full-screen in a CanvasLayer above the HUDs.
 
-enum State { COUNTDOWN, RACING, FINISHED }
+enum State { WAITING, COUNTDOWN, RACING, FINISHED }
 
 @export var laps: int = 3
 @export var countdown_time: float = 3.0
+@export var circuit_path: NodePath
+## Start the countdown by itself (off when a RaceSetup adds the racers).
+@export var auto_start: bool = true
 @export var vehicle_paths: Array[NodePath] = []
 @export var lap_timer_paths: Array[NodePath] = []
 @export var player_names: PackedStringArray = ["PLAYER 1", "PLAYER 2"]
 @export var player_colors: PackedColorArray = [Color(0.35, 0.8, 1.0), Color(1.0, 0.4, 0.35)]
-@export var circuit_path: NodePath
 
-var state: int = State.COUNTDOWN
+var state: int = State.WAITING
 var race_time: float = 0.0
-## Indices of the cars in the order they crossed the finish line.
+## Indices of the racers in the order they crossed the finish line.
 var finish_order: Array[int] = []
 var finish_times: Dictionary = {}
 
-var _vehicles: Array[Vehicle] = []
-var _timers: Array[LapTimer] = []
+## One entry per racer: {vehicle, timer, name, color, human}.
+var _racers: Array[Dictionary] = []
 var _circuit: Circuit
 var _countdown: float = 0.0
 var _go_flash: float = 0.0
@@ -35,13 +38,25 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	_font = ThemeDB.fallback_font
 	_circuit = get_node_or_null(circuit_path) as Circuit
-	for p in vehicle_paths:
-		_vehicles.append(get_node(p) as Vehicle)
-	for p in lap_timer_paths:
-		_timers.append(get_node(p) as LapTimer)
+	for i in vehicle_paths.size():
+		add_racer(get_node(vehicle_paths[i]) as Vehicle, get_node(lap_timer_paths[i]) as LapTimer,
+				player_names[i] if i < player_names.size() else "PLAYER %d" % (i + 1),
+				player_colors[i] if i < player_colors.size() else Color.WHITE, true)
+	if auto_start:
+		begin.call_deferred()
+
+
+func add_racer(vehicle: Vehicle, timer: LapTimer, racer_name: String, color: Color, human: bool) -> void:
+	_racers.append({"vehicle": vehicle, "timer": timer, "name": racer_name, "color": color, "human": human})
+	vehicle.controls_locked = true
+
+
+## Start the countdown.
+func begin() -> void:
+	state = State.COUNTDOWN
 	_countdown = countdown_time + 0.5
-	for v in _vehicles:
-		v.controls_locked = true
+	for r in _racers:
+		r.vehicle.controls_locked = true
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -56,18 +71,29 @@ func _physics_process(delta: float) -> void:
 			if _countdown <= 0.0:
 				state = State.RACING
 				_go_flash = 1.2
-				for v in _vehicles:
-					v.controls_locked = false
+				for r in _racers:
+					r.vehicle.controls_locked = false
 		State.RACING:
 			race_time += delta
-			for i in _vehicles.size():
+			for i in _racers.size():
 				if i in finish_order:
 					continue
 				if completed_laps(i) >= laps:
 					finish_order.append(i)
 					finish_times[i] = race_time
-			if finish_order.size() == _vehicles.size():
+			# The race is over once every human has finished.
+			var humans_left := false
+			for i in _racers.size():
+				if _racers[i].human and not (i in finish_order):
+					humans_left = true
+			if not humans_left:
 				state = State.FINISHED
+		State.FINISHED:
+			race_time += delta
+			for i in _racers.size():
+				if not (i in finish_order) and completed_laps(i) >= laps:
+					finish_order.append(i)
+					finish_times[i] = race_time
 	_go_flash = maxf(_go_flash - delta, 0.0)
 
 
@@ -76,15 +102,23 @@ func _process(_delta: float) -> void:
 
 
 func car_count() -> int:
-	return _vehicles.size()
+	return _racers.size()
 
 
 func vehicle_at(i: int) -> Vehicle:
-	return _vehicles[i]
+	return _racers[i].vehicle
+
+
+func color_at(i: int) -> Color:
+	return _racers[i].color
+
+
+func name_at(i: int) -> String:
+	return _racers[i].name
 
 
 func completed_laps(i: int) -> int:
-	var t := _timers[i]
+	var t: LapTimer = _racers[i].timer
 	return maxi(t.lap - 1, 0) if t.running else 0
 
 
@@ -94,27 +128,39 @@ func current_lap(i: int) -> int:
 
 
 func index_of(vehicle: Vehicle) -> int:
-	return _vehicles.find(vehicle)
+	for i in _racers.size():
+		if _racers[i].vehicle == vehicle:
+			return i
+	return -1
 
 
 ## 1 = leading. Finished cars keep their finishing position.
 func position_of(i: int) -> int:
-	var order := _vehicles.size()
 	if i in finish_order:
 		return finish_order.find(i) + 1
 	var mine := _race_distance(i)
 	var pos := finish_order.size() + 1
-	for j in _vehicles.size():
+	for j in _racers.size():
 		if j != i and not (j in finish_order) and _race_distance(j) > mine:
 			pos += 1
-	return mini(pos, order)
+	return pos
+
+
+## Racer indices sorted by current position.
+func standings() -> Array[int]:
+	var order: Array[int] = []
+	for i in _racers.size():
+		order.append(i)
+	order.sort_custom(func(a: int, b: int) -> bool: return position_of(a) < position_of(b))
+	return order
 
 
 func _race_distance(i: int) -> float:
 	if _circuit == null:
 		return 0.0
-	var offset := _circuit.progress_at(_vehicles[i].global_position)
-	if not _timers[i].running:
+	var t: LapTimer = _racers[i].timer
+	var offset := _circuit.progress_at(_racers[i].vehicle.global_position)
+	if not t.running:
 		# Still on the grid behind the line.
 		return offset - _circuit.length
 	return completed_laps(i) * _circuit.length + offset
@@ -129,8 +175,7 @@ static func ordinal(n: int) -> String:
 
 
 func _draw() -> void:
-	var s := size
-	var centre := s * 0.5
+	var centre := size * 0.5
 	if state == State.COUNTDOWN:
 		var n := ceili(_countdown - 0.5)
 		if n >= 1 and n <= int(countdown_time):
@@ -138,30 +183,45 @@ func _draw() -> void:
 		_big(centre + Vector2(0, 130), "GET READY", 36, Color(1, 1, 1, 0.9))
 	elif _go_flash > 0.0:
 		_big(centre, "GO!", 180, Color(0.4, 1.0, 0.45, clampf(_go_flash, 0.0, 1.0)))
-
-	if finish_order.size() > 0:
+	if state == State.FINISHED or _any_human_finished():
 		_draw_results(centre)
 
 
+func _any_human_finished() -> bool:
+	for i in finish_order:
+		if _racers[i].human:
+			return true
+	return false
+
+
 func _draw_results(centre: Vector2) -> void:
+	var rows := _racers.size()
+	var row_h := 34.0
+	var panel_h := 150.0 + rows * row_h
+	var panel := Rect2(centre - Vector2(360, panel_h * 0.5), Vector2(720, panel_h))
+	draw_rect(panel, Color(0, 0, 0, 0.75))
+	var top := panel.position.y
 	var winner := finish_order[0]
-	var panel := Rect2(centre - Vector2(330, 150), Vector2(660, 300))
-	draw_rect(panel, Color(0, 0, 0, 0.72))
-	_big(centre + Vector2(0, -95), "%s WINS!" % player_names[winner], 52, player_colors[winner])
-	var y := -30.0
-	for place in finish_order.size():
-		var i: int = finish_order[place]
-		var gap := ""
-		if place > 0:
-			gap = "  (+%.3f s)" % (finish_times[i] - finish_times[finish_order[0]])
-		_big(centre + Vector2(0, y), "%s  %s   %s%s" % [ordinal(place + 1), player_names[i],
-				LapTimer.format_time(finish_times[i]), gap], 26, player_colors[i])
-		y += 40.0
-	for i in _vehicles.size():
-		if not (i in finish_order):
-			_big(centre + Vector2(0, y), "%s still racing..." % player_names[i], 22, Color(1, 1, 1, 0.7))
-			y += 36.0
-	_big(centre + Vector2(0, 120), "Backspace = race again    F3 = back to single player", 20, Color(1, 1, 1, 0.8))
+	_big(Vector2(centre.x, top + 40.0), "%s WINS!" % _racers[winner].name, 46, _racers[winner].color)
+	var y := top + 92.0
+	for i in standings():
+		var r := _racers[i]
+		var place := position_of(i)
+		var time_text := "racing..."
+		if i in finish_order:
+			time_text = LapTimer.format_time(finish_times[i])
+			if place > 1:
+				time_text += "  +%.3f" % (finish_times[i] - finish_times[winner])
+		var label := "%s  %s" % [ordinal(place), r.name]
+		_text_at(Vector2(panel.position.x + 60.0, y), label, 24, r.color)
+		_text_at(Vector2(panel.position.x + 400.0, y), time_text, 22, Color(1, 1, 1, 0.9))
+		y += row_h
+	_big(Vector2(centre.x, panel.end.y - 26.0), "Backspace = race again", 20, Color(1, 1, 1, 0.8))
+
+
+func _text_at(pos: Vector2, text: String, font_size: int, color: Color) -> void:
+	draw_string_outline(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 6, Color(0, 0, 0, 0.8))
+	draw_string(_font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
 
 
 func _big(pos: Vector2, text: String, font_size: int, color: Color) -> void:
