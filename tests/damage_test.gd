@@ -48,10 +48,13 @@ func _run() -> void:
 	_check("paint darkened round the dent", _darkest_tint(dmg) < 0.9)
 	print("  (crash + dent took %.1f ms of wall time over 150 ticks)" % ((Time.get_ticks_usec() - t0) / 1000.0))
 
-	# Side into the barrier: steering pulls to that side.
-	car.teleport(Transform3D(Basis.looking_at(circuit.direction_at(off + 60.0), Vector3.UP), circuit.point_at(off + 60.0) + Vector3.UP * 0.4))
+	# Side into the barrier: steering pulls to that side. On a level, straight
+	# bit of road (on a slope the sliding car turns before it hits).
+	var off2 := _level_spot(circuit)
+	var r2 := circuit.right_at(off2)
+	car.teleport(Transform3D(Basis.looking_at(circuit.direction_at(off2), Vector3.UP),
+			circuit.point_at(off2) + Vector3.UP * 0.4))
 	await _ticks(30)
-	var r2 := circuit.right_at(off + 60.0)
 	car.linear_velocity = r2 * 70.0 / 3.6
 	await _ticks(120)
 	print("  zones after side hit: %s" % _zones(dmg))
@@ -112,6 +115,21 @@ func _load_practice() -> Node:
 	current_scene = scene
 	await _ticks(60)
 	return scene
+
+
+## Lap distance of the flattest, straightest piece of road.
+func _level_spot(circuit: Circuit) -> float:
+	var best := 0.0
+	var score := 1e9
+	var o := 100.0
+	while o < circuit.length - 100.0:
+		var rise := absf(circuit.point_at(o + 30.0).y - circuit.point_at(o - 30.0).y)
+		var bend := absf(circuit.curvature_at(o)) * 200.0
+		if rise + bend < score:
+			score = rise + bend
+			best = o
+		o += 10.0
+	return best
 
 
 func _zones(dmg: CarDamage) -> String:

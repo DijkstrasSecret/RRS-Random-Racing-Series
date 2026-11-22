@@ -23,6 +23,8 @@ const ROAD_Y := 0.03
 	Vector2(300, 255), Vector2(225, 290), Vector2(150, 370), Vector2(65, 400),
 	Vector2(10, 360), Vector2(0, 315),
 ])
+## Height (m) of each control point; empty = flat.
+@export var heights: PackedFloat32Array = PackedFloat32Array()
 @export var road_width: float = 12.0
 @export var curb_width: float = 1.4
 ## Corners tighter than this radius (m) get curbs.
@@ -56,6 +58,7 @@ func _ready() -> void:
 		GameSettings.ensure_loaded()
 		var track := TrackList.get_track(GameSettings.track)
 		points = PackedVector2Array(track.points)
+		heights = TrackList.heights_of(GameSettings.track)
 		track_name = String(track.name).capitalize()
 		random_seed = int(track.seed)
 		theme = String(track.get("theme", "hills"))
@@ -162,7 +165,7 @@ func distance_from_centre(world_pos: Vector3) -> float:
 # --- Shape -------------------------------------------------------------------
 
 func _build_curve() -> void:
-	curve = TrackList.make_curve(points)
+	curve = TrackList.make_curve(points, heights)
 	length = curve.get_baked_length()
 
 
@@ -172,8 +175,10 @@ func _sample_curve() -> void:
 		var off := length * k / count
 		var pos := _at(off)
 		var tangent := (_at(off + 1.0) - _at(off - 1.0)).normalized()
-		var t1 := (pos - _at(off - 8.0)).normalized()
-		var t2 := (_at(off + 8.0) - pos).normalized()
+		# Turning is measured on the flat plan (crests and dips are not corners).
+		var flat := Vector3(1.0, 0.0, 1.0)
+		var t1 := ((pos - _at(off - 8.0)) * flat).normalized()
+		var t2 := ((_at(off + 8.0) - pos) * flat).normalized()
 		# + = turning left, in radians per metre.
 		var curvature := t1.signed_angle_to(t2, Vector3.UP) / 16.0
 		_samples.append({
@@ -209,8 +214,8 @@ func _build_ground() -> void:
 	var centre := Vector3(rect.get_center().x, 0.0, rect.get_center().y)
 	var size := rect.size
 
-	# Flat grass collision around the track; the terrain draws the ground
-	# and rises into hills / mountains further out.
+	# Safety floor well below the land (the terrain is the real ground: it
+	# follows the track's height and rises into hills / mountains further out).
 	var body := StaticBody3D.new()
 	body.name = "Grass"
 	body.collision_layer = LAYER_WORLD
@@ -221,7 +226,7 @@ func _build_ground() -> void:
 	shape.size = Vector3(size.x, 2.0, size.y)
 	var cs := CollisionShape3D.new()
 	cs.shape = shape
-	cs.position = centre + Vector3(0.0, -1.0, 0.0)
+	cs.position = centre + Vector3(0.0, -4.0, 0.0)
 	body.add_child(cs)
 	add_child(body)
 	terrain = TrackTerrain.new()
@@ -248,7 +253,7 @@ func _build_ground() -> void:
 		add_child(wb)
 
 
-## Ground height at a world position (0 on and near the track).
+## Ground height at a world position (about the road's height near the track).
 func ground_height(x: float, z: float) -> float:
 	return terrain.height_at(x, z) if terrain else 0.0
 
@@ -323,7 +328,10 @@ func _build_curbs() -> void:
 
 func _quad(st: SurfaceTool, a: Vector3, b: Vector3, c: Vector3, d: Vector3,
 		ua: Vector2, ub: Vector2, uc: Vector2, ud: Vector2) -> void:
-	st.set_normal(Vector3.UP)
+	# a-b runs left to right, a-d forwards: their cross product points up
+	# (tilted on slopes, so hills catch the light properly).
+	var n := (b - a).cross(d - a)
+	st.set_normal(n.normalized() if n.y > 0.0001 else Vector3.UP)
 	# Clockwise seen from above = facing up (Godot's front faces), so the
 	# sun, headlights and lamps light the surface.
 	for pair: Array in [[a, ua], [c, uc], [b, ub], [a, ua], [d, ud], [c, uc]]:

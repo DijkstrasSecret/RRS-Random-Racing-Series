@@ -1,7 +1,7 @@
 class_name TrackTerrain
 extends Node3D
-## The land around a circuit: flat near the track (run-off, barriers, stands),
-## rising into rolling hills ("hills") or big rocky peaks ("mountains")
+## The land around a circuit: level with the road near the track (run-off,
+## barriers, stands; it climbs and dips with the track), rising into rolling hills ("hills") or big rocky peaks ("mountains")
 ## further out, with tiny low-poly villages / chalets far away.
 ## height_at(x, z) lets scenery sit on the ground.
 
@@ -16,6 +16,7 @@ var _w := 0
 var _h := 0
 var _heights := PackedFloat32Array()
 var _dist := PackedFloat32Array()
+var _base := PackedFloat32Array()  ## road height of the nearest bit of track
 var _rng := RandomNumberGenerator.new()
 
 
@@ -33,7 +34,7 @@ func build(circuit: Circuit) -> void:
 	_build_villages()
 
 
-## Height of the ground at a world position (0 near the track).
+## Height of the ground at a world position (about the road's height near the track).
 func height_at(x: float, z: float) -> float:
 	var gx := clampf((x - _origin.x) / CELL, 0.0, _w - 1.001)
 	var gz := clampf((z - _origin.y) / CELL, 0.0, _h - 1.001)
@@ -51,6 +52,8 @@ func height_at(x: float, z: float) -> float:
 func _distance_field(circuit: Circuit) -> void:
 	_dist.resize(_w * _h)
 	_dist.fill(1e9)
+	_base.resize(_w * _h)
+	_base.fill(0.0)
 	for s: Dictionary in circuit._samples:
 		var p: Vector3 = circuit.to_global(s.pos)
 		var cx := int(round((p.x - _origin.x) / CELL))
@@ -65,27 +68,57 @@ func _distance_field(circuit: Circuit) -> void:
 				var i := z * _w + x
 				if d < _dist[i]:
 					_dist[i] = d
+					_base[i] = p.y
 	var diag := CELL * 1.4142
 	for z in _h:
 		for x in _w:
 			var i := z * _w + x
-			var d := _dist[i]
-			if x > 0: d = minf(d, _dist[i - 1] + CELL)
+			if x > 0: _relax(i, i - 1, CELL)
 			if z > 0:
-				d = minf(d, _dist[i - _w] + CELL)
-				if x > 0: d = minf(d, _dist[i - _w - 1] + diag)
-				if x < _w - 1: d = minf(d, _dist[i - _w + 1] + diag)
-			_dist[i] = d
+				_relax(i, i - _w, CELL)
+				if x > 0: _relax(i, i - _w - 1, diag)
+				if x < _w - 1: _relax(i, i - _w + 1, diag)
 	for z in range(_h - 1, -1, -1):
 		for x in range(_w - 1, -1, -1):
 			var i := z * _w + x
-			var d := _dist[i]
-			if x < _w - 1: d = minf(d, _dist[i + 1] + CELL)
+			if x < _w - 1: _relax(i, i + 1, CELL)
 			if z < _h - 1:
-				d = minf(d, _dist[i + _w] + CELL)
-				if x < _w - 1: d = minf(d, _dist[i + _w + 1] + diag)
-				if x > 0: d = minf(d, _dist[i + _w - 1] + diag)
-			_dist[i] = d
+				_relax(i, i + _w, CELL)
+				if x < _w - 1: _relax(i, i + _w + 1, diag)
+				if x > 0: _relax(i, i + _w - 1, diag)
+	_smooth_base()
+
+
+## Distance-field step: take the neighbour's track if it is nearer (and its height).
+func _relax(i: int, j: int, step: float) -> void:
+	if _dist[j] + step < _dist[i]:
+		_dist[i] = _dist[j] + step
+		_base[i] = _base[j]
+
+
+## Away from the track the base height is blurred, so where two stretches of
+## track at different heights meet there is a gentle slope, not a step.
+func _smooth_base() -> void:
+	var tmp := PackedFloat32Array()
+	tmp.resize(_base.size())
+	for pass_i in 8:
+		for z in _h:
+			for x in _w:
+				var i := z * _w + x
+				var sum := 0.0
+				var cnt := 0
+				for dz in range(-1, 2):
+					for dx in range(-1, 2):
+						var xx := x + dx
+						var zz := z + dz
+						if xx >= 0 and zz >= 0 and xx < _w and zz < _h:
+							sum += _base[zz * _w + xx]
+							cnt += 1
+				var keep := 1.0 - smoothstep(30.0, 140.0, _dist[i])
+				tmp[i] = lerpf(sum / cnt, _base[i], keep)
+		var swap := _base
+		_base = tmp
+		tmp = swap
 
 
 func _heightfield(circuit: Circuit) -> void:
@@ -116,7 +149,35 @@ func _heightfield(circuit: Circuit) -> void:
 			else:
 				h = n * (smoothstep(85.0, 380.0, d) * 70.0 + smoothstep(450.0, 1050.0, d) * 140.0)
 				h += detail.get_noise_2d(wx, wz) * 2.5 * smoothstep(80.0, 200.0, d)
-			_heights[i] = maxf(h, 0.0)
+			# A few cm under the road next to it (like the old flat ground).
+			var sink := 0.06 * (1.0 - smoothstep(40.0, 70.0, d))
+			_heights[i] = _base[i] + maxf(h, 0.0) - sink
+	_clear_road(circuit)
+
+
+## The 16 m grid can bulge above the road in a dip: wherever the ground
+## would come up through the road or curbs, lower just those grid points.
+func _clear_road(circuit: Circuit) -> void:
+	var reach := circuit.road_width * 0.5 + circuit.curb_width + 1.0
+	for pass_i in 3:
+		var changed := false
+		for smp: Dictionary in circuit._samples:
+			var c: Vector3 = circuit.to_global(smp.pos)
+			var right: Vector3 = smp.right
+			var lat := -reach
+			while lat <= reach + 0.01:
+				var q := c + right * lat
+				var limit := c.y + Circuit.ROAD_Y - 0.08
+				var over := height_at(q.x, q.z) - limit
+				if over > 0.0:
+					var ix := clampi(int((q.x - _origin.x) / CELL), 0, _w - 2)
+					var iz := clampi(int((q.z - _origin.y) / CELL), 0, _h - 2)
+					for k: int in [iz * _w + ix, iz * _w + ix + 1, (iz + 1) * _w + ix, (iz + 1) * _w + ix + 1]:
+						_heights[k] -= over
+					changed = true
+				lat += 2.0
+		if not changed:
+			break
 
 
 func _ground_color(h: float, slope: float, wx: float, wz: float) -> Color:
@@ -153,7 +214,7 @@ func _build_mesh() -> void:
 			var slope := sqrt(1.0 - n.y * n.y) / maxf(n.y, 0.05)
 			verts[i] = Vector3(wx, _heights[i], wz)
 			normals[i] = n
-			colors[i] = _ground_color(_heights[i], slope, wx, wz)
+			colors[i] = _ground_color(_heights[i] - _base[i], slope, wx, wz)
 			uvs[i] = Vector2(wx, wz) * 0.08
 	var indices := PackedInt32Array()
 	for z in _h - 1:

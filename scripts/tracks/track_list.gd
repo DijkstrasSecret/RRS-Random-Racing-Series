@@ -4,10 +4,13 @@ extends RefCounted
 ## `use_selected_track` builds the one in GameSettings.track.
 ## Each layout ends with a straight run into the start/finish line (the grid,
 ## grandstands and pits sit there).
+## Elevation: "profile" = [lap fraction, height m] key points of the real
+## circuit (times "height_scale"), or "hills" = how many metres of gentle
+## made-up rise and fall (the same at a spot whichever way the track runs).
 
 const TRACKS: Array[Dictionary] = [
 	{
-		"id": "greenhill", "name": "GREENHILL RING", "seed": 11, "theme": "hills",
+		"id": "greenhill", "name": "GREENHILL RING", "seed": 11, "theme": "hills", "hills": 12.0,
 		"tagline": "Fast and flowing. A long main straight into a tight hairpin.",
 		"points": [
 			Vector2(0, 250), Vector2(0, -330), Vector2(20, -405), Vector2(75, -425),
@@ -19,7 +22,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12, "theme": "hills",
+		"id": "greenhill_rev", "name": "GREENHILL REVERSE", "seed": 12, "theme": "hills", "hills": 12.0,
 		"tagline": "The Ring run backwards. New braking points everywhere.",
 		"points": [
 			Vector2(0, 0), Vector2(0, 250), Vector2(0, 315), Vector2(10, 360),
@@ -31,7 +34,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "kestrel", "name": "KESTREL PARK", "seed": 23, "theme": "mountains",
+		"id": "kestrel", "name": "KESTREL PARK", "seed": 23, "theme": "mountains", "hills": 18.0,
 		"tagline": "Short and twisty. Hairpins, esses and very little rest.",
 		"points": [
 			Vector2(0, 0), Vector2(0, -260), Vector2(25, -320), Vector2(85, -335),
@@ -43,7 +46,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true,
+		"id": "monza", "name": "MONZA", "seed": 31, "theme": "hills", "real": true, "hills": 3.0,
 		"tagline": "Temple of speed. Huge straights, tight chicanes, late braking.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -60,6 +63,12 @@ const TRACKS: Array[Dictionary] = [
 	},
 	{
 		"id": "spa", "name": "SPA-FRANCORCHAMPS", "seed": 37, "theme": "mountains", "real": true,
+		# Real rise and fall (Stavelot = 0, Les Combes ~100 m), halved like the layout.
+		"height_scale": 0.5, "profile": [
+			[0.0, 55.0], [0.03, 57.0], [0.065, 44.0], [0.1, 22.0], [0.14, 52.0], [0.2, 72.0],
+			[0.29, 100.0], [0.33, 90.0], [0.4, 72.0], [0.5, 50.0], [0.58, 30.0], [0.64, 2.0],
+			[0.7, 6.0], [0.8, 25.0], [0.88, 40.0], [0.94, 50.0],
+		],
 		"tagline": "Ardennes classic. La Source hairpin, Eau Rouge, the long Kemmel run.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -79,7 +88,7 @@ const TRACKS: Array[Dictionary] = [
 		],
 	},
 	{
-		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "real": true,
+		"id": "silverstone", "name": "SILVERSTONE", "seed": 41, "theme": "hills", "real": true, "hills": 4.0,
 		"tagline": "Old airfield. Fast sweepers through Maggotts, Becketts and Chapel.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -101,6 +110,12 @@ const TRACKS: Array[Dictionary] = [
 	},
 	{
 		"id": "istanbul", "name": "ISTANBUL PARK", "seed": 47, "theme": "hills", "real": true,
+		# Downhill plunge into Turn 1, Turn 8 on the side of the hill.
+		"height_scale": 0.65, "profile": [
+			[0.0, 20.0], [0.06, 10.0], [0.1, 4.0], [0.16, 10.0], [0.22, 16.0], [0.3, 14.0],
+			[0.36, 18.0], [0.42, 22.0], [0.52, 18.0], [0.58, 14.0], [0.62, 12.0], [0.72, 18.0],
+			[0.82, 22.0], [0.92, 24.0],
+		],
 		"tagline": "Runs anticlockwise. Home of the endless four-apex Turn 8.",
 		# Real F1 layout (open f1-circuits outline data), scaled down to about 60%.
 		"points": [
@@ -143,24 +158,85 @@ static func points_of(id: String) -> PackedVector2Array:
 	return PackedVector2Array(get_track(id).points)
 
 
-## The same smooth closed curve a Circuit builds from `points`.
-static func make_curve(points: PackedVector2Array) -> Curve3D:
+## The same smooth closed curve a Circuit builds from `points` (with an
+## optional height per point; empty = flat).
+static func make_curve(points: PackedVector2Array, heights: PackedFloat32Array = PackedFloat32Array()) -> Curve3D:
 	var curve := Curve3D.new()
 	var n := points.size()
+	var hs := heights if heights.size() == n else PackedFloat32Array()
+	if hs.is_empty():
+		hs.resize(n)
+		hs.fill(0.0)
 	for i in n:
-		var p := points[i]
-		var prev := points[(i - 1 + n) % n]
-		var next := points[(i + 1) % n]
+		var p := Vector3(points[i].x, hs[i], points[i].y)
+		var prev := Vector3(points[(i - 1 + n) % n].x, hs[(i - 1 + n) % n], points[(i - 1 + n) % n].y)
+		var next := Vector3(points[(i + 1) % n].x, hs[(i + 1) % n], points[(i + 1) % n].y)
 		# Catmull-Rom tangent direction, but each handle is limited to a third
 		# of its own segment so uneven spacing (a long straight next to a tight
 		# corner) can't make the curve overshoot into a kink.
-		var dir := Vector3(next.x - prev.x, 0.0, next.y - prev.y).normalized()
+		var dir := (next - prev).normalized()
 		var len_in := p.distance_to(prev) / 3.0
 		var len_out := p.distance_to(next) / 3.0
-		curve.add_point(Vector3(p.x, 0.0, p.y), -dir * len_in, dir * len_out)
+		curve.add_point(p, -dir * len_in, dir * len_out)
 	curve.add_point(curve.get_point_position(0), curve.get_point_in(0), curve.get_point_out(0))
 	curve.bake_interval = 1.0
 	return curve
+
+
+## Height (m) of every control point of track `id`.
+static func heights_of(id: String) -> PackedFloat32Array:
+	var t := get_track(id)
+	var pts := points_of(id)
+	var out := PackedFloat32Array()
+	out.resize(pts.size())
+	out.fill(0.0)
+	if t.has("profile"):
+		var flat := make_curve(pts)
+		var total := flat.get_baked_length()
+		var scale: float = t.get("height_scale", 1.0)
+		for i in pts.size():
+			var f := 0.0 if i == 0 else flat.get_closest_offset(Vector3(pts[i].x, 0.0, pts[i].y)) / total
+			out[i] = profile_height(t.profile, f) * scale
+	elif t.has("hills"):
+		for i in pts.size():
+			out[i] = rolling_height(pts[i].x, pts[i].y, t.hills)
+	# Lowest point at 0 so the land never dips below the base.
+	var low := 1e9
+	for h in out:
+		low = minf(low, h)
+	for i in out.size():
+		out[i] -= low
+	return out
+
+
+## Smooth (Catmull-Rom) height along the lap from [fraction, height] keys.
+static func profile_height(keys: Array, f: float) -> float:
+	var n := keys.size()
+	f = fposmod(f, 1.0)
+	var k := n - 1
+	for i in n:
+		if float(keys[i][0]) > f:
+			k = i - 1
+			break
+	k = (k + n) % n
+	var f0: float = keys[k][0]
+	var f1: float = keys[(k + 1) % n][0]
+	if f1 <= f0:
+		f1 += 1.0
+	var t := clampf((f - f0 if f >= f0 else f + 1.0 - f0) / (f1 - f0), 0.0, 1.0)
+	var p0: float = keys[(k - 1 + n) % n][1]
+	var p1: float = keys[k][1]
+	var p2: float = keys[(k + 1) % n][1]
+	var p3: float = keys[(k + 2) % n][1]
+	var t2 := t * t
+	return 0.5 * (2.0 * p1 + (p2 - p0) * t + (2.0 * p0 - 5.0 * p1 + 4.0 * p2 - p3) * t2
+			+ (3.0 * p1 - p0 - 3.0 * p2 + p3) * t2 * t)
+
+
+## Gentle made-up rise and fall, 0..amount metres, long waves (~400-900 m).
+static func rolling_height(x: float, z: float, amount: float) -> float:
+	var v := 0.5 + 0.28 * sin(x * 0.0105 + 1.3) * cos(z * 0.0085 - 0.4) 			+ 0.22 * sin((x + z) * 0.0068 + 2.1)
+	return clampf(v, 0.0, 1.0) * amount
 
 
 ## Centre line as (x, z) points every few metres, plus the lap length, for

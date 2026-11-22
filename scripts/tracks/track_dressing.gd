@@ -232,7 +232,11 @@ func _in_spectator_zone(off: float, side: int) -> bool:
 func _side_point(i: int, side: int, dist: float) -> Vector3:
 	var s: Dictionary = _samples()[i]
 	var sign_ := 1.0 if side == 1 else -1.0
-	return circuit.to_global(s.pos + s.right * sign_ * dist)
+	var p := circuit.to_global(s.pos + s.right * sign_ * dist)
+	# Close to the road: the road's height. Further out: on the ground (on
+	# hills another stretch of track nearby may be higher or lower).
+	p.y = lerpf(p.y, circuit.ground_height(p.x, p.z), smoothstep(20.0, 40.0, dist))
+	return p
 
 
 ## A spot is usable if no other part of the track is closer than intended.
@@ -406,9 +410,12 @@ func _place_segment(kind: String, a: Vector3, b: Vector3, side: int, seg_len: fl
 	var length := chord.length()
 	if length < 0.3:
 		return
-	# The piece's front (+Z) must face the road.
+	# The piece's front (+Z) must face the road; on hills it tilts with the slope.
 	var x := chord / length * (-1.0 if side == 1 else 1.0)
-	var rot := Basis(x, Vector3.UP, x.cross(Vector3.UP))
+	var z := x.cross(Vector3.UP)
+	var x3 := (b - a).normalized() * (-1.0 if side == 1 else 1.0)
+	var rot := Basis(x3, z.cross(x3), z)
+	length = a.distance_to(b)
 	var mid := (a + b) * 0.5
 	var xf := Transform3D(rot.scaled_local(Vector3(length / seg_len, 1.0, 1.0)), mid)
 	_add(kind, xf)
