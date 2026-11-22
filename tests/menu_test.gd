@@ -47,8 +47,18 @@ func _run() -> void:
 	focused = root.gui_get_focus_owner() as Button
 	_check("Esc / B goes back to the main list", focused != null and focused.text == "RACE")
 
+	# The same with a gamepad (second pad): D-pad moves, A selects, B goes back.
+	for i in 5:
+		await _pad(JOY_BUTTON_DPAD_DOWN, 1)
+	await _pad(JOY_BUTTON_A, 1)
+	row = root.gui_get_focus_owner() as OptionRow
+	_check("gamepad: D-pad + A opens settings", row != null and row.text == "LAPS")
+	await _pad(JOY_BUTTON_B, 1)
+	focused = root.gui_get_focus_owner() as Button
+	_check("gamepad: B goes back to the main list", focused != null and focused.text == "RACE")
+
 	# RACE -> car select -> track select -> race settings -> race.
-	await _action("ui_accept")
+	await _pad(JOY_BUTTON_A, 0)
 	await _frames(5)
 	var cs := _find(menu, "CarSelect") as CarSelect
 	_check("RACE opens the car select", cs != null and cs.is_visible_in_tree() and cs.players == 1)
@@ -59,10 +69,10 @@ func _run() -> void:
 	await _action("ui_up")
 	_check("down then up comes back", cs.cursor_of(0) == wrapi(start_car + 1, 0, CarRoster.CARS.size()))
 	var picked: String = CarRoster.CARS[cs.cursor_of(0)].id
-	await _action("ui_accept")
+	await _pad(JOY_BUTTON_A, 1)
 	await _frames(20)
 	var ts := _find(menu, "TrackSelect") as TrackSelect
-	_check("choosing a car opens the track select (%s saved)" % picked, ts != null and ts.is_visible_in_tree() and GameSettings.p1_car == picked)
+	_check("gamepad A picks the car, track select opens (%s saved)" % picked, ts != null and ts.is_visible_in_tree() and GameSettings.p1_car == picked)
 	await _action("ui_cancel")
 	_check("back goes to the car select", cs.is_visible_in_tree() and not ts.is_visible_in_tree())
 	await _action("ui_accept")
@@ -167,6 +177,21 @@ func _action(action: String) -> void:
 	await _frames(2)
 	var up := InputEventAction.new()
 	up.action = action
+	up.pressed = false
+	Input.parse_input_event(up)
+	await _frames(3)
+
+
+func _pad(button: JoyButton, device: int) -> void:
+	var e := InputEventJoypadButton.new()
+	e.device = device
+	e.button_index = button
+	e.pressed = true
+	Input.parse_input_event(e)
+	await _frames(2)
+	var up := InputEventJoypadButton.new()
+	up.device = device
+	up.button_index = button
 	up.pressed = false
 	Input.parse_input_event(up)
 	await _frames(3)

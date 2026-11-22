@@ -42,6 +42,10 @@ static func ensure() -> void:
 		"handbrake": [KEY_SLASH, KEY_KP_0], "shift_up": [KEY_PERIOD], "shift_down": [KEY_COMMA],
 		"recover": [KEY_ENTER, KEY_KP_ENTER], "cycle_camera": [KEY_APOSTROPHE],
 	})
+	# Godot's built-in menu actions only listen to the keyboard for select /
+	# back: add every gamepad's A and B so pads can pick menu items.
+	_add_event_if_missing("ui_accept", _button(JOY_BUTTON_A))
+	_add_event_if_missing("ui_cancel", _button(JOY_BUTTON_B))
 	# Menus where both players choose at once (car select).
 	_add_menu(1, 0, {"up": [KEY_W], "down": [KEY_S], "left": [KEY_A], "right": [KEY_D],
 		"accept": [KEY_SPACE, KEY_E], "back": [KEY_Q]})
@@ -104,6 +108,11 @@ static func _add(action: StringName, events: Array, deadzone: float = 0.5) -> vo
 	InputMap.add_action(action, deadzone)
 	for e: InputEvent in events:
 		InputMap.action_add_event(action, e)
+
+
+static func _add_event_if_missing(action: StringName, event: InputEvent) -> void:
+	if InputMap.has_action(action) and not InputMap.action_has_event(action, event):
+		InputMap.action_add_event(action, event)
 
 
 static func _key(code: Key) -> InputEventKey:
