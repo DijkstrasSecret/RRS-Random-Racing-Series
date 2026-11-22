@@ -20,6 +20,7 @@ static func ensure() -> void:
 	_add("toggle_telemetry", [_key(KEY_F1), _key(KEY_T)])
 	_add("toggle_help", [_key(KEY_H)])
 	_add("cycle_look", [_key(KEY_V)])
+	_add("switch_track", [_key(KEY_F2)])
 
 
 static func _add(action: StringName, events: Array) -> void:

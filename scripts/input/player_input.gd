@@ -3,7 +3,7 @@ extends VehicleInput
 ## Keyboard / gamepad driver. Keyboard keys are on/off, so steering and
 ## pedals are ramped to feel smooth.
 
-@export var steer_speed: float = 3.5
+@export var steer_speed: float = 4.5
 @export var steer_return_speed: float = 6.0
 @export var pedal_speed: float = 7.0
 

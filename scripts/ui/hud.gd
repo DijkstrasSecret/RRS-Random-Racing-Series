@@ -8,6 +8,13 @@ var show_telemetry: bool = false
 var show_help: bool = true
 var _vehicle: Vehicle
 var _font: Font
+var _lap_timer: LapTimer
+var _circuit: Circuit
+var _map_points := PackedVector2Array()
+var _map_rect := Rect2()
+var _map_centre := Vector2.ZERO
+var _map_scale := 1.0
+var _best_flash_until := 0.0
 
 const PANEL := Color(0.0, 0.0, 0.0, 0.5)
 const TEXT := Color(1.0, 1.0, 1.0)
@@ -19,7 +26,7 @@ const HOT := Color(1.0, 0.3, 0.25)
 
 ## Help panel: keys and what they do. The first five rows are driving.
 const HELP_KEYS: PackedStringArray = [
-	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "V", "C", "F1", "R", "H",
+	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "V", "C", "F1", "F2", "R", "H",
 ]
 const HELP_ACTIONS: PackedStringArray = [
 	"Throttle",
@@ -28,9 +35,10 @@ const HELP_ACTIONS: PackedStringArray = [
 	"Handbrake",
 	"Shift down / up  (M = back to auto)",
 	"Handling profile  (Arcade / Sport / Sim)",
-	"Visual style  (Modern / PS2-ish / PS1)",
+	"Visual style  (Modern / PS2 / PS1)",
 	"Camera view",
 	"Telemetry",
+	"Switch track  (circuit / test track)",
 	"Recover car     Backspace  Back to start",
 	"Hide help     Esc  Quit",
 ]
@@ -63,6 +71,75 @@ func _draw() -> void:
 		_draw_help(Vector2(24.0, 24.0))
 	if show_telemetry:
 		_draw_telemetry(Vector2(s.x - 500.0, 24.0))
+	_find_race_nodes()
+	if _lap_timer:
+		_draw_laps(Vector2(s.x * 0.5 - 270.0, 18.0))
+	if _vehicle.off_track and fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4:
+		_text(Vector2(s.x * 0.5 - 80.0, 130.0), "OFF TRACK", 32, HOT)
+	if _circuit:
+		_draw_minimap(Rect2(s.x - 254.0, s.y - 420.0, 230.0, 230.0))
+
+
+func _find_race_nodes() -> void:
+	if _lap_timer == null:
+		_lap_timer = get_tree().get_first_node_in_group("lap_timer") as LapTimer
+		if _lap_timer:
+			_lap_timer.lap_completed.connect(_on_lap_completed)
+	if _circuit == null:
+		_circuit = get_tree().get_first_node_in_group("circuit") as Circuit
+
+
+func _on_lap_completed(_time: float, is_best: bool) -> void:
+	if is_best:
+		_best_flash_until = Time.get_ticks_msec() / 1000.0 + 3.0
+
+
+func _draw_laps(o: Vector2) -> void:
+	var lt := _lap_timer
+	draw_rect(Rect2(o, Vector2(540.0, 66.0)), PANEL)
+	_text(o + Vector2(18.0, 44.0), ("LAP %d" % lt.lap) if lt.running else "LAP -", 26, ACCENT)
+	_text(o + Vector2(130.0, 46.0), LapTimer.format_time(lt.lap_time if lt.running else -1.0), 34)
+	_text(o + Vector2(330.0, 28.0), "LAST   " + LapTimer.format_time(lt.last_lap), 17, DIM)
+	_text(o + Vector2(330.0, 54.0), "BEST   " + LapTimer.format_time(lt.best_lap), 17, GOOD)
+	if Time.get_ticks_msec() / 1000.0 < _best_flash_until:
+		_text(o + Vector2(190.0, 100.0), "NEW BEST LAP!", 28, GOOD)
+	elif not lt.running:
+		_text(o + Vector2(120.0, 96.0), "Cross the line to start the clock", 18, DIM)
+
+
+func _draw_minimap(rect: Rect2) -> void:
+	if _map_points.is_empty() or _map_rect != rect:
+		_build_map(rect)
+	draw_rect(rect, PANEL)
+	draw_polyline(_map_points, Color(0.1, 0.1, 0.12, 0.9), 7.0, true)
+	draw_polyline(_map_points, Color(0.85, 0.86, 0.9), 3.0, true)
+	draw_circle(_map_points[0], 4.0, ACCENT)
+	var p := _vehicle.global_position
+	var dot := _to_map(Vector2(p.x, p.z))
+	var fwd := -_vehicle.global_basis.z
+	draw_line(dot, dot + Vector2(fwd.x, fwd.z).normalized() * 10.0, HOT, 2.0)
+	draw_circle(dot, 5.5, HOT)
+
+
+func _build_map(rect: Rect2) -> void:
+	_map_rect = rect
+	var outline := _circuit.outline
+	var lo := outline[0]
+	var hi := outline[0]
+	for q in outline:
+		lo = Vector2(minf(lo.x, q.x), minf(lo.y, q.y))
+		hi = Vector2(maxf(hi.x, q.x), maxf(hi.y, q.y))
+	_map_centre = (lo + hi) * 0.5
+	var span := hi - lo
+	_map_scale = minf((rect.size.x - 24.0) / maxf(span.x, 1.0), (rect.size.y - 24.0) / maxf(span.y, 1.0))
+	_map_points = PackedVector2Array()
+	for i in range(0, outline.size(), 3):
+		_map_points.append(_to_map(outline[i]))
+	_map_points.append(_map_points[0])
+
+
+func _to_map(world_xz: Vector2) -> Vector2:
+	return _map_rect.get_center() + (world_xz - _map_centre) * _map_scale
 
 
 func _text(pos: Vector2, text: String, font_size: int, color: Color = TEXT) -> void:

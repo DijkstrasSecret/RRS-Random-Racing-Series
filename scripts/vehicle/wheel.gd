@@ -52,6 +52,10 @@ var grip_usage: float = 0.0  ## 1.0 = at the friction limit.
 var force_long: float = 0.0
 var force_lat: float = 0.0
 var mu_load: float = 0.0  ## Max friction force available right now.
+## Grip multiplier of the surface under the tyre (collider meta "surface_grip").
+var surface_grip: float = 1.0
+## Extra rolling drag of the surface (collider meta "surface_drag").
+var surface_drag: float = 0.0
 
 var _prev_spring_length: float = 0.30
 var _fwd: Vector3 = Vector3.FORWARD
@@ -73,7 +77,7 @@ func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
 	spring_rate = cfg.front_spring_rate if is_front else cfg.rear_spring_rate
 	damper_bump = cfg.front_damper_bump if is_front else cfg.rear_damper_bump
 	damper_rebound = cfg.front_damper_rebound if is_front else cfg.rear_damper_rebound
-	grip = cfg.tire_grip
+	grip = cfg.tire_grip * (1.0 if is_front else cfg.rear_grip_scale)
 	peak_slip_ratio = cfg.tire_peak_slip_ratio
 	tan_peak_angle = tan(deg_to_rad(cfg.tire_peak_slip_angle_deg))
 	load_sensitivity = cfg.tire_load_sensitivity
@@ -105,6 +109,9 @@ func update_suspension(dt: float) -> void:
 	if grounded:
 		contact_point = get_collision_point()
 		contact_normal = get_collision_normal()
+		var collider := get_collider()
+		surface_grip = collider.get_meta(&"surface_grip", 1.0) if collider else 1.0
+		surface_drag = collider.get_meta(&"surface_drag", 0.0) if collider else 0.0
 		spring_length = clampf(global_position.distance_to(contact_point) - radius, 0.0, rest_length)
 	else:
 		spring_length = rest_length
@@ -175,7 +182,7 @@ func substep(h: float) -> void:
 	omega += h * (drive_torque - fx * radius) / i_eff
 
 	# Brakes and rolling resistance can stop the wheel but never reverse it.
-	var resist := brake_torque + (rolling_resistance * tire_load * radius if grounded else 0.3)
+	var resist := brake_torque + ((rolling_resistance + surface_drag) * tire_load * radius if grounded else 0.3)
 	var dw := resist * h / i_eff
 	if absf(omega) <= dw:
 		omega = 0.0
@@ -209,7 +216,7 @@ func update_visual(dt: float) -> void:
 
 func _mu_load() -> float:
 	var load_factor := clampf(1.0 - load_sensitivity * (tire_load / nominal_load - 1.0), 0.5, 1.3)
-	return grip * tire_load * load_factor
+	return grip * surface_grip * tire_load * load_factor
 
 
 func _build_visual() -> void:

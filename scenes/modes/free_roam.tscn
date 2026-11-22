@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=3]
 
-[ext_resource type="Script" path="res://scripts/modes/free_roam.gd" id="1_mode"]
+[ext_resource type="Script" path="res://scripts/modes/drive_mode.gd" id="1_mode"]
 [ext_resource type="PackedScene" path="res://scenes/tracks/test_track.tscn" id="2_track"]
 [ext_resource type="PackedScene" path="res://scenes/vehicle/psx_hatch.tscn" id="3_vehicle"]
 [ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="4_camera"]
@@ -9,6 +9,9 @@
 
 [node name="FreeRoam" type="Node3D"]
 script = ExtResource("1_mode")
+other_scene = "res://scenes/modes/circuit_race.tscn"
+track_path = NodePath("TestTrack")
+vehicle_path = NodePath("Vehicle")
 
 [node name="TestTrack" parent="." instance=ExtResource("2_track")]
 

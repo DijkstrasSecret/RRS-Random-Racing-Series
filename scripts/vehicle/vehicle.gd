@@ -5,6 +5,8 @@ extends RigidBody3D
 ## Everything runs in _physics_process at the project's 120 Hz tick.
 
 signal profile_changed(profile: int)
+## Emitted after the car is put back on the start (Backspace).
+signal reset_to_start_done
 
 const SUBSTEPS := 4
 ## Limited-slip coupling at diff_lock = 1, in N·m per rad/s of speed difference.
@@ -19,6 +21,17 @@ const FALL_RESET_Y := -30.0
 @export var body_model: PackedScene
 ## Move the Wheel nodes so their hubs line up with the model's wheels.
 @export var align_wheels_to_model: bool = true
+
+@export_group("Body motion (visual only)")
+## Extra body tilt per g of acceleration/braking (nose up / nose dive).
+@export var pitch_per_g_deg: float = 6.5
+## Extra body lean per g of cornering.
+@export var roll_per_g_deg: float = 4.5
+## How quickly the body settles (Hz). Lower = slower, floatier.
+@export var body_motion_hz: float = 0.8
+## 1 = no wobble, lower = the body overshoots a little and settles.
+@export var body_motion_damping: float = 0.55
+@export_group("")
 
 const PSX_SHADER := preload("res://assets/vfx/shaders/psx_lit.gdshader")
 
@@ -42,6 +55,8 @@ var tc_active: bool = false
 var abs_active: bool = false
 var stability_active: bool = false
 var airborne: bool = false
+## True when two or more wheels are on a low-grip surface (grass, gravel).
+var off_track: bool = false
 var spawn_transform: Transform3D
 
 var _reverse_timer: float = 0.0
@@ -52,6 +67,12 @@ var _wheelbase: float = 2.6
 var _model: Node3D
 ## [MeshInstance3D, surface index, original material, retro material]
 var _retro_surfaces: Array = []
+var _body_visual: Node3D
+var _body_pitch: float = 0.0
+var _body_pitch_vel: float = 0.0
+var _body_roll: float = 0.0
+var _body_roll_vel: float = 0.0
+const BODY_PIVOT := Vector3(0.0, 0.35, 0.0)
 
 
 func _ready() -> void:
@@ -123,6 +144,15 @@ func set_handling_profile(p: int) -> void:
 	profile_changed.emit(handling_profile)
 
 
+## Front wheel angle (radians) that full steering input gives right now.
+func current_steer_limit() -> float:
+	return assists.steer_limit(forward_speed, deg_to_rad(config.max_steer_deg), _wheelbase, config.tire_grip)
+
+
+func wheelbase() -> float:
+	return _wheelbase
+
+
 func velocity_at_point(world_point: Vector3) -> Vector3:
 	var com := global_transform * center_of_mass
 	return linear_velocity + angular_velocity.cross(world_point - com)
@@ -152,7 +182,7 @@ func _physics_process(delta: float) -> void:
 
 	# --- Steering ---
 	var target := assists.steer_target(input.steer, forward_speed, lateral_speed,
-			deg_to_rad(config.max_steer_deg))
+			deg_to_rad(config.max_steer_deg), _wheelbase, config.tire_grip)
 	steer_angle = move_toward(steer_angle, target, config.steer_rate * delta)
 	for w in front_wheels:
 		w.steer_angle = steer_angle
@@ -165,6 +195,11 @@ func _physics_process(delta: float) -> void:
 		if w.grounded:
 			grounded_count += 1
 	airborne = grounded_count == 0
+	var slow_wheels := 0
+	for w in wheels:
+		if w.grounded and w.surface_grip < 0.85:
+			slow_wheels += 1
+	off_track = slow_wheels >= 2
 	_apply_anti_roll(front_wheels, config.front_anti_roll)
 	_apply_anti_roll(rear_wheels, config.rear_anti_roll)
 	for w in wheels:
@@ -210,6 +245,30 @@ func _physics_process(delta: float) -> void:
 	_apply_stability()
 	if airborne:
 		_apply_air_control()
+	_update_body_motion(delta)
+
+
+## Slow, springy body tilt on top of the real suspension movement, so speeding
+## up lifts the nose and braking dips it (wheels stay where they are).
+func _update_body_motion(delta: float) -> void:
+	if _body_visual == null:
+		_body_visual = _model if _model else get_node_or_null("Greybox") as Node3D
+		if _body_visual == null:
+			return
+	var w := TAU * body_motion_hz
+	var target_pitch := clampf(g_long, -1.5, 1.5) * deg_to_rad(pitch_per_g_deg)
+	var target_roll := clampf(g_lat, -1.5, 1.5) * deg_to_rad(roll_per_g_deg)
+	if airborne:
+		target_pitch = 0.0
+		target_roll = 0.0
+	_body_pitch_vel += (w * w * (target_pitch - _body_pitch) - 2.0 * body_motion_damping * w * _body_pitch_vel) * delta
+	_body_pitch += _body_pitch_vel * delta
+	_body_roll_vel += (w * w * (target_roll - _body_roll) - 2.0 * body_motion_damping * w * _body_roll_vel) * delta
+	_body_roll += _body_roll_vel * delta
+	# + pitch lifts the nose (-Z); + roll lifts the right side (leans outward
+	# in a right-hander, where g_lat is positive).
+	var tilt := Basis(Vector3.RIGHT, _body_pitch) * Basis(Vector3.BACK, _body_roll)
+	_body_visual.transform = Transform3D(tilt, BODY_PIVOT - tilt * BODY_PIVOT)
 
 
 ## Gear selection. Returns the (throttle, brake) actually sent to the car.
@@ -358,6 +417,7 @@ func recover() -> void:
 
 func reset_to_start() -> void:
 	teleport(spawn_transform)
+	reset_to_start_done.emit()
 
 
 func teleport(xform: Transform3D) -> void:
@@ -413,20 +473,33 @@ func _collect_retro_surfaces(node: Node) -> void:
 			var original := mi.get_active_material(i)
 			var retro := ShaderMaterial.new()
 			retro.shader = PSX_SHADER
+			var ps2: Material = null
 			if original is BaseMaterial3D:
 				var base := original as BaseMaterial3D
 				retro.set_shader_parameter("albedo_tex", base.albedo_texture)
 				retro.set_shader_parameter("albedo_color", base.albedo_color)
-			_retro_surfaces.append([mi, i, original, retro])
+				# PS2 style: smooth (bilinear) textures and per-vertex lighting.
+				var soft := base.duplicate() as BaseMaterial3D
+				soft.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+				soft.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
+				soft.roughness = 0.55
+				soft.metallic_specular = 0.6
+				ps2 = soft
+			_retro_surfaces.append([mi, i, original, retro, ps2])
 	for child in node.get_children():
 		_collect_retro_surfaces(child)
 
 
-## Called by RetroLook: 0 = modern, 1 = PS2-ish, 2 = PS1.
+## Called by RetroLook: 0 = modern, 1 = PS2, 2 = PS1.
 func set_retro_level(level: int) -> void:
 	var res := RetroLook.resolution_for(level)
 	for entry: Array in _retro_surfaces:
 		var mi: MeshInstance3D = entry[0]
 		var retro: ShaderMaterial = entry[3]
 		retro.set_shader_parameter("snap_resolution", res)
-		mi.set_surface_override_material(entry[1], retro if level == RetroLook.Level.PS1 else null)
+		var mat: Material = null
+		if level == RetroLook.Level.PS1:
+			mat = retro
+		elif level == RetroLook.Level.PS2:
+			mat = entry[4]
+		mi.set_surface_override_material(entry[1], mat)

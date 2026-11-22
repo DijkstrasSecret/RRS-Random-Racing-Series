@@ -25,6 +25,9 @@ enum DriveType { FWD, RWD, AWD }
 @export var tire_peak_slip_angle_deg: float = 8.0
 ## How much grip per Newton drops as load rises (0 = none).
 @export var tire_load_sensitivity: float = 0.12
+## Rear grip relative to the front. Below 1 lets the rear step out when
+## the car is pushed too hard (lift-off and high-speed oversteer).
+@export var rear_grip_scale: float = 0.98
 @export var rolling_resistance: float = 0.015
 
 @export_group("Suspension")
@@ -32,14 +35,14 @@ enum DriveType { FWD, RWD, AWD }
 @export var rest_length: float = 0.30
 ## Spring compression from free length until the bump stop.
 @export var max_travel: float = 0.22
-@export var front_spring_rate: float = 38000.0
-@export var rear_spring_rate: float = 32000.0
-@export var front_damper_bump: float = 2800.0
-@export var front_damper_rebound: float = 3800.0
-@export var rear_damper_bump: float = 2500.0
-@export var rear_damper_rebound: float = 3400.0
-@export var front_anti_roll: float = 12000.0
-@export var rear_anti_roll: float = 9000.0
+@export var front_spring_rate: float = 32000.0
+@export var rear_spring_rate: float = 27000.0
+@export var front_damper_bump: float = 2400.0
+@export var front_damper_rebound: float = 3300.0
+@export var rear_damper_bump: float = 2150.0
+@export var rear_damper_rebound: float = 2900.0
+@export var front_anti_roll: float = 10000.0
+@export var rear_anti_roll: float = 11000.0
 
 @export_group("Engine")
 @export var idle_rpm: float = 900.0
@@ -72,12 +75,12 @@ enum DriveType { FWD, RWD, AWD }
 ## Total brake torque for all four wheels at full pedal.
 @export var brake_torque: float = 4200.0
 ## Share of brake torque on the front axle.
-@export_range(0.0, 1.0) var brake_bias: float = 0.66
+@export_range(0.0, 1.0) var brake_bias: float = 0.7
 ## Extra brake torque per rear wheel from the handbrake.
 @export var handbrake_torque: float = 2500.0
 @export var max_steer_deg: float = 33.0
 ## How fast the front wheels can turn, in radians per second.
-@export var steer_rate: float = 3.0
+@export var steer_rate: float = 4.0
 
 @export_group("Aero")
 ## Drag coefficient × frontal area (m²).

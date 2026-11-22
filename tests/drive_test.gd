@@ -23,6 +23,8 @@ var _air_time := 0.0
 var _max_height := 0.0
 var _takeoff_kmh := -1.0
 var _teleported := false
+var _max_beta := 0.0
+var _max_hs_lat_g := 0.0
 
 
 func _ready() -> void:
@@ -123,7 +125,24 @@ func _physics_process(delta: float) -> void:
 				results["jump_air_time_s"] = "%.2f" % _air_time
 				results["jump_max_height_m"] = "%.1f" % _max_height
 				results["jump_exit_kmh"] = "%.0f" % kmh
-				_finish()
+				_start_high_speed("hs_gentle")
+		"hs_gentle", "hs_abuse":
+			# 130 km/h on open ground: a small steering input should stay in
+			# grip, a big sudden one should break traction (slide or spin).
+			var gentle := phase == "hs_gentle"
+			drv.throttle = 0.3
+			drv.steer = 0.3 if gentle else 1.0
+			var beta := rad_to_deg(atan2(absf(vehicle.lateral_speed), maxf(absf(vehicle.forward_speed), 0.1)))
+			_max_beta = maxf(_max_beta, beta)
+			_max_hs_lat_g = maxf(_max_hs_lat_g, absf(vehicle.g_lat))
+			if phase_t > 2.5:
+				results[phase + "_max_slip_deg"] = "%.1f" % _max_beta
+				results[phase + "_max_lat_g"] = "%.2f" % _max_hs_lat_g
+				results[phase + "_end_kmh"] = "%.0f" % kmh
+				if gentle:
+					_start_high_speed("hs_abuse")
+				else:
+					_finish()
 
 	# A sudden big speed loss means the car hit something.
 	if _teleported:
@@ -134,6 +153,20 @@ func _physics_process(delta: float) -> void:
 		results["collision_%s_%.1fs" % [phase, phase_t]] = "lost %.0f km/h at %s" % [
 			_last_kmh - absf(kmh), vehicle.global_position.snapped(Vector3.ONE)]
 	_last_kmh = absf(kmh)
+
+
+func _start_high_speed(p: String) -> void:
+	var speed := 130.0 / 3.6
+	vehicle.teleport(Transform3D(Basis.IDENTITY, Vector3(-250.0, 0.05, 250.0)))
+	vehicle.linear_velocity = Vector3(0.0, 0.0, -speed)
+	for w in vehicle.wheels:
+		w.omega = speed / w.radius
+	vehicle.drivetrain.set_gear(4)
+	drv.steer = 0.0
+	_max_beta = 0.0
+	_max_hs_lat_g = 0.0
+	_teleported = true
+	_next(p)
 
 
 func _next(p: String) -> void:
