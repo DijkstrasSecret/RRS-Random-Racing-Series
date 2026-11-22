@@ -67,31 +67,33 @@ shape = SubResource("Shape_body")
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.295, 0.25)
 shape = SubResource("Shape_cabin")
 
-[node name="Body" type="MeshInstance3D" parent="."]
+[node name="Greybox" type="Node3D" parent="."]
+
+[node name="Body" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.71, 0)
 mesh = SubResource("Mesh_body")
 
-[node name="Cabin" type="MeshInstance3D" parent="."]
+[node name="Cabin" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.295, 0.25)
 mesh = SubResource("Mesh_cabin")
 
-[node name="Spoiler" type="MeshInstance3D" parent="."]
+[node name="Spoiler" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6, 1.2)
 mesh = SubResource("Mesh_spoiler")
 
-[node name="HeadlightL" type="MeshInstance3D" parent="."]
+[node name="HeadlightL" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 0.82, -2.05)
 mesh = SubResource("Mesh_headlight")
 
-[node name="HeadlightR" type="MeshInstance3D" parent="."]
+[node name="HeadlightR" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.82, -2.05)
 mesh = SubResource("Mesh_headlight")
 
-[node name="TaillightL" type="MeshInstance3D" parent="."]
+[node name="TaillightL" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.55, 0.86, 2.05)
 mesh = SubResource("Mesh_taillight")
 
-[node name="TaillightR" type="MeshInstance3D" parent="."]
+[node name="TaillightR" type="MeshInstance3D" parent="Greybox"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.55, 0.86, 2.05)
 mesh = SubResource("Mesh_taillight")
 

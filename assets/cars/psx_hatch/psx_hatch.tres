@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+display_name = "PSX Hatch (look test)"
+wheel_radius = 0.315
+wheel_width = 0.18

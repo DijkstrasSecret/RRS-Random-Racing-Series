@@ -2,7 +2,8 @@ extends Node3D
 ## Handling smoke test (design concept §6.4 feel targets). Drives the car with
 ## scripted inputs and prints the results. Run it without a window:
 ##   Godot_console.exe --headless --path . res://tests/drive_test.tscn
-## Optional: add  -- --profile=0  (Arcade), 1 (Sport, default) or 2 (Sim).
+## Optional: add  -- --profile=0  (Arcade), 1 (Sport, default) or 2 (Sim),
+##   --car=res://scenes/vehicle/psx_hatch.tscn  to test another car.
 
 class ScriptedInput extends VehicleInput:
 	pass
@@ -26,7 +27,11 @@ var _teleported := false
 
 func _ready() -> void:
 	add_child(load("res://scenes/tracks/test_track.tscn").instantiate())
-	vehicle = load("res://scenes/vehicle/vehicle.tscn").instantiate()
+	var car_path := "res://scenes/vehicle/vehicle.tscn"
+	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--car="):
+			car_path = arg.get_slice("=", 1)
+	vehicle = load(car_path).instantiate()
 	var player := vehicle.get_node("PlayerInput")
 	vehicle.remove_child(player)
 	player.free()
@@ -37,7 +42,7 @@ func _ready() -> void:
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--profile="):
 			vehicle.set_handling_profile(int(arg.get_slice("=", 1)))
-	print("drive_test | profile: %s" % vehicle.assists.profile_name())
+	print("drive_test | %s | profile: %s" % [vehicle.config.display_name, vehicle.assists.profile_name()])
 
 
 func _physics_process(delta: float) -> void:

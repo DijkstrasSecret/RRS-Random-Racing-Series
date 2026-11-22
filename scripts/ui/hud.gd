@@ -19,7 +19,7 @@ const HOT := Color(1.0, 0.3, 0.25)
 
 ## Help panel: keys and what they do. The first five rows are driving.
 const HELP_KEYS: PackedStringArray = [
-	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "C", "F1", "R", "H",
+	"W / Up", "S / Down", "A D / Arrows", "Space", "Q / E", "P", "V", "C", "F1", "R", "H",
 ]
 const HELP_ACTIONS: PackedStringArray = [
 	"Throttle",
@@ -28,6 +28,7 @@ const HELP_ACTIONS: PackedStringArray = [
 	"Handbrake",
 	"Shift down / up  (M = back to auto)",
 	"Handling profile  (Arcade / Sport / Sim)",
+	"Visual style  (Modern / PS2-ish / PS1)",
 	"Camera view",
 	"Telemetry",
 	"Recover car     Backspace  Back to start",
@@ -92,8 +93,9 @@ func _draw_speedo(o: Vector2) -> void:
 
 
 func _draw_status(o: Vector2) -> void:
-	draw_rect(Rect2(o, Vector2(430.0, 72.0)), PANEL)
+	draw_rect(Rect2(o, Vector2(470.0, 72.0)), PANEL)
 	_text(o + Vector2(16.0, 28.0), _vehicle.config.display_name, 18)
+	_text(o + Vector2(250.0, 28.0), "Look: %s" % RetroLook.level_name(), 18, ACCENT)
 	_text(o + Vector2(16.0, 56.0), "Profile: %s" % _vehicle.assists.profile_name(), 18, ACCENT)
 	var x := 200.0
 	for flag: Array in [["TC", _vehicle.tc_active], ["ABS", _vehicle.abs_active],

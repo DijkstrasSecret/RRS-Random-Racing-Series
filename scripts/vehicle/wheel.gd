@@ -59,6 +59,9 @@ var _right: Vector3 = Vector3.RIGHT
 var _fx_sum: float = 0.0
 var _fy_sum: float = 0.0
 var _visual: Node3D
+## Optional wheel mesh from an imported car model (origin at the hub,
+## axle along X). Set before setup(); replaces the generated tyre.
+var custom_visual: Node3D
 
 
 func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
@@ -215,6 +218,10 @@ func _build_visual() -> void:
 	_visual = Node3D.new()
 	_visual.name = "Visual"
 	add_child(_visual)
+	if custom_visual:
+		custom_visual.reparent(_visual, false)
+		custom_visual.transform = Transform3D.IDENTITY
+		return
 
 	var tire_mesh := CylinderMesh.new()
 	tire_mesh.top_radius = radius

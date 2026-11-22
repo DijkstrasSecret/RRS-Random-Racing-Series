@@ -1,10 +1,11 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scripts/modes/free_roam.gd" id="1_mode"]
 [ext_resource type="PackedScene" path="res://scenes/tracks/test_track.tscn" id="2_track"]
-[ext_resource type="PackedScene" path="res://scenes/vehicle/vehicle.tscn" id="3_vehicle"]
+[ext_resource type="PackedScene" path="res://scenes/vehicle/psx_hatch.tscn" id="3_vehicle"]
 [ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="4_camera"]
 [ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/fx/retro_look.gd" id="6_retro"]
 
 [node name="FreeRoam" type="Node3D"]
 script = ExtResource("1_mode")
@@ -20,7 +21,11 @@ current = true
 script = ExtResource("4_camera")
 target_path = NodePath("../Vehicle")
 
+[node name="RetroLook" type="CanvasLayer" parent="."]
+script = ExtResource("6_retro")
+
 [node name="HUDLayer" type="CanvasLayer" parent="."]
+layer = 10
 
 [node name="HUD" type="Control" parent="HUDLayer"]
 layout_mode = 3

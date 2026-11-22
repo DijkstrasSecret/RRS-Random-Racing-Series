@@ -14,6 +14,13 @@ const FALL_RESET_Y := -30.0
 
 @export var config: VehicleConfig
 @export_enum("Arcade", "Sport", "Sim") var handling_profile: int = 1
+## Optional imported car model (.glb) with nodes body and wheel_FL/FR/RL/RR
+## (design concept §15). When set, the greybox meshes are hidden.
+@export var body_model: PackedScene
+## Move the Wheel nodes so their hubs line up with the model's wheels.
+@export var align_wheels_to_model: bool = true
+
+const PSX_SHADER := preload("res://assets/vfx/shaders/psx_lit.gdshader")
 
 var wheels: Array[Wheel] = []
 var front_wheels: Array[Wheel] = []  ## [left, right]
@@ -42,9 +49,13 @@ var _prev_velocity: Vector3 = Vector3.ZERO
 var _front_axle_z: float = -1.3
 var _rear_axle_z: float = 1.3
 var _wheelbase: float = 2.6
+var _model: Node3D
+## [MeshInstance3D, surface index, original material, retro material]
+var _retro_surfaces: Array = []
 
 
 func _ready() -> void:
+	add_to_group("retro_aware")
 	if config == null:
 		config = VehicleConfig.new()
 	_apply_config()
@@ -57,6 +68,8 @@ func _ready() -> void:
 	if input == null:
 		input = VehicleInput.new()
 		add_child(input)
+	if body_model:
+		_attach_model()
 
 	for w in wheels:
 		w.setup(self, config)
@@ -366,3 +379,54 @@ func _mean_z(list: Array[Wheel]) -> float:
 	for w in list:
 		sum += w.position.z
 	return sum / list.size()
+
+
+# --- Imported model & retro look ---------------------------------------------
+
+func _attach_model() -> void:
+	_model = body_model.instantiate() as Node3D
+	_model.name = "Model"
+	add_child(_model)
+	var greybox := get_node_or_null("Greybox") as Node3D
+	if greybox:
+		greybox.visible = false
+	for w in wheels:
+		var key := String(w.name).trim_prefix("Wheel")
+		var src := _model.find_child("wheel_" + key, true, false) as Node3D
+		if src == null:
+			push_warning("%s: model has no wheel_%s" % [name, key])
+			continue
+		if align_wheels_to_model:
+			var hub := to_local(src.global_position)
+			# Mount sits one static spring length above the hub.
+			var corner_load := config.mass * 9.81 * 0.25
+			var rate := config.front_spring_rate if w.is_front else config.rear_spring_rate
+			w.position = Vector3(hub.x, hub.y + config.rest_length - corner_load / rate, hub.z)
+		w.custom_visual = src
+	_collect_retro_surfaces(_model)
+
+
+func _collect_retro_surfaces(node: Node) -> void:
+	if node is MeshInstance3D:
+		var mi := node as MeshInstance3D
+		for i in mi.mesh.get_surface_count():
+			var original := mi.get_active_material(i)
+			var retro := ShaderMaterial.new()
+			retro.shader = PSX_SHADER
+			if original is BaseMaterial3D:
+				var base := original as BaseMaterial3D
+				retro.set_shader_parameter("albedo_tex", base.albedo_texture)
+				retro.set_shader_parameter("albedo_color", base.albedo_color)
+			_retro_surfaces.append([mi, i, original, retro])
+	for child in node.get_children():
+		_collect_retro_surfaces(child)
+
+
+## Called by RetroLook: 0 = modern, 1 = PS2-ish, 2 = PS1.
+func set_retro_level(level: int) -> void:
+	var res := RetroLook.resolution_for(level)
+	for entry: Array in _retro_surfaces:
+		var mi: MeshInstance3D = entry[0]
+		var retro: ShaderMaterial = entry[3]
+		retro.set_shader_parameter("snap_resolution", res)
+		mi.set_surface_override_material(entry[1], retro if level == RetroLook.Level.PS1 else null)

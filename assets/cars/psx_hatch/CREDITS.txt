@@ -1,0 +1,8 @@
+PSX Style Cars by GGBot (https://ggbot.itch.io/psx-style-cars)
+"Car 03" (3-door hatchback), August 2023 release.
+License: CC0 1.0 Universal (public domain). Credit not required, given anyway.
+
+source/  = original files from the pack (ignored by Godot, see .gdignore)
+source/psx_hatch.blend = prepared Blender scene
+psx_hatch.glb = re-exported from Blender: wheels separated, scaled to
+real size, named per design concept §15 (body, wheel_FL/FR/RL/RR).
