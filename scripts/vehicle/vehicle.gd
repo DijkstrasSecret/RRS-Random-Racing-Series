@@ -475,6 +475,13 @@ func recover() -> void:
 
 
 func reset_to_start() -> void:
+	# Safety net: a reset point underground (car never placed on the grid)
+	# would make it fall forever; use the circuit's start line instead.
+	var circuit := get_tree().get_first_node_in_group("circuit") as Circuit
+	if circuit:
+		var o := spawn_transform.origin
+		if o.y < circuit.surface_height(o.x, o.z) - 2.0:
+			spawn_transform = circuit.get_spawn_transform()
 	teleport(spawn_transform)
 	reset_to_start_done.emit()
 

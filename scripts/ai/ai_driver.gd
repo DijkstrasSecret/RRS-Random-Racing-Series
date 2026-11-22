@@ -155,7 +155,26 @@ func _reset_onto_track(off: float, track_dir: Vector3) -> void:
 	_build_profile()
 	_lost_time = 0.0
 	lane = 0.0
-	var pos := _circuit.point_at(off) + Vector3.UP * 0.3
+	# Put it back on a clear patch of road: several cars stuck in one pile
+	# would otherwise all reset onto the same spot and crash again.
+	var spot := off
+	var lateral := 0.0
+	for attempt in 12:
+		var cand_off := off - attempt * 9.0
+		var cand_lat: float = [0.0, -3.2, 3.2][attempt % 3]
+		var cand: Vector3 = _circuit.point_at(cand_off) + _circuit.right_at(cand_off) * cand_lat
+		var clear := true
+		for node in get_tree().get_nodes_in_group("vehicles"):
+			var other := node as Vehicle
+			if other != _vehicle and other.global_position.distance_to(cand) < 7.0:
+				clear = false
+				break
+		if clear:
+			spot = cand_off
+			lateral = cand_lat
+			break
+	track_dir = _circuit.direction_at(spot)
+	var pos := _circuit.point_at(spot) + _circuit.right_at(spot) * lateral + Vector3.UP * 0.3
 	_vehicle.teleport(Transform3D(Basis.looking_at(track_dir, Vector3.UP), pos))
 	throttle = 0.0
 	brake = 0.0
