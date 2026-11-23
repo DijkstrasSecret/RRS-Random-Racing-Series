@@ -16,6 +16,10 @@ uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;
 // Crash damage darkens the paint through the vertex colours (1 = use them).
 uniform float vertex_tint = 0.0;
+// Baked shading (generated cars): a small pixel texture on the second UV set
+// that darkens creases, sills and arches like a hand-painted PS1 car.
+uniform sampler2D shade_tex : filter_nearest, hint_default_white;
+uniform float shade_amount : hint_range(0.0, 1.0) = 0.0;
 // Decals that sit a few mm off a surface (car liveries): drawn this many
 // metres closer to the camera along the view ray, so the vertex snapping
 // can't make the surface underneath poke through. Same spot on screen.
@@ -44,6 +48,7 @@ void fragment() {
 	vec2 uv = mix(UV, affine_uv / affine_w, affine_amount);
 	vec4 tex = texture(albedo_tex, uv);
 	ALBEDO = tex.rgb * albedo_color.rgb * mix(vec3(1.0), COLOR.rgb, vertex_tint);
+	ALBEDO *= mix(vec3(1.0), texture(shade_tex, UV2).rgb, shade_amount);
 	ROUGHNESS = roughness_value;
 	SPECULAR = specular_value;
 	EMISSION = emission_color * emission_energy;

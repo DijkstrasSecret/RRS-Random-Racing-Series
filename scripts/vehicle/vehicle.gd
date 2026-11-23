@@ -656,6 +656,7 @@ func _attach_model() -> void:
 			w.position = Vector3(hub.x, hub.y + config.rest_length - corner_load / rate, hub.z)
 		w.custom_visual = src
 	_fit_collision_to_model()
+	_shade_tex = CarLook.shade_texture(_model)
 	_collect_retro_surfaces(_model)
 	_setup_lamps()
 
@@ -665,7 +666,7 @@ func _attach_model() -> void:
 func _setup_lamps() -> void:
 	GameSettings.ensure_loaded()
 	_night = GameSettings.time_of_day == 3 and get_tree().get_first_node_in_group("circuit") != null
-	_head_energy = 5.0 if _night else 2.2
+	_head_energy = 5.0 if _night else 0.4  # by day just a lit lens, not a glare
 	_set_lamp_energy(_head_lamps, _head_energy)
 	_update_brake_lamps(true)
 	if not _night or DisplayServer.get_name() == "headless":
@@ -691,7 +692,7 @@ func _update_brake_lamps(force: bool = false) -> void:
 	if _brake_lamps.is_empty():
 		return
 	var braking := input != null and (input.brake > 0.05 or input.handbrake > 0.5)
-	var glow := 7.0 if braking else (2.0 if _night else 1.2)
+	var glow := 7.0 if braking else (2.0 if _night else 0.45)
 	if _brake_broken:
 		glow = 0.0
 	if force or glow != _brake_glow:
@@ -726,14 +727,16 @@ func _set_shine(mat_name: String, retro: ShaderMaterial, soft: BaseMaterial3D) -
 	var rough := -1.0
 	var metal := 0.0
 	if mat_name.contains("paint"):
-		rough = 0.3
-		metal = 0.35
+		# Satin, not mirror: the body's shape and shading read, like PS1 cars.
+		rough = 0.5
+		metal = 0.15
 		soft.clearcoat_enabled = true
 		soft.clearcoat = 0.8
 		soft.clearcoat_roughness = 0.15
 	elif mat_name.contains("glass"):
-		rough = 0.14
-		metal = 0.4
+		# Dark tinted glass with a soft sheen (pale mirror glass washed the cabins out).
+		rough = 0.25
+		metal = 0.15
 	elif mat_name.contains("chrome") or mat_name.contains("rim_silver") or mat_name.contains("silver"):
 		rough = 0.18
 		metal = 0.9
@@ -803,6 +806,8 @@ func _fit_collision_to_model() -> void:
 		cabin.disabled = true
 
 
+var _shade_tex: Texture2D
+
 func _collect_retro_surfaces(node: Node) -> void:
 	if node is MeshInstance3D:
 		var mi := node as MeshInstance3D
@@ -833,16 +838,28 @@ func _collect_retro_surfaces(node: Node) -> void:
 			if original is BaseMaterial3D:
 				var base := original as BaseMaterial3D
 				retro.set_shader_parameter("albedo_tex", base.albedo_texture)
-				retro.set_shader_parameter("albedo_color", base.albedo_color)
+				var is_paint := base.resource_name.to_lower().contains("paint") and not _is_livery(mi)
+				retro.set_shader_parameter("albedo_color", CarLook.grade_paint(base.albedo_color) if is_paint else base.albedo_color)
 				if base.emission_enabled:
 					retro.set_shader_parameter("emission_color", base.emission)
-					retro.set_shader_parameter("emission_energy", base.emission_energy_multiplier)
+					# Running lights / amber lamps: a soft glow by day, full at night.
+					var lamp_energy := base.emission_energy_multiplier
+					if GameSettings.time_of_day != 3:
+						lamp_energy = minf(lamp_energy, 0.5)
+					retro.set_shader_parameter("emission_energy", lamp_energy)
 				# PS2 style: smooth (bilinear) textures and per-vertex lighting.
 				var soft := base.duplicate() as BaseMaterial3D
 				soft.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 				soft.shading_mode = BaseMaterial3D.SHADING_MODE_PER_VERTEX
 				soft.roughness = 0.55
 				soft.metallic_specular = 0.6
+				if is_paint:
+					soft.albedo_color = CarLook.grade_paint(base.albedo_color)
+				if _shade_tex and String(mi.name).begins_with("body"):
+					soft.detail_enabled = true
+					soft.detail_uv_layer = BaseMaterial3D.DETAIL_UV_2
+					soft.detail_blend_mode = BaseMaterial3D.BLEND_MODE_MUL
+					soft.detail_albedo = _shade_tex
 				ps2 = soft
 				var mat_name := base.resource_name.to_lower()
 				_set_shine(mat_name, retro, soft)
@@ -852,6 +869,7 @@ func _collect_retro_surfaces(node: Node) -> void:
 					_head_lamps.append([retro, soft])
 			if _is_livery(mi):
 				CarLook.make_decal(retro)
+			CarLook.apply_shade(retro, mi, _shade_tex)
 			_retro_surfaces.append([mi, i, original, retro, ps2])
 	for child in node.get_children():
 		_collect_retro_surfaces(child)

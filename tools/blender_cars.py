@@ -1490,7 +1490,6 @@ def build_livery(cid, c, M, front_y, coll):
                         border=(0.04, 0.04, 0.04))
     sponsor = text_material(f"{cid}_sponsor", lv["sponsor"], lv.get("sponsor_fg", (1, 1, 1)), lv.get("sponsor_bg", (0.1, 0.1, 0.12)),
                             px_h=12, scale=2)
-    banner = text_material(f"{cid}_banner", lv["banner"], (1, 1, 1), (0.05, 0.05, 0.07), px_h=10, scale=1)
     door_s = lv.get("number_s", c["fo"] + c["wb"] * 0.45)
     belt = c["belt"]
     if style == "muscle":
@@ -1524,7 +1523,8 @@ def build_livery(cid, c, M, front_y, coll):
         # Number board on the roof.
         z = c["H"] + c["crown"]
         textured_box(m, (0.6, 0.012, 0.36), (0, front_y - (c["roof_front"] + c["roof_rear"]) / 2, z + 0.02), 1, num, M["black"])
-    # Door number panels and sponsor panels on both sides, and the banner.
+    # Door number panels and sponsor panels on both sides (no windscreen banner:
+    # it cluttered the view of the cabin).
     zn = lv.get("number_z", (rk + belt) / 2)
     ss = lv.get("sponsor_s", L - 1.05)
     sz = lv.get("sponsor_z", belt - 0.13)
@@ -1532,7 +1532,6 @@ def build_livery(cid, c, M, front_y, coll):
     for side in (-1, 1):
         side_panel(m, c, front_y, side, door_s - 0.2, door_s + 0.2, zn - 0.17, zn + 0.17, num, tex=True)
         side_panel(m, c, front_y, side, ss - sw, ss + sw, sz - 0.075, sz + 0.075, sponsor, tex=True)
-    windscreen_banner(m, c, front_y, banner)
     return m.build(coll)
 
 
@@ -1617,23 +1616,33 @@ def build_car(cid, c):
     coll.objects.link(root)
     for o in [body] + wheels + ([livery] if livery else []):
         o.parent = root
-    return coll, root
+    return coll, root, body
 
 
 scn = bpy.data.scenes.get("cars") or bpy.data.scenes.new("cars")
-bpy.context.window.scene = scn
+if bpy.context.window:
+    bpy.context.window.scene = scn
+else:  # headless (blender --background): work in the default scene
+    scn = bpy.context.scene
+import sys
+sys.path.insert(0, os.path.join(PROJECT, "tools"))
+import importlib
+import blender_shade
+importlib.reload(blender_shade)
 MATS = shared_mats()
 only = globals().get("CARS_ONLY")
 report = []
 for i, (cid, c) in enumerate(CARS.items()):
     if only and cid not in only:
         continue
-    coll, root = build_car(cid, c)
+    coll, root, body = build_car(cid, c)
     root.location = (i * 3.0, 0, 0)
     if globals().get("NO_EXPORT"):  # preview only
         continue
     out_dir = os.path.join(PROJECT, "assets", "cars", cid)
     os.makedirs(out_dir, exist_ok=True)
+    bpy.context.view_layer.update()
+    blender_shade.bake_shade(cid, body, out_dir)
     bpy.ops.object.select_all(action="DESELECT")
     for o in coll.objects:
         o.select_set(True)
@@ -1644,7 +1653,7 @@ for i, (cid, c) in enumerate(CARS.items()):
     root.location = (i * 3.0, 0, 0)
     tris = sum(sum(len(f.vertices) - 2 for f in o.data.polygons) for o in coll.objects if o.type == "MESH")
     report.append(f"{cid}: {tris} tris")
-if not globals().get("NO_EXPORT"):
+if not globals().get("NO_EXPORT") and not only:  # (a partial rebuild would drop the other cars)
     src = os.path.join(PROJECT, "assets", "cars", "_source")
     os.makedirs(src, exist_ok=True)
     open(os.path.join(src, ".gdignore"), "w").close()
