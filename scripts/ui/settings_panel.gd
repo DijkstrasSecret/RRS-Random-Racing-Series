@@ -31,9 +31,13 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.handling_profile = i)
 	_add_row("VIBRATION", PackedStringArray(["OFF", "ON"]), int(GameSettings.vibration),
 			func(i: int) -> void: GameSettings.vibration = i == 1)
-	add_child(MenuStyle.section("CAMERA"))
+	add_child(MenuStyle.section("LOOK & CAMERA"))
 	_add_row("VISUAL STYLE", PackedStringArray(["PS2", "PS1"]), clampi(GameSettings.look - 1, 0, 1),
 			func(i: int) -> void: GameSettings.look = i + 1)
+	_add_slider("RETRO EFFECT", 0.0, 100.0, 5.0, GameSettings.retro_strength, "%d%%",
+			func(v: float) -> void:
+				GameSettings.retro_strength = v
+				get_tree().call_group("retro_look", "set_level", RetroLook.level))
 	_add_slider("FIELD OF VIEW", 50.0, 85.0, 1.0, GameSettings.fov, "%d°",
 			func(v: float) -> void: GameSettings.fov = v)
 	_add_slider("SPEED FOV", 0.0, 100.0, 5.0, GameSettings.speed_fov, "%d%%",

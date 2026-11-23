@@ -29,6 +29,9 @@ static var vibration: bool = true
 static var fov: float = 64.0
 ## How much the view widens at speed: 0 = not at all, 100 = +28 degrees.
 static var speed_fov: float = 100.0
+## Strength of the PS1 / PS2 screen effect (low resolution, few colours,
+## dithering): 0 = sharp full-resolution picture, 100 = the full retro look.
+static var retro_strength: float = 100.0
 ## Camera rumble and edge blur at speed.
 static var speed_fx: bool = true
 ## Lens bend, 0..100 (single player only); 100 = a strong barrel.
@@ -92,6 +95,7 @@ static func ensure_loaded() -> void:
 	fov = clampf(float(cfg.get_value("video", "fov", fov)), 50.0, 85.0)
 	speed_fov = clampf(float(cfg.get_value("video", "speed_fov", speed_fov)), 0.0, 100.0)
 	speed_fx = cfg.get_value("video", "speed_fx", speed_fx)
+	retro_strength = clampf(float(cfg.get_value("video", "retro_strength", retro_strength)), 0.0, 100.0)
 	fisheye = clampf(float(cfg.get_value("video", "fisheye_amount", fisheye)), 0.0, 100.0)
 	if look < 1 or look > 2:
 		look = 2
@@ -126,6 +130,7 @@ static func save() -> void:
 	cfg.set_value("video", "fov", fov)
 	cfg.set_value("video", "speed_fov", speed_fov)
 	cfg.set_value("video", "speed_fx", speed_fx)
+	cfg.set_value("video", "retro_strength", retro_strength)
 	cfg.set_value("video", "fisheye_amount", fisheye)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("audio", "sound", sound_volume)

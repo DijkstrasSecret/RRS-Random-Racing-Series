@@ -208,7 +208,7 @@ func _apply_rumble(delta: float, v: float) -> void:
 	var amp := 0.012 * pow(clampf(v / 70.0, 0.0, 1.0), 2.0)
 	var car := _target as Vehicle
 	if car and car.off_track and v > 5.0:
-		amp += 0.035
+		amp += 0.014  # off road: 40% of the old 0.035
 	if amp <= 0.0005:
 		return
 	var t := _time * 31.0

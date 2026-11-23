@@ -93,14 +93,22 @@ func set_level(new_level: int) -> void:
 
 func _apply() -> void:
 	_rect.visible = level != Level.MODERN
-	_material.set_shader_parameter("virtual_resolution", resolution_for(level))
+	# RETRO EFFECT (settings, 0..100%): how far the picture goes from the
+	# full-resolution render towards the PS1 / PS2 look (resolution, colour
+	# depth, dithering). At 0% the screen stays sharp; fisheye and the speed
+	# blur still work.
+	var t := clampf(GameSettings.retro_strength / 100.0, 0.0, 1.0)
+	var full := Vector2(get_window().size) if get_window() else Vector2(1920, 1080)
+	var retro := resolution_for(level)
+	var res := Vector2(full.x * pow(retro.x / full.x, t), full.y * pow(retro.y / full.y, t))
+	_material.set_shader_parameter("virtual_resolution", res.round())
+	var levels := 32.0 if level == Level.PS1 else 48.0
+	_material.set_shader_parameter("color_levels", 256.0 * pow(levels / 256.0, t))
 	if level == Level.PS1:
-		_material.set_shader_parameter("color_levels", 32.0)
-		_material.set_shader_parameter("dither_strength", 1.0)
+		_material.set_shader_parameter("dither_strength", 1.0 * t)
 		_material.set_shader_parameter("smooth_upscale", 0.0)
 	else:
-		_material.set_shader_parameter("color_levels", 48.0)
-		_material.set_shader_parameter("dither_strength", 0.45)
+		_material.set_shader_parameter("dither_strength", 0.45 * t)
 		_material.set_shader_parameter("smooth_upscale", 1.0)
 	_apply_environment()
 	get_tree().call_group("retro_aware", "set_retro_level", level)
