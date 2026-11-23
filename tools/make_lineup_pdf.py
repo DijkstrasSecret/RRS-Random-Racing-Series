@@ -1,7 +1,7 @@
 """Builds docs/RRS_car_lineup.pdf: 3 cars per page, livery off / livery on.
 
-Names, classes and livery flags come from scripts/core/car_roster.gd; number,
-sponsor and windscreen banner from tools/blender_cars.py. Pictures first:
+Names, classes and livery flags come from scripts/core/car_roster.gd; number
+and sponsor from tools/blender_cars.py. Pictures first:
     Godot.exe --path . -s res://tests/screenshot_cars.gd -- --cars=<all ids> --prefix=pdf0 --livery=0 --far --no-chase
     Godot.exe --path . -s res://tests/screenshot_cars.gd -- --cars=<all ids> --prefix=pdf1 --livery=1 --far --no-chase
 (windowed, with an override.cfg containing window/size/no_focus=true), then:
@@ -43,7 +43,7 @@ def livery_text(cid):
         return None
     block = src[i:src.find("\n    ),", i)]
     get = lambda key: (re.search(key + r'="([^"]*)"', block) or [None, ""])[1]
-    return "#%s %s  ·  %s  ·  %s" % (get("number"), get("sponsor"), get("banner"), STYLE.get(cid, ""))
+    return "#%s %s  ·  %s" % (get("number"), get("sponsor"), STYLE.get(cid, ""))
 
 
 PW, PH = 1240, 1754
