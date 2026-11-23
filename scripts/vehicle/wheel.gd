@@ -59,6 +59,26 @@ var surface_drag: float = 0.0
 ## True when the tyre is on the track itself (road of any surface or curbs).
 var on_road: bool = true
 
+## Tyre temperature (C) and wear (0 new .. 1 gone). Sliding heats and wears
+## the tyre; airflow cools it. Grip is best between 80 and 105 C.
+var temp: float = 50.0
+var wear: float = 0.0
+## Wear speed: 0 = tyre heat / wear off, 1 = normal, 2 = fast.
+var wear_rate: float = 1.0
+## Energy (J) the tyre has turned into heat since the race started (calibration).
+var slide_energy: float = 0.0
+const AMBIENT_C := 28.0
+const HEAT_CAPACITY := 1150.0  ## J per C
+const WEAR_PER_J := 3.6e-7
+
+## Running-gear damage. puncture: 0 = fine, > 0 = punctured and deflating
+## towards 1 (flat); toe: bent suspension, extra steer angle (radians);
+## detached: the wheel has come off.
+var punctured := false
+var deflate := 0.0
+var toe := 0.0
+var detached := false
+
 var _prev_spring_length: float = 0.30
 var _fwd: Vector3 = Vector3.FORWARD
 var _right: Vector3 = Vector3.RIGHT
@@ -111,6 +131,13 @@ func reset() -> void:
 
 ## Step 1: cast the ray and compute the spring/damper force.
 func update_suspension(dt: float) -> void:
+	if punctured:
+		deflate = minf(deflate + dt / 4.0, 1.0)
+	if detached:
+		grounded = false
+		spring_force = 0.0
+		spring_length = rest_length
+		return
 	force_raycast_update()
 	grounded = is_colliding()
 	if grounded:
@@ -127,7 +154,8 @@ func update_suspension(dt: float) -> void:
 			on_road = true
 		else:
 			on_road = surface_grip >= 0.85
-		spring_length = clampf(global_position.distance_to(contact_point) - radius, 0.0, rest_length)
+		# A flat tyre: the rim sits ~9 cm lower.
+		spring_length = clampf(global_position.distance_to(contact_point) - radius * (1.0 - 0.3 * deflate), 0.0, rest_length)
 	else:
 		spring_length = rest_length
 		contact_point = global_position - global_basis.y * (rest_length + radius)
@@ -154,7 +182,7 @@ func compression_ratio() -> float:
 
 ## Step 2: build the tyre's frame and read the ground speed at the contact.
 func prepare_tire(body_basis: Basis, contact_velocity: Vector3) -> void:
-	var b := body_basis * Basis(Vector3.UP, -steer_angle)
+	var b := body_basis * Basis(Vector3.UP, -(steer_angle + toe))
 	var n := contact_normal
 	_fwd = -b.z
 	_fwd = (_fwd - n * _fwd.dot(n)).normalized()
@@ -203,7 +231,7 @@ func substep(h: float) -> void:
 	omega += h * (drive_torque - fx * radius) / i_eff
 
 	# Brakes and rolling resistance can stop the wheel but never reverse it.
-	var resist := brake_torque + ((rolling_resistance + surface_drag) * tire_load * radius if grounded else 0.3)
+	var resist := brake_torque + ((rolling_resistance + surface_drag + 0.06 * deflate) * tire_load * radius if grounded else 0.3)
 	var dw := resist * h / i_eff
 	if absf(omega) <= dw:
 		omega = 0.0
@@ -228,18 +256,86 @@ func finish_tire(substeps: int) -> Vector3:
 	return _fwd * force_long + _right * force_lat
 
 
+## Tyre heat and wear for one physics tick (after finish_tire).
+func update_tyre(dt: float) -> void:
+	if wear_rate <= 0.0:
+		return
+	var power := 0.0
+	if grounded:
+		var slip_speed := omega * radius - v_long
+		power = absf(force_long * slip_speed) + absf(force_lat * v_lat)
+	slide_energy += power * dt
+	# Airflow cools it (faster at speed), sliding heats it.
+	var cool := 0.012 + 0.0004 * absf(v_long)
+	temp += (power / HEAT_CAPACITY - (temp - AMBIENT_C) * cool) * dt
+	temp = clampf(temp, AMBIENT_C - 5.0, 160.0)
+	var loose := 1.4 if surface_grip < 0.9 else 1.0
+	wear = minf(wear + power * WEAR_PER_J * wear_rate * loose * dt, 1.0)
+
+
+## Grip multiplier from temperature and wear (1 = warm, new tyre).
+func condition() -> float:
+	if wear_rate <= 0.0:
+		return 1.0
+	var t := 1.0
+	if temp < 80.0:
+		t = lerpf(0.88, 1.0, smoothstep(30.0, 80.0, temp))
+	elif temp > 105.0:
+		t = lerpf(1.0, 0.85, smoothstep(105.0, 140.0, temp))
+	return t * (1.0 - 0.34 * pow(wear, 1.2))
+
+
+## Fresh, warm tyres, straight suspension, wheel back on (pit stop).
+func new_tyres() -> void:
+	wear = 0.0
+	temp = 65.0
+	punctured = false
+	deflate = 0.0
+	toe = 0.0
+	detached = false
+
+
+## The wheel comes off: it bounces away as a loose body (the car keeps the
+## corner empty until a recovery or a pit stop).
+func detach(car_velocity: Vector3) -> void:
+	if detached or _visual == null:
+		return
+	detached = true
+	var loose := RigidBody3D.new()
+	loose.mass = 18.0
+	var cs := CollisionShape3D.new()
+	var cyl := CylinderShape3D.new()
+	cyl.radius = radius
+	cyl.height = width
+	cs.shape = cyl
+	cs.rotation_degrees = Vector3(0, 0, 90)
+	loose.add_child(cs)
+	var copy := _visual.duplicate() as Node3D
+	copy.visible = true
+	copy.transform = Transform3D.IDENTITY
+	loose.add_child(copy)
+	get_tree().current_scene.add_child(loose)
+	loose.global_transform = _visual.global_transform
+	var side := global_basis.x * (-1.0 if is_left else 1.0)
+	loose.linear_velocity = car_velocity * 0.8 + side * 4.0 + Vector3.UP * 3.0
+	loose.angular_velocity = global_basis.x * omega
+	loose.get_tree().create_timer(10.0).timeout.connect(loose.queue_free)
+
+
 func update_visual(dt: float) -> void:
 	spin_angle = wrapf(spin_angle + omega * dt, 0.0, TAU)
 	if _dirt:
 		_dirt.update_from(self)
 	if _visual:
+		_visual.visible = not detached
 		_visual.position = Vector3(0.0, -spring_length, 0.0)
-		_visual.basis = Basis(Vector3.UP, -steer_angle) * Basis(Vector3.RIGHT, -spin_angle)
+		var wobble := Basis(Vector3.BACK, sin(spin_angle) * absf(toe) * 1.5) if toe != 0.0 else Basis.IDENTITY
+		_visual.basis = Basis(Vector3.UP, -(steer_angle + toe)) * wobble * Basis(Vector3.RIGHT, -spin_angle)
 
 
 func _mu_load() -> float:
 	var load_factor := clampf(1.0 - load_sensitivity * (tire_load / nominal_load - 1.0), 0.5, 1.3)
-	return grip * surface_grip * tire_load * load_factor
+	return grip * surface_grip * tire_load * load_factor * condition() * (1.0 - 0.55 * deflate)
 
 
 func _build_visual() -> void:

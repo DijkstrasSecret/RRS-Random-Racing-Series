@@ -98,6 +98,13 @@ var damage_taken: float = 1.0
 ## (closer and more in line = stronger). Up to 20% less drag.
 var draft: float = 0.0
 const DRAFT_RANGE := 30.0
+## Pit lane: true while in the lane (speed limiter on), seconds of service
+## left while stopped in the box, and how many stops this race.
+var in_pit_lane := false
+var pit_service_left := 0.0
+var pit_stops := 0
+var _pit_served := false
+var _circuit_ref: Circuit
 var _head_broken := false
 var _brake_broken := false
 var _head_energy := 2.2
@@ -132,8 +139,10 @@ func _ready() -> void:
 	if body_model:
 		_attach_model()
 
+	GameSettings.ensure_loaded()
 	for w in wheels:
 		w.setup(self, config)
+		w.wear_rate = [0.0, 1.0, 2.0][clampi(GameSettings.tyre_wear, 0, 2)]
 		if w.is_front:
 			front_wheels.append(w)
 		else:
@@ -225,6 +234,7 @@ func _physics_process(delta: float) -> void:
 		input.brake = 1.0
 		input.steer = 0.0
 		input.handbrake = 1.0
+	_update_pit(delta)
 	if _handle_meta_inputs():
 		return
 	if global_position.y < FALL_RESET_Y:
@@ -304,10 +314,12 @@ func _physics_process(delta: float) -> void:
 		var tire_force := w.finish_tire(SUBSTEPS)
 		if w.grounded:
 			apply_force(tire_force, w.contact_point - global_position)
+		w.update_tyre(delta)
 		w.update_visual(delta)
 
 	_apply_aero()
 	_apply_stability()
+	_check_trip()
 	if airborne:
 		_apply_air_control()
 	# (The old painted-on body lean is off: the body moves on its springs now.)
@@ -437,6 +449,42 @@ func _apply_aero() -> void:
 	apply_force(-b.y * down * (1.0 - config.aero_balance), b * Vector3(0.0, 0.3, _rear_axle_z))
 
 
+## Pit lane: 60 km/h limiter in the lane; stop in the box zone and the crew
+## fits new tyres and fixes the damage (3 s + up to 4 s for a wreck).
+func _update_pit(delta: float) -> void:
+	if _circuit_ref == null:
+		_circuit_ref = get_tree().get_first_node_in_group("circuit") as Circuit
+	if _circuit_ref == null or _circuit_ref.pit.is_empty():
+		return
+	in_pit_lane = _circuit_ref.in_pit_lane(global_position)
+	if not in_pit_lane:
+		_pit_served = false
+		pit_service_left = 0.0
+		return
+	if pit_service_left > 0.0:
+		pit_service_left -= delta
+		input.throttle = 0.0
+		input.brake = 1.0
+		input.handbrake = 1.0
+		if pit_service_left <= 0.0:
+			for w in wheels:
+				w.new_tyres()
+			if damage:
+				damage.repair()
+			pit_stops += 1
+			_pit_served = true
+		return
+	if not _pit_served and absf(forward_speed) < 1.5 and _circuit_ref.in_pit_zone(global_position):
+		pit_service_left = 3.0 + (damage.total() * 8.0 if damage else 0.0)
+		return
+	# Speed limiter.
+	if forward_speed > Circuit.PIT_LIMIT:
+		input.throttle = 0.0
+		input.brake = maxf(input.brake, clampf((forward_speed - Circuit.PIT_LIMIT) * 0.4, 0.0, 1.0))
+	elif forward_speed > Circuit.PIT_LIMIT - 1.0:
+		input.throttle = minf(input.throttle, 0.2)
+
+
 ## How strongly this car is in another car's wake (0 = clean air).
 func _measure_draft() -> float:
 	if forward_speed < 15.0:
@@ -474,6 +522,40 @@ func _apply_stability() -> void:
 		var err := yaw_rate - desired
 		apply_torque(up * (-err * assists.stability * inertia.y * 2.5))
 		stability_active = true
+
+
+## Tripping: a car sliding sideways fast whose leading wheels dig into
+## gravel or sand, or run on a flat / missing wheel, gets rolled over that
+## side (only with damage on).
+func _check_trip() -> void:
+	if damage == null or airborne:
+		return
+	var up := global_basis.y
+	if up.y < 0.5:
+		return  # already going over: physics takes it from here
+	var v_lat := linear_velocity.dot(global_basis.x)
+	if absf(v_lat) < 10.0:
+		return
+	var lead_left := v_lat < 0.0
+	var dig := 0.0
+	for w in wheels:
+		if w.is_left != lead_left:
+			continue
+		if w.detached or w.deflate > 0.6:
+			dig = maxf(dig, 1.0)
+		elif w.grounded and w.surface_drag > 0.05:
+			dig = maxf(dig, clampf(w.surface_drag * 1.8, 0.0, 0.45))
+	if dig <= 0.0:
+		return
+	var k := clampf((absf(v_lat) - 10.0) / 8.0, 0.0, 1.0) * dig
+	# Sliding right (+x): the right side digs in and drops, the left lifts.
+	apply_torque(-global_basis.z * signf(v_lat) * inertia.z * 30.0 * k)
+
+
+## A huge side hit can start a roll-over: kick the car around its length.
+func knock_roll(push_side: float, strength: float) -> void:
+	apply_torque_impulse(-global_basis.z * push_side * inertia.z * 10.0 * strength)
+	apply_central_impulse(Vector3.UP * mass * 2.5 * strength)
 
 
 ## Small pitch/roll correction while airborne (rally jumps).
@@ -535,6 +617,7 @@ func teleport(xform: Transform3D) -> void:
 	steer_angle = 0.0
 	for w in wheels:
 		w.reset()
+		w.detached = false  # a recovery puts a lost wheel back on
 	drivetrain.reset()
 	reset_physics_interpolation()
 

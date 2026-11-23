@@ -69,6 +69,15 @@ var _samples: Array[Dictionary] = []
 var _materials: Dictionary = {}
 var _bounds := Rect2()
 var _surface_grid: Dictionary = {}  ## Vector2i cell -> sample indices
+## Pit lane (F1 circuits): lap distances relative to the start line where it
+## leaves and rejoins (from < 0 < to), the side (+1 right / -1 left), the
+## service zone. Empty = no pits.
+var pit: Dictionary = {}
+const PIT_OFFSET := 16.0   ## lane centre, metres from the track centre
+const PIT_HALF := 4.5      ## half the lane width
+const PIT_RAMP := 70.0     ## entry / exit length
+const PIT_LIMIT := 16.7    ## 60 km/h
+const PIT_ZONE := 36.0     ## length of the service zone
 var _track_id := ""  ## set when built from the track list (use_selected_track)
 
 
@@ -96,8 +105,10 @@ func _ready() -> void:
 	_build_ground()
 	_build_road()
 	_build_curbs()
+	_plan_pit_lane()
 	_build_verge()
 	_build_causeway()
+	_build_pit_lane()
 	_build_start_line()
 	_build_brake_boards()
 	var dressing := TrackDressing.new()
@@ -565,6 +576,9 @@ func _build_verge() -> void:
 					var q: Vector3 = _samples[owner].pos
 					if Vector2(q.x - p.x, q.z - p.z).length() < half + out - 1.5:
 						y -= 3.0
+				# Under the pit apron: tuck it away.
+				if not pit.is_empty() and side == float(pit.side) and absf(pit_lateral(float(smp.off))) > 0.5:
+					y -= 3.0
 				pts.append(Vector3(p.x, y, p.z))
 			per_side.append(pts)
 		rows.append(per_side)
@@ -592,6 +606,223 @@ func _build_verge() -> void:
 	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
 	mesh.surface_set_material(0, mat)
 	_add_static_mesh("Verge", mesh, 0.55, 0.05)
+
+
+# --- Pit lane ------------------------------------------------------------------------
+
+## Finds the straight through the start line and fits the pit lane on it.
+func _plan_pit_lane() -> void:
+	if _track_id == "" or String(TrackList.get_track(_track_id).get("series", "")) != "F1":
+		return
+	var limit := 1.0 / 100.0
+	var back := 0.0
+	while back < 600.0 and absf(curvature_at(length - back - 10.0)) < limit:
+		back += 5.0
+	var fwd := 0.0
+	while fwd < 400.0 and absf(curvature_at(fwd + 10.0)) < limit:
+		fwd += 5.0
+	var from := -back + 10.0
+	var to := fwd - 5.0
+	# Ramps as long as the straight allows (45..70 m).
+	var ramp := clampf((to - from - PIT_ZONE - 24.0) * 0.5, 0.0, PIT_RAMP)
+	if ramp < 45.0:
+		return  # straight too short for a pit lane
+	var zone_mid := (from + ramp + to - ramp) * 0.5
+	pit = {"from": from, "to": to, "ramp": ramp, "side": 1.0 if infield_side() == 1 else -1.0,
+		"zone_from": zone_mid - PIT_ZONE * 0.5, "zone_to": zone_mid + PIT_ZONE * 0.5}
+
+
+## Lap distance relative to the start line (-length/2 .. length/2).
+func _rel(off: float) -> float:
+	var o := fposmod(off, length)
+	return o - length if o > length * 0.5 else o
+
+
+## Signed lateral position of the pit lane centre at lap distance `off`
+## (+ = right of the centre line); 0 where there is no lane.
+func pit_lateral(off: float) -> float:
+	if pit.is_empty():
+		return 0.0
+	var r := _rel(off)
+	if r <= float(pit.from) or r >= float(pit.to):
+		return 0.0
+	var ramp := float(pit.ramp)
+	var k := smoothstep(float(pit.from), float(pit.from) + ramp, r) * smoothstep(float(pit.to), float(pit.to) - ramp, r)
+	return k * PIT_OFFSET * float(pit.side)
+
+
+## Signed sideways offset of a world position from the centre line (+ = right).
+func lateral_of(world_pos: Vector3) -> float:
+	var local := to_local(world_pos)
+	var off := curve.get_closest_offset(local)
+	var c := _at(off)
+	var tangent := (_at(off + 1.0) - _at(off - 1.0)).normalized()
+	return (local - c).dot(tangent.cross(Vector3.UP).normalized())
+
+
+## True if the position is in the pit lane (off the track, on the lane).
+func in_pit_lane(world_pos: Vector3) -> bool:
+	if pit.is_empty():
+		return false
+	var off := progress_at(world_pos)
+	var lat := pit_lateral(off)
+	if absf(lat) < road_width * 0.5 + 2.0:
+		return false
+	return absf(lateral_of(world_pos) - lat) < PIT_HALF + 1.0
+
+
+## True if the position is in the service zone (pit boxes).
+func in_pit_zone(world_pos: Vector3) -> bool:
+	if not in_pit_lane(world_pos):
+		return false
+	var r := _rel(progress_at(world_pos))
+	return r >= float(pit.zone_from) and r <= float(pit.zone_to)
+
+
+## Lap distance of the middle of the service zone.
+func pit_zone_mid() -> float:
+	return fposmod((float(pit.zone_from) + float(pit.zone_to)) * 0.5, length)
+
+
+func _right_at_local(off: float) -> Vector3:
+	return (_at(off + 1.0) - _at(off - 1.0)).normalized().cross(Vector3.UP).normalized()
+
+
+## Ground spots the terrain must keep below the pit apron: [world x, z, max y].
+func pit_ground_spots() -> Array[Vector3]:
+	var out: Array[Vector3] = []
+	if pit.is_empty():
+		return out
+	var r := float(pit.from)
+	while r <= float(pit.to):
+		var lat := absf(pit_lateral(r))
+		if lat > 1.0:
+			var c := _at(fposmod(r, length))
+			var right := _right_at_local(r) * float(pit.side)
+			var lo := road_width * 0.5
+			while lo <= lat + PIT_HALF + 6.0:
+				var g := to_global(c + right * lo)
+				out.append(Vector3(g.x, g.z, to_global(c).y + ROAD_Y - 0.06))
+				lo += 3.0
+		r += 3.0
+	return out
+
+
+## Concrete apron, the lane itself, the pit wall, boxes and the 60 boards.
+func _build_pit_lane() -> void:
+	if pit.is_empty():
+		return
+	var apron := SurfaceTool.new()
+	apron.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var lane := SurfaceTool.new()
+	lane.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var wall := SurfaceTool.new()
+	wall.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var half := road_width * 0.5
+	var side := float(pit.side)
+	var step := 3.0
+	var r := float(pit.from)
+	var wall_body := StaticBody3D.new()
+	wall_body.name = "PitWall"
+	wall_body.collision_layer = LAYER_WORLD
+	wall_body.collision_mask = 0
+	var any_wall := false
+	while r < float(pit.to):
+		var r2 := minf(r + step, float(pit.to))
+		var la := absf(pit_lateral(r))
+		var lb := absf(pit_lateral(r2))
+		var ca := _at(fposmod(r, length))
+		var cb := _at(fposmod(r2, length))
+		var ra := _right_at_local(r) * side
+		var rb := _right_at_local(r2) * side
+		var y := Vector3.UP * (ROAD_Y + 0.005)
+		if la > 1.0 or lb > 1.0:
+			# Apron: from the road edge out past the lane.
+			_side_quad(apron, ca + ra * half + y, ca + ra * (la + PIT_HALF + 6.0) + y,
+					cb + rb * half + y, cb + rb * (lb + PIT_HALF + 6.0) + y, side)
+		# The lane strip (with its painted edges) never reaches onto the track:
+		# where it splits off / rejoins, its inner edge is the road's edge.
+		if la + PIT_HALF > half + 1.0 and lb + PIT_HALF > half + 1.0:
+			var up := Vector3.UP * 0.012
+			_side_quad(lane, ca + ra * maxf(la - PIT_HALF, half) + y + up, ca + ra * (la + PIT_HALF) + y + up,
+					cb + rb * maxf(lb - PIT_HALF, half) + y + up, cb + rb * (lb + PIT_HALF) + y + up, side)
+		# Pit wall between the track and the lane, where the lane is clear of the road.
+		if la > half + PIT_HALF + 2.5 and lb > half + PIT_HALF + 2.5:
+			var wa := ca + ra * (half + 2.4)
+			var wb := cb + rb * (half + 2.4)
+			var mid := (wa + wb) * 0.5 + Vector3.UP * (ROAD_Y + 0.5)
+			var along := wb - wa
+			var col := Color(0.92, 0.92, 0.9) if int(r / 6.0) % 2 == 0 else Color(0.85, 0.15, 0.12)
+			_box(wall, mid, ra * 0.25, Vector3.UP * 0.5, along * 0.5, col)
+			var cs := CollisionShape3D.new()
+			var bs := BoxShape3D.new()
+			bs.size = Vector3(0.5, 1.0, along.length())
+			cs.shape = bs
+			cs.transform = Transform3D(Basis.looking_at(along.normalized(), Vector3.UP), mid)
+			wall_body.add_child(cs)
+			any_wall = true
+		r = r2
+	var apron_mesh := apron.commit()
+	var amat := StandardMaterial3D.new()
+	amat.albedo_color = Color(0.58, 0.58, 0.6)
+	amat.roughness = 1.0
+	amat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	apron_mesh.surface_set_material(0, amat)
+	_add_static_mesh("Road_pit_apron", apron_mesh, 0.95, 0.0)
+	var lane_mesh := lane.commit()
+	var lmat := StandardMaterial3D.new()
+	lmat.albedo_texture = _road_texture()
+	lmat.albedo_color = Color(0.85, 0.85, 0.9)
+	lmat.roughness = 0.9
+	lmat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	lane_mesh.surface_set_material(0, lmat)
+	_add_static_mesh("Road_pit_lane", lane_mesh, 1.0, 0.0)
+	# Pit boxes painted along the service zone (team colours).
+	var boxes := SurfaceTool.new()
+	boxes.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var colors := [Color(0.9, 0.1, 0.1), Color(0.1, 0.35, 0.9), Color(0.95, 0.75, 0.1), Color(0.1, 0.65, 0.3)]
+	var k := 0
+	var z := float(pit.zone_from)
+	while z < float(pit.zone_to) - 4.0:
+		var c := _at(fposmod(z + 3.0, length))
+		var rr := _right_at_local(z + 3.0) * side
+		var lat := absf(pit_lateral(z + 3.0))
+		var fw := (_at(z + 4.0) - _at(z + 2.0)).normalized()
+		_box(boxes, c + rr * (lat + PIT_HALF * 0.55) + Vector3.UP * (ROAD_Y + 0.025), rr * 1.6, Vector3.UP * 0.005, fw * 2.6, colors[k % colors.size()])
+		k += 1
+		z += 6.0
+	boxes.generate_normals()
+	var box_mesh := boxes.commit()
+	var bmat := StandardMaterial3D.new()
+	bmat.vertex_color_use_as_albedo = true
+	box_mesh.surface_set_material(0, bmat)
+	var bmi := MeshInstance3D.new()
+	bmi.name = "PitBoxes"
+	bmi.mesh = box_mesh
+	add_child(bmi)
+	if any_wall:
+		wall.generate_normals()
+		var wall_mesh := wall.commit()
+		var wmat := StandardMaterial3D.new()
+		wmat.vertex_color_use_as_albedo = true
+		wall_mesh.surface_set_material(0, wmat)
+		var wmi := MeshInstance3D.new()
+		wmi.mesh = wall_mesh
+		wall_body.add_child(wmi)
+	add_child(wall_body)
+	# 60 km/h board at the lane entry, outside the lane once it's clear of the track.
+	var e := float(pit.from) + float(pit.ramp)
+	var ce := _at(fposmod(e, length))
+	var spot := ce + _right_at_local(e) * side * (absf(pit_lateral(e)) + PIT_HALF + 1.5)
+	_brake_board(to_global(spot), direction_at(e), "60")
+
+
+## A flat quad from inner / outer edge points at two stations (either side).
+func _side_quad(st: SurfaceTool, a_in: Vector3, a_out: Vector3, b_in: Vector3, b_out: Vector3, side: float) -> void:
+	if side > 0.0:
+		_quad(st, a_in, a_out, b_out, b_in, Vector2.ZERO, Vector2(1, 0), Vector2(1, 1), Vector2(0, 1))
+	else:
+		_quad(st, a_out, a_in, b_in, b_out, Vector2.ZERO, Vector2(1, 0), Vector2(1, 1), Vector2(0, 1))
 
 
 ## Wooden posts and side beams under the causeway, down into the water.
@@ -742,8 +973,12 @@ func _build_brake_boards() -> void:
 			var pos := _at(off)
 			var tangent := (_at(off + 1.0) - _at(off - 1.0)).normalized()
 			var right := tangent.cross(Vector3.UP).normalized()
-			var spot := pos + right * outside * (road_width * 0.5 + 3.5)
-			_brake_board(spot, tangent, str(dist))
+			var lat := road_width * 0.5 + 3.5
+			# On the pit side, stand behind the pit lane, not between it and the track.
+			var pit_lat := pit_lateral(off)
+			if absf(pit_lat) > 0.5 and signf(pit_lat) == outside:
+				lat = absf(pit_lat) + PIT_HALF + 3.0
+			_brake_board(pos + right * outside * lat, tangent, str(dist))
 		# Skip past this corner.
 		while k < n and absf(_samples[k].curv) > calm:
 			k += 1

@@ -192,6 +192,10 @@ func _plan_runoff() -> void:
 			smooth[i] = half + total / 21.0
 			if s[i].bridge:
 				smooth[i] = half + 0.15  # railings on the causeway's edge beams
+			# Pit lane side: the barrier goes behind the lane and its apron.
+			var pit_lat := absf(circuit.pit_lateral(float(s[i].off)))
+			if pit_lat > 0.5 and float(side * 2 - 1) == float(circuit.pit.get("side", 0.0)):
+				smooth[i] = maxf(smooth[i], pit_lat + Circuit.PIT_HALF + 7.0)
 		_barrier_dist.append(smooth)
 		_outside_corner.append(out_w)
 
@@ -336,6 +340,8 @@ func _build_gravel() -> void:
 			var dj := _barrier_dist[side][j]
 			if _outside_corner[side][i] < 0.45 or di - half < 13.0 or s[i].bridge or s[j].bridge:
 				continue
+			if absf(circuit.pit_lateral(float(s[i].off))) > 0.5 and float(side * 2 - 1) == float(circuit.pit.get("side", 0.0)):
+				continue  # pit apron there
 			var inner := half + circuit.curb_width + 2.5
 			if not _clear_of_track(circuit.to_global(s[i].pos + s[i].right * sign_ * (di - 1.5)), di - 1.5):
 				continue

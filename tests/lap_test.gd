@@ -91,6 +91,10 @@ func _physics_process(delta: float) -> void:
 		print("  max distance from line %.1f m (road half-width %.1f)" % [_max_centre, _circuit.road_width * 0.5])
 		print("  stayed upright        %s (min up %.2f)" % [str(_min_up > 0.5), _min_up])
 		print("  AI resets             %d" % _ai.resets)
+		var tyres := PackedStringArray()
+		for w in _car.wheels:
+			tyres.append("%s %.0fC wear %.0f%% (%.1f MJ)" % [w.name.trim_prefix("Wheel"), w.temp, w.wear * 100.0, w.slide_energy / 1e6])
+		print("  tyres                 " + ", ".join(tyres))
 		print("  big speed losses      %s" % (", ".join(_hits) if _hits.size() > 0 else "none"))
 		print("lap_test done, %.1f s sim time" % _t)
 		set_physics_process(false)

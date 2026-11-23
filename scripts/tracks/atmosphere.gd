@@ -47,6 +47,19 @@ var sun: DirectionalLight3D
 
 var _cloud_threshold := 0.3
 
+## CLEAR weather borrows this share of HAZY's air (colour in the sky, depth
+## in the distance) so a clear day isn't flat; sun, shadows and clouds stay
+## clear. Static so tests can compare settings.
+static var clear_haze := 0.5
+
+
+## Per-weather value [clear, hazy, fog]; clear leans `clear_haze` of the way
+## towards hazy.
+func _air(v: Array) -> float:
+	if weather == Weather.CLEAR:
+		return lerpf(float(v[0]), float(v[1]), clear_haze)
+	return float(v[weather])
+
 
 ## `main_dir` is the direction of the main straight (x, z); `centre` the
 ## middle of the circuit.
@@ -76,12 +89,14 @@ func _build_environment(t: Dictionary, horizon: Color) -> void:
 		top = top.lerp(horizon, 0.6)
 	elif weather == Weather.HAZY:
 		top = top.lerp(horizon, 0.25)
+	else:
+		top = top.lerp(horizon, 0.25 * clear_haze)
 	sky_mat.set_shader_parameter("top_color", top)
 	sky_mat.set_shader_parameter("horizon_color", horizon)
 	sky_mat.set_shader_parameter("ground_color", t.ground)
 	sky_mat.set_shader_parameter("sun_dir", sun_dir)
 	sky_mat.set_shader_parameter("sun_color", t.sun)
-	sky_mat.set_shader_parameter("sun_glow", [0.7, 0.9, 0.5][weather])
+	sky_mat.set_shader_parameter("sun_glow", _air([0.7, 0.9, 0.5]))
 	sky_mat.set_shader_parameter("sun_size", 0.0008 if time_of_day == DayTime.NIGHT else 0.0012)
 	sky_mat.set_shader_parameter("moon", 1.0 if time_of_day == DayTime.NIGHT else 0.0)
 	sky_mat.set_shader_parameter("stars", 0.9 if time_of_day == DayTime.NIGHT and weather != Weather.FOG else 0.0)
@@ -107,8 +122,8 @@ func _build_environment(t: Dictionary, horizon: Color) -> void:
 	environment.tonemap_mode = Environment.TONE_MAPPER_FILMIC
 	environment.fog_enabled = true
 	environment.fog_light_color = horizon
-	environment.fog_density = [0.0005, 0.0018, 0.009][weather]
-	environment.fog_sky_affect = [0.0, 0.35, 1.0][weather]
+	environment.fog_density = _air([0.0005, 0.0018, 0.009])
+	environment.fog_sky_affect = _air([0.0, 0.35, 1.0])
 	environment.fog_sun_scatter = 0.12 if time_of_day == DayTime.SUNSET else 0.05
 	# Soft bloom so headlights, brake lights and the sun glow.
 	environment.glow_enabled = true
@@ -214,7 +229,7 @@ func _build_screen_fx(t: Dictionary) -> void:
 	mat.set_shader_parameter("cloud_threshold", _cloud_threshold)
 	mat.set_shader_parameter("wind", WIND)
 	mat.set_shader_parameter("field_size", FIELD_SIZE)
-	mat.set_shader_parameter("ray_strength", t.rays * [1.0, 1.3, 0.35][weather])
+	mat.set_shader_parameter("ray_strength", t.rays * _air([1.0, 1.3, 0.35]))
 	mat.set_shader_parameter("flare_strength", t.flare * [1.0, 0.6, 0.0][weather])
 	mat.set_shader_parameter("glare_strength", t.flare * 0.5 * [1.0, 0.8, 0.2][weather])
 	quad.material = mat

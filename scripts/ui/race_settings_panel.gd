@@ -33,6 +33,8 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.weather = i)
 	_add_row("DAMAGE", GameSettings.DAMAGE_NAMES, GameSettings.damage,
 			func(i: int) -> void: GameSettings.damage = i)
+	_add_row("TYRE WEAR", GameSettings.TYRE_WEAR_NAMES, GameSettings.tyre_wear,
+			func(i: int) -> void: GameSettings.tyre_wear = i)
 	_add_row("AI DIFFICULTY", GameSettings.DIFFICULTY_NAMES, GameSettings.ai_difficulty,
 			func(i: int) -> void: GameSettings.ai_difficulty = i)
 	var tiers := TierToggleRow.create("AI CAR CLASSES", GameSettings.ai_tiers)

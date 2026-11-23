@@ -63,6 +63,8 @@ func _draw() -> void:
 	_draw_dial(Vector2(s.x - r - 36.0 * k, s.y - r - 30.0 * k), r, k)
 	if _vehicle.damage:
 		_draw_damage(Vector2(s.x - r * 2.0 - 96.0 * k, s.y - 150.0 * k), k)
+	if _vehicle.wheels.size() == 4 and _vehicle.wheels[0].wear_rate > 0.0:
+		_draw_tyres(Vector2(s.x - r * 2.0 - 176.0 * k, s.y - 150.0 * k), k)
 	_draw_top(k)
 	if _circuit:
 		var m := 200.0 * k
@@ -76,6 +78,10 @@ func _draw() -> void:
 		_label(Vector2(dx + 200.0 * k, s.y - r * 2.0 - 92.0 * k), "SLIPSTREAM", int(16 * k), Color(0.5, 0.9, 1.0, 0.5 + 0.5 * _vehicle.draft))
 	if Tournament.active:
 		_draw_tournament(k)
+	if _vehicle.pit_service_left > 0.0:
+		_label(Vector2(s.x * 0.5, s.y * 0.2), "PIT STOP  %.1f" % _vehicle.pit_service_left, int(34 * k), GOOD, true)
+	elif _vehicle.in_pit_lane:
+		_label(Vector2(s.x * 0.5, s.y * 0.2), "PIT LIMITER 60", int(28 * k), Color(1.0, 0.8, 0.2), true)
 	if _vehicle.off_track and fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4:
 		_label(Vector2(s.x * 0.5, s.y * 0.2), "OFF TRACK", int(34 * k), HOT, true)
 
@@ -321,6 +327,46 @@ func _draw_dial(c: Vector2, r: float, k: float) -> void:
 	for flag: Array in [["TC", _vehicle.tc_active], ["ABS", _vehicle.abs_active], ["ESC", _vehicle.stability_active]]:
 		_label(Vector2(x, c.y - r - 12.0 * k), flag[0], int(17 * k), HOT if flag[1] else Color(1, 1, 1, 0.22))
 		x += 46.0 * k
+
+
+## Four tyres (top = front): colour = temperature (blue cold, green ideal,
+## orange / red hot), the dark part = worn away, % = tread left.
+func _draw_tyres(o: Vector2, k: float) -> void:
+	var tw := 22.0 * k
+	var th := 38.0 * k
+	draw_rect(Rect2(o - Vector2(6, 6) * k, Vector2(tw * 2.0 + 30.0 * k, th * 2.0 + 40.0 * k)), PANEL)
+	var order := {"FL": Vector2(0, 0), "FR": Vector2(1, 0), "RL": Vector2(0, 1), "RR": Vector2(1, 1)}
+	for w in _vehicle.wheels:
+		var key := String(w.name).trim_prefix("Wheel")
+		if not order.has(key):
+			continue
+		var cell: Vector2 = order[key]
+		var p := o + Vector2(cell.x * (tw + 18.0 * k), cell.y * (th + 22.0 * k))
+		var col := Color(0.35, 0.55, 1.0)
+		if w.temp >= 105.0:
+			col = Color(1.0, 0.55, 0.15).lerp(HOT, clampf((w.temp - 105.0) / 25.0, 0.0, 1.0))
+		elif w.temp >= 75.0:
+			col = GOOD
+		elif w.temp >= 55.0:
+			col = Color(0.35, 0.55, 1.0).lerp(GOOD, (w.temp - 55.0) / 20.0)
+		draw_rect(Rect2(p, Vector2(tw, th)), col)
+		draw_rect(Rect2(p, Vector2(tw, th * w.wear)), Color(0.05, 0.05, 0.07, 0.8))
+		draw_rect(Rect2(p, Vector2(tw, th)), Color(1, 1, 1, 0.5), false, 1.5 * k)
+		# Running gear: a lost wheel is an empty outline, a flat one red, a bent one yellow.
+		var note := "%d" % roundi((1.0 - w.wear) * 100.0)
+		var note_col := TEXT
+		if w.detached:
+			draw_rect(Rect2(p, Vector2(tw, th)), Color(0.05, 0.05, 0.07, 1.0))
+			draw_rect(Rect2(p, Vector2(tw, th)), HOT, false, 2.0 * k)
+			note = "OFF"
+			note_col = HOT
+		elif w.punctured:
+			note = "FLAT"
+			note_col = HOT
+		elif absf(w.toe) > 0.02:
+			note = "BENT"
+			note_col = Color(1.0, 0.8, 0.2)
+		_label(p + Vector2(tw * 0.5, th + 15.0 * k), note, int(13 * k), note_col, true, 3)
 
 
 ## Small top-down car (nose up): each area turns yellow, then red, as it

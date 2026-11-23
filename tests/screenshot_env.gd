@@ -27,6 +27,12 @@ func _run() -> void:
 	if "--quick" in OS.get_cmdline_user_args():
 		list = SHOTS.slice(0, 1)
 	for arg in OS.get_cmdline_user_args():
+		if arg.begins_with("--haze-compare="):  # clear noon/morning at several haze amounts
+			list = []
+			for id in arg.get_slice("=", 1).split(","):
+				for h in [0.0, 0.25, 0.5]:
+					list.append([id, 1, 0, [4.0, 14.0], h])
+					list.append([id, 0, 0, [14.0], h])
 		if arg.begins_with("--tracks="):  # noon, clear, two shots per track
 			list = []
 			for id in arg.get_slice("=", 1).split(","):
@@ -35,6 +41,7 @@ func _run() -> void:
 		GameSettings.track = shot[0]
 		GameSettings.time_of_day = shot[1]
 		GameSettings.weather = shot[2]
+		TrackAtmosphere.clear_haze = shot[4] if shot.size() > 4 else 0.5
 		GameSettings.p1_car = "braxton"
 		var scene := (load("res://scenes/modes/circuit_practice.tscn") as PackedScene).instantiate()
 		var car := scene.get_node("Vehicle") as Vehicle
@@ -51,8 +58,9 @@ func _run() -> void:
 			while (Time.get_ticks_msec() - start) / 1000.0 < at:
 				await process_frame
 			await RenderingServer.frame_post_draw
-			var file := "%s/env_%s_%s_%s_%d.png" % [OUT, shot[0], GameSettings.TIME_NAMES[shot[1]].to_lower(),
-					GameSettings.WEATHER_NAMES[shot[2]].to_lower(), roundi(at)]
+			var file := "%s/env_%s_%s_%s_%d%s.png" % [OUT, shot[0], GameSettings.TIME_NAMES[shot[1]].to_lower(),
+					GameSettings.WEATHER_NAMES[shot[2]].to_lower(), roundi(at),
+					("_haze%d" % roundi(shot[4] * 100.0)) if shot.size() > 4 else ""]
 			root.get_texture().get_image().save_png(file)
 			print("saved ", file)
 		scene.queue_free()

@@ -12,6 +12,7 @@ extends Node3D
 ## car into car at 40 km/h ~4 kNs.
 
 signal damaged(zone: int, amount: float)
+signal repaired
 
 enum Zone { FRONT, REAR, LEFT, RIGHT, ROOF }
 const ZONE_NAMES: PackedStringArray = ["FRONT", "REAR", "LEFT", "RIGHT", "ROOF"]
@@ -43,6 +44,60 @@ func setup(car: Vehicle, damage_level: int) -> void:
 	_prepare_meshes()
 	_measure_body()
 	_make_particles()
+
+
+## A hard hit near a wheel can puncture its tyre, bend its suspension or,
+## when it's huge, knock the wheel off.
+func _hurt_running_gear(local_pos: Vector3, amount: float) -> void:
+	var nearest: Wheel = null
+	var best := 1.3
+	for w in _car.wheels:
+		var d := Vector2(w.position.x - local_pos.x, w.position.z - local_pos.z).length()
+		if d < best:
+			best = d
+			nearest = w
+	if nearest == null or nearest.detached:
+		return
+	var rng := randf()
+	if amount >= 0.5 and rng < 0.4:
+		nearest.detach(_car.linear_velocity)
+		return
+	if amount >= 0.22 and randf() < 0.5:
+		nearest.toe = clampf(nearest.toe + (randf_range(0.03, 0.07) * (1.0 if randf() < 0.5 else -1.0)), -0.12, 0.12)
+	if amount >= 0.16 and randf() < 0.2 + amount:
+		nearest.punctured = true
+
+
+## Sparks from a flat tyre's rim or a missing wheel's hub scraping the road.
+func _rim_sparks() -> Vector3:
+	for w in _car.wheels:
+		if (w.detached or w.deflate > 0.9) and absf(_car.forward_speed) > 5.0:
+			return w.global_position - _car.global_basis.y * (w.rest_length + w.radius * 0.5)
+	return Vector3.INF
+
+
+## Pit stop: straightens the body, new paint, lamps and handling back to normal.
+func repair() -> void:
+	zones.fill(0.0)
+	_recent.fill(0.0)
+	for entry in _meshes:
+		# (Packed arrays are copies: write each one back.)
+		for k in (entry.offsets as Array).size():
+			var off: PackedVector3Array = entry.offsets[k]
+			off.fill(Vector3.ZERO)
+			entry.offsets[k] = off
+			var tint: PackedFloat32Array = entry.tints[k]
+			tint.fill(1.0)
+			entry.tints[k] = tint
+			var bend: PackedVector3Array = entry.bends[k]
+			bend.fill(Vector3.ZERO)
+			entry.bends[k] = bend
+		_rebuild(entry)
+	_apply_effects()
+	_car.power_scale = 1.0
+	_car.drag_scale = 1.0
+	_car.steer_pull = 0.0
+	repaired.emit()
 
 
 ## 0..1 overall (for the HUD and tests).
@@ -88,6 +143,10 @@ func _physics_process(delta: float) -> void:
 		sum_imp += impulse
 		sum_pos += pos * impulse
 		sum_dir += imp_vec
+	var rim := _rim_sparks()
+	if rim != Vector3.INF:
+		scrape = true
+		scrape_pos = rim
 	_sparks.emitting = scrape
 	if scrape:
 		_sparks.global_position = scrape_pos
@@ -110,6 +169,12 @@ func _hit(local_pos: Vector3, dv: float, push: Vector3 = Vector3.ZERO) -> void:
 	_cooldown[zone] = 0.35
 	zones[zone] = minf(zones[zone] + extra, 1.0)
 	_dent(local_pos, extra, zone)
+	if level >= 2:
+		_hurt_running_gear(local_pos, amount)
+		# Super hard side hit: it may go over.
+		if extra > 0.35 and (zone == Zone.LEFT or zone == Zone.RIGHT) and randf() < 0.6:
+			var side := signf(push.x) if absf(push.x) > 0.001 else (1.0 if zone == Zone.LEFT else -1.0)
+			_car.knock_roll(side, clampf(extra / 0.5, 0.5, 1.0))
 	if extra > 0.12:
 		_debris.global_position = _car.global_transform * local_pos
 		_debris.restart()

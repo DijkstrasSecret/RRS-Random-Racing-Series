@@ -38,6 +38,7 @@ var _corner_scale: float = 1.0
 func poll(delta: float) -> void:
 	if _circuit == null and not _setup():
 		return
+	_check_tyres(delta)
 	var v := _vehicle.forward_speed
 	var pos := _vehicle.global_position
 	var off := _circuit.progress_at(pos)
@@ -49,10 +50,15 @@ func poll(delta: float) -> void:
 	var traffic := _read_traffic(v)
 	var lane_target := clampf(line + lane_bias + traffic.x, -road_half, road_half)
 	lane = move_toward(lane, lane_target, 3.5 * delta)
+	_think_pits(off)
 
 	# --- Steering: pure pursuit to a point ahead on that line.
 	var look := lookahead_base + maxf(v, 0.0) * lookahead_per_mps
-	var target_point := _circuit.point_at(off + look) + _circuit.right_at(off + look) * lane
+	var aim_lane := lane
+	if _pitting:
+		aim_lane = _circuit.pit_lateral(off + look) if absf(_circuit.pit_lateral(off + look)) > 0.1 else lane
+		lane = aim_lane
+	var target_point := _circuit.point_at(off + look) + _circuit.right_at(off + look) * aim_lane
 	var local := _vehicle.to_local(target_point)
 	var dist_sq := maxf(local.x * local.x + local.z * local.z, 1.0)
 	var arc_curvature := 2.0 * local.x / dist_sq  # + = target to the right
@@ -61,6 +67,8 @@ func poll(delta: float) -> void:
 
 	# --- Speed: follow the plan, respect traffic, back off when sliding.
 	target_speed = minf(_circuit.profile_speed(_profile, off + maxf(v, 0.0) * 0.3), traffic.y)
+	if _pitting:
+		target_speed = minf(target_speed, _pit_speed(off))
 	var slip := absf(atan2(_vehicle.lateral_speed, maxf(absf(v), 0.5)))
 	if v > 8.0 and slip > deg_to_rad(7.0):
 		target_speed = minf(target_speed, v - 2.0)
@@ -73,17 +81,23 @@ func poll(delta: float) -> void:
 	# Running wide toward the edge: ease off before it reaches the grass.
 	if from_centre > _circuit.road_width * 0.45:
 		target_speed = minf(target_speed, maxf(v - 1.5, 14.0))
-	var off_line := from_centre > _circuit.road_width * 0.75
+	var off_line := from_centre > _circuit.road_width * 0.75 and not _pitting and not _vehicle.in_pit_lane
 	if off_line:
 		target_speed = minf(target_speed, 14.0)
 	var track_dir := _circuit.direction_at(off)
 	var wrong_way := (-_vehicle.global_basis.z).dot(track_dir) < -0.2
-	var stuck := absf(v) < 1.0 and not _vehicle.controls_locked
+	# (Standing in the pit box being serviced is not stuck.)
+	var stuck := absf(v) < 1.0 and not _vehicle.controls_locked and _vehicle.pit_service_left <= 0.0 and not (_pitting and _vehicle.in_pit_lane)
 	_lost_time = _lost_time + delta if (off_line or wrong_way or stuck) else 0.0
 	if _lost_time > reset_after:
 		if OS.get_cmdline_user_args().has("--log-resets"):
 			print("    reset %s at %.0f m (%s%s%s)" % [_vehicle.name, off, "off line " if off_line else "",
 				"wrong way " if wrong_way else "", "stuck" if stuck else ""])
+		if OS.get_cmdline_user_args().has("--log-resets"):
+			var gear := ""
+			for w in _vehicle.wheels:
+				gear += "%s%s%s " % ["F" if w.punctured else "", "B" if absf(w.toe) > 0.02 else "", "X" if w.detached else ""]
+			print("      gear [%s] pit_lane %s service %.1f" % [gear, _vehicle.in_pit_lane, _vehicle.pit_service_left])
 		_reset_onto_track(off, track_dir)
 		return
 
@@ -118,9 +132,81 @@ func _setup() -> bool:
 func _build_profile() -> void:
 	# Heavy cars lose grip under load (tyre load sensitivity): plan for it.
 	var heavy := clampf(1.0 - (_vehicle.config.mass - 1300.0) / 9000.0, 0.85, 1.05)
-	var grip := _vehicle.config.tire_grip * heavy * 9.81
+	_tyre_condition = _mean_tyre_condition()
+	var grip := _vehicle.config.tire_grip * heavy * 9.81 * _tyre_condition
 	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill) * _corner_scale,
 			grip * lerpf(0.42, 0.58, skill), 95.0)
+
+
+var _tyre_condition := 1.0
+var _pitting := false
+
+
+## Decides when to pit (worn tyres or heavy damage, at least 2 laps to go)
+## and when the stop is over.
+func _think_pits(off: float) -> void:
+	if _circuit.pit.is_empty():
+		return
+	if _pitting:
+		# Done once served and back out on the track.
+		if _vehicle.pit_stops > _stops_at_entry and absf(_circuit.pit_lateral(off)) < 0.5:
+			_pitting = false
+		return
+	var race := get_tree().get_first_node_in_group("race_director") as RaceDirector
+	if race == null or race.state != RaceDirector.State.RACING:
+		return
+	var me := race.index_of(_vehicle)
+	if me < 0 or race.laps - race.completed_laps(me) < 2 or _vehicle.pit_stops >= 3:
+		return
+	var worn := _mean_tyre_condition() < 0.86
+	var broken := _vehicle.damage != null and _vehicle.damage.total() > 0.35
+	for w in _vehicle.wheels:
+		if w.punctured or w.detached or absf(w.toe) > 0.04:
+			broken = true
+	if not (worn or broken):
+		return
+	# Commit when the pit entry is coming up.
+	var to_entry := fposmod(float(_circuit.pit.from) - off, _circuit.length)
+	if to_entry > 40.0 and to_entry < 500.0:
+		_pitting = true
+		_stops_at_entry = _vehicle.pit_stops
+
+
+var _stops_at_entry := 0
+
+
+## Speed plan in the pit lane: the limit, then a stop in the box zone.
+func _pit_speed(off: float) -> float:
+	if absf(_circuit.pit_lateral(off)) < 2.0 and _circuit._rel(off) < float(_circuit.pit.from) + 10.0:
+		return 999.0  # not in the lane yet
+	var limit := Circuit.PIT_LIMIT - 0.6
+	if _vehicle.pit_stops > _stops_at_entry or _vehicle.pit_service_left > 0.0:
+		return limit if _vehicle.pit_service_left <= 0.0 else 0.0
+	var to_box := _circuit._rel(_circuit.pit_zone_mid()) - _circuit._rel(off)
+	if to_box < 0.5:
+		return 0.0
+	return minf(limit, sqrt(2.0 * 3.5 * maxf(to_box - 1.0, 0.0)))
+var _tyre_check := 0.0
+
+
+## Average grip of the four tyres (heat and wear), 1 = fresh and warm.
+func _mean_tyre_condition() -> float:
+	if _vehicle == null or _vehicle.wheels.is_empty():
+		return 1.0
+	var c := 0.0
+	for w in _vehicle.wheels:
+		c += 0.3 if w.detached else w.condition() * (1.0 - 0.55 * w.deflate)
+	return c / _vehicle.wheels.size()
+
+
+## Every couple of seconds: re-plan corner speeds if the tyres have changed.
+func _check_tyres(delta: float) -> void:
+	_tyre_check += delta
+	if _tyre_check < 2.0:
+		return
+	_tyre_check = 0.0
+	if absf(_mean_tyre_condition() - _tyre_condition) > 0.015:
+		_build_profile()
 
 
 ## Returns (lane shift in metres, speed cap in m/s) caused by nearby cars.
@@ -153,6 +239,7 @@ func _read_traffic(v: float) -> Vector2:
 ## Put the car back on the centre line, pointing the right way.
 func _reset_onto_track(off: float, track_dir: Vector3) -> void:
 	resets += 1
+	_pitting = false  # decide again from the new spot (never steer into the pit wall)
 	_corner_scale = maxf(_corner_scale * 0.95, 0.8)
 	_build_profile()
 	_lost_time = 0.0

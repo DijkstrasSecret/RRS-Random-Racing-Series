@@ -30,6 +30,7 @@ func _ready() -> void:
 	_row("TIME OF DAY", GameSettings.TIME_NAMES, GameSettings.time_of_day, func(i: int) -> void: GameSettings.time_of_day = i)
 	_row("WEATHER", GameSettings.WEATHER_NAMES, GameSettings.weather, func(i: int) -> void: GameSettings.weather = i)
 	_row("DAMAGE", GameSettings.DAMAGE_NAMES, GameSettings.damage, func(i: int) -> void: GameSettings.damage = i)
+	_row("TYRE WEAR", GameSettings.TYRE_WEAR_NAMES, GameSettings.tyre_wear, func(i: int) -> void: GameSettings.tyre_wear = i)
 	var gap2 := Control.new()
 	gap2.custom_minimum_size = Vector2(0, 18)
 	add_child(gap2)

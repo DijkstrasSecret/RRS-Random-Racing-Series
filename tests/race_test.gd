@@ -69,7 +69,7 @@ func _physics_process(delta: float) -> void:
 			var time := LapTimer.format_time(_race.finish_times[i]) if _race.finish_times.has(i) else "DNF"
 			print("  %-4s %-9s %-22s %s   skill %.2f  resets %d  damage %.2f" % [RaceDirector.ordinal(_race.position_of(i)),
 				_race.name_at(i), car.config.display_name, time, ai.skill if ai else 0.0, ai.resets if ai else 0,
-				car.damage.total() if car.damage else -1.0])
+				car.damage.total() if car.damage else -1.0] + ("  pits %d" % car.pit_stops if car.pit_stops > 0 else ""))
 		print("  dirt effect seen       %s" % str(_dirt_seen))
 		print("race_test done, %.1f s sim time" % _t)
 		set_physics_process(false)

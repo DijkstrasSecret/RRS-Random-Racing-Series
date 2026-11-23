@@ -199,6 +199,7 @@ func _clear_road(circuit: Circuit) -> void:
 				var surf := circuit.surface_y(lq.x, lq.z, smp.pos.y)
 				spots.append(Vector3(q.x, q.z, surf + circuit.global_position.y + Circuit.ROAD_Y - (0.08 if absf(lat) <= road else 0.0)))
 			lat += 2.0
+	spots.append_array(circuit.pit_ground_spots())
 	for pass_i in 8:
 		var changed := false
 		for spot in spots:
