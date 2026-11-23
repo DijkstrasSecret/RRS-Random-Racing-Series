@@ -70,6 +70,9 @@ func _draw() -> void:
 	if show_telemetry:
 		_draw_telemetry(Vector2(s.x - 500.0, 150.0))
 	_draw_view_name(k)
+	_draw_nitro(Vector2(s.x - r * 2.0 - 36.0 * k, s.y - r * 2.0 - 84.0 * k), k)
+	if Tournament.active:
+		_draw_tournament(k)
 	if _vehicle.off_track and fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4:
 		_label(Vector2(s.x * 0.5, s.y * 0.2), "OFF TRACK", int(34 * k), HOT, true)
 
@@ -340,6 +343,38 @@ func _draw_damage(o: Vector2, k: float) -> void:
 			col.a = 0.55 + 0.45 * clampf(d * 2.0, 0.0, 1.0)
 		draw_rect(a[0], col)
 	draw_rect(Rect2(o, Vector2(w, h)), Color(1, 1, 1, 0.55), false, 2.0 * k)
+
+
+## Nitro bottle (tournament upgrade): a bar above the dial, glowing while used.
+func _draw_nitro(o: Vector2, k: float) -> void:
+	var perks := _vehicle.get_node_or_null("Perks") as CarPerks
+	if perks == null or perks.nitro_capacity <= 0.0:
+		return
+	var w := 300.0 * k
+	var h := 18.0 * k
+	var r := Rect2(o, Vector2(w, h))
+	draw_rect(r.grow(3.0 * k), Color(0.05, 0.05, 0.07, 0.85))
+	var col := Color(1.0, 0.4, 0.9) if perks.nitro_active else Color(0.75, 0.3, 0.95)
+	draw_rect(Rect2(o, Vector2(w * perks.nitro / perks.nitro_capacity, h)), col)
+	_label(o + Vector2(0, -8.0 * k), "NITRO", int(16 * k), col)
+	if perks.drafting:
+		_label(o + Vector2(w - 90.0 * k, -8.0 * k), "SLIPSTREAM", int(14 * k), Color(0.5, 0.9, 1.0))
+
+
+## Tournament banner: which race, and this player's points.
+func _draw_tournament(k: float) -> void:
+	var me := Tournament.human(2 if player_name == "PLAYER 2" else 1)
+	var text := Tournament.race_title()
+	if not Tournament.is_final():
+		text += "   ·   %d PTS" % int(me.get("points", 0))
+	else:
+		text += "   ·   ONLY THIS RESULT COUNTS"
+	var font_size := int(22 * k)
+	var tw := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var r := Rect2(size.x * 0.5 - tw * 0.5 - 20.0 * k, 24.0 * k, tw + 40.0 * k, 40.0 * k)
+	draw_rect(r, F1_DARK)
+	draw_rect(Rect2(r.position, Vector2(r.size.x, 3.0 * k)), Color(1.0, 0.45, 0.85) if Tournament.is_final() else F1_RED)
+	_bold_text(r.position + Vector2(20.0 * k, 28.0 * k), text, font_size, TEXT)
 
 
 ## Shows the camera view name for a moment after it changes.

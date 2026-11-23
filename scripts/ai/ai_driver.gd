@@ -98,6 +98,8 @@ func poll(delta: float) -> void:
 		# At full lock a front-drive car needs its front grip for turning.
 		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * 0.9, 0.08, 1.0)
 	handbrake = 0.0
+	# Nitro on the straights: flat out, wheel straight, and the road ahead fast.
+	nitro = throttle > 0.95 and turning < 0.15 and target_speed > v + 4.0
 
 
 func _setup() -> bool:

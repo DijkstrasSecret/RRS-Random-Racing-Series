@@ -7,6 +7,7 @@ var throttle: float = 0.0  ## 0..1
 var brake: float = 0.0  ## 0..1
 var steer: float = 0.0  ## -1 (left) .. +1 (right)
 var handbrake: float = 0.0  ## 0..1
+var nitro: bool = false  ## held: fire the nitro (if the car has a nitro kit)
 
 # One-tick "pressed" pulses.
 var shift_up_pressed: bool = false

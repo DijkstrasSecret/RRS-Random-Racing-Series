@@ -73,6 +73,7 @@ func poll(delta: float) -> void:
 		steer = move_toward(steer, raw_steer, rate * delta)
 
 	handbrake = 1.0 if Input.is_action_pressed(_a("handbrake")) else 0.0
+	nitro = Input.is_action_pressed(_a("nitro"))
 	shift_up_pressed = Input.is_action_just_pressed(_a("shift_up"))
 	shift_down_pressed = Input.is_action_just_pressed(_a("shift_down"))
 	recover_pressed = Input.is_action_just_pressed(_a("recover"))

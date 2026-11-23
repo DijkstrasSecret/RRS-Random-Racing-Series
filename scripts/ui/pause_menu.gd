@@ -40,7 +40,8 @@ func _build() -> void:
 	_main.add_child(MenuStyle.logo(420.0))
 	_main.add_child(MenuStyle.label("PAUSED", 40, MenuStyle.ACCENT))
 	_main.add_child(MenuStyle.button("RESUME", resume))
-	_main.add_child(MenuStyle.button("RESTART", _restart))
+	if not Tournament.active:  # no do-overs in a tournament
+		_main.add_child(MenuStyle.button("RESTART", _restart))
 	_main.add_child(MenuStyle.button("SETTINGS", _show_settings))
 	_main.add_child(MenuStyle.button("CONTROLS", _show_controls))
 	_main.add_child(MenuStyle.button("MAIN MENU", _main_menu))

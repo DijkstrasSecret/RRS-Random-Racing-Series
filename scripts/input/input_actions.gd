@@ -21,7 +21,8 @@ static func ensure() -> void:
 	_add("recover", [_key(KEY_R), _button(JOY_BUTTON_Y)])
 	_add("restart", [_key(KEY_BACKSPACE), _button(JOY_BUTTON_BACK)])
 	_add("cycle_profile", [_key(KEY_P)])
-	_add("cycle_camera", [_key(KEY_C), _button(JOY_BUTTON_X)])
+	_add("cycle_camera", [_key(KEY_C), _button(JOY_BUTTON_RIGHT_STICK)])
+	_add("nitro", [_key(KEY_SHIFT), _button(JOY_BUTTON_X)])
 	_add("toggle_telemetry", [_key(KEY_F1), _key(KEY_T)])
 	_add("toggle_help", [_key(KEY_H)])
 	_add("cycle_look", [_key(KEY_V)])
@@ -60,6 +61,9 @@ static func ensure() -> void:
 		"handbrake": [KEY_SLASH, KEY_KP_0], "shift_up": [KEY_PERIOD], "shift_down": [KEY_COMMA],
 		"recover": [KEY_ENTER, KEY_KP_ENTER], "cycle_camera": [KEY_APOSTROPHE],
 	})
+	# Nitro: left Shift for player 1, right Shift for player 2 (plus each pad's X).
+	_add("p1_nitro", [_key_at(KEY_SHIFT, KEY_LOCATION_LEFT), _button(JOY_BUTTON_X, 0)])
+	_add("p2_nitro", [_key_at(KEY_SHIFT, KEY_LOCATION_RIGHT), _button(JOY_BUTTON_X, 1)])
 	# Godot's built-in menu actions only listen to the keyboard for select /
 	# back: add every gamepad's A and B so pads can pick menu items.
 	_add_event_if_missing("ui_accept", _button(JOY_BUTTON_A))
@@ -103,7 +107,8 @@ static func _add_player(player: int, device: int, keys: Dictionary) -> void:
 		"shift_up": [_button(JOY_BUTTON_RIGHT_SHOULDER, device)],
 		"shift_down": [_button(JOY_BUTTON_LEFT_SHOULDER, device)],
 		"recover": [_button(JOY_BUTTON_Y, device)],
-		"cycle_camera": [_button(JOY_BUTTON_X, device)],
+		"cycle_camera": [_button(JOY_BUTTON_RIGHT_STICK, device)],
+		"nitro": [_button(JOY_BUTTON_X, device)],
 	}
 	for action: String in keys:
 		var events: Array = []
@@ -134,6 +139,13 @@ static func _add(action: StringName, events: Array, deadzone: float = 0.5) -> vo
 static func _add_event_if_missing(action: StringName, event: InputEvent) -> void:
 	if InputMap.has_action(action) and not InputMap.action_has_event(action, event):
 		InputMap.action_add_event(action, event)
+
+
+## A key on one side of the keyboard only (left / right Shift, Ctrl...).
+static func _key_at(code: Key, location: KeyLocation) -> InputEventKey:
+	var e := _key(code)
+	e.location = location
+	return e
 
 
 static func _key(code: Key) -> InputEventKey:

@@ -89,6 +89,11 @@ var damage: CarDamage
 var power_scale: float = 1.0
 var drag_scale: float = 1.0
 var steer_pull: float = 0.0  ## radians, + = pulls right
+## Tournament perks (CarPerks sets these each tick): power and drag multipliers,
+## and how much crash damage the car takes.
+var perk_power: float = 1.0
+var perk_drag: float = 1.0
+var damage_taken: float = 1.0
 var _head_broken := false
 var _brake_broken := false
 var _head_energy := 2.2
@@ -264,7 +269,7 @@ func _physics_process(delta: float) -> void:
 	var tc := assists.traction_factor(driven_wheels, config.tire_peak_slip_ratio, forward_speed)
 	throttle_out = thr * tc
 	tc_active = thr > 0.05 and tc < 0.95
-	var wheel_torque := drivetrain.update(_driven_mean_omega(), throttle_out, delta) * power_scale
+	var wheel_torque := drivetrain.update(_driven_mean_omega(), throttle_out, delta) * power_scale * perk_power
 
 	abs_active = false
 	brake_out = brk
@@ -413,7 +418,7 @@ func _apply_aero() -> void:
 	var v2 := v.length_squared()
 	if v2 < 0.01:
 		return
-	apply_central_force(-v.normalized() * 0.5 * AIR_DENSITY * v2 * config.drag_area * drag_scale)
+	apply_central_force(-v.normalized() * 0.5 * AIR_DENSITY * v2 * config.drag_area * drag_scale * perk_drag)
 	var down := 0.5 * AIR_DENSITY * forward_speed * forward_speed * config.downforce_area
 	var b := global_basis
 	apply_force(-b.y * down * config.aero_balance, b * Vector3(0.0, 0.3, _front_axle_z))

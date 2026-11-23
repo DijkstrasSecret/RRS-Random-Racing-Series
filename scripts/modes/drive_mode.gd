@@ -17,6 +17,8 @@ func _enter_tree() -> void:
 	var car := get_node_or_null(vehicle_path) as Vehicle
 	if car:
 		CarRoster.apply(car, GameSettings.p1_car, Color(0, 0, 0, 0), GameSettings.p1_livery)
+		if Tournament.active:
+			Upgrades.apply_to(car, Tournament.human(1).get("upgrades", {}))
 
 
 func _ready() -> void:

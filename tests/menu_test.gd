@@ -29,8 +29,8 @@ func _run() -> void:
 	var focused := root.gui_get_focus_owner() as Button
 	_check("RACE is selected first", focused != null and focused.text == "RACE")
 
-	# Down 5 times to SETTINGS, then select it.
-	for i in 5:
+	# Down 6 times to SETTINGS (past TOURNAMENT), then select it.
+	for i in 6:
 		await _action("ui_down")
 	focused = root.gui_get_focus_owner() as Button
 	_check("arrow keys move the selection (now %s)" % (focused.text if focused else "nothing"),
@@ -48,7 +48,7 @@ func _run() -> void:
 	_check("Esc / B goes back to the main list", focused != null and focused.text == "RACE")
 
 	# The same with a gamepad (second pad): D-pad moves, A selects, B goes back.
-	for i in 5:
+	for i in 6:
 		await _pad(JOY_BUTTON_DPAD_DOWN, 1)
 	await _pad(JOY_BUTTON_A, 1)
 	row = root.gui_get_focus_owner() as OptionRow

@@ -46,6 +46,8 @@ func _build() -> void:
 		var skills_range := GameSettings.ai_skill_range()
 		ai_skill_min = skills_range.x
 		ai_skill_max = skills_range.y
+	if Tournament.active:
+		ai_count = Tournament.racers.size() - Tournament.players
 	var root := get_parent()
 	var rng := RandomNumberGenerator.new()
 	if random_seed != 0:
@@ -76,9 +78,16 @@ func _build() -> void:
 		var car := car_scene.instantiate() as Vehicle
 		car.name = "AI_%s" % names[i]
 		var car_id: String = roster[i % roster.size()]
+		var t_racer: Dictionary = Tournament.racers[Tournament.players + i] if Tournament.active else {}
+		if Tournament.active:
+			car_id = t_racer.car
+			names[i] = t_racer.name
+			skills[i] = t_racer.skill
 		var paint := AI_COLORS[i % AI_COLORS.size()] if car_id in used else Color(0, 0, 0, 0)
 		used.append(car_id)
 		CarRoster.apply(car, car_id, paint)
+		if Tournament.active:
+			Upgrades.apply_to(car, t_racer.upgrades)
 		var player_input := car.get_node_or_null("PlayerInput")
 		if player_input:
 			car.remove_child(player_input)
@@ -89,7 +98,7 @@ func _build() -> void:
 		ai.lane_bias = rng.randf_range(-0.8, 0.8)
 		car.add_child(ai)
 		root.add_child(car)
-		_place(car, circuit, slot)
+		_place(car, circuit, _tournament_slot(names[i], slot))
 		slot += 1
 		var timer := LapTimer.new()
 		timer.name = "LapTimer_%s" % names[i]
@@ -102,7 +111,8 @@ func _build() -> void:
 
 	for i in player_paths.size():
 		var car := get_node(player_paths[i]) as Vehicle
-		_place(car, circuit, slot)
+		var pname: String = player_names[i] if i < player_names.size() else "PLAYER %d" % (i + 1)
+		_place(car, circuit, _tournament_slot(pname, slot))
 		slot += 1
 		var timer := get_node(player_timer_paths[i]) as LapTimer
 		if director == null:
@@ -111,6 +121,15 @@ func _build() -> void:
 				player_colors[i] if i < player_colors.size() else Color.WHITE, true)
 	if director:
 		director.begin()
+
+
+## Tournament: the grid goes by points, the leader starts at the back.
+func _tournament_slot(racer_name: String, fallback: int) -> int:
+	if not Tournament.active:
+		return fallback
+	var k := Tournament.find(racer_name)
+	var order := Tournament.grid_order()
+	return order.find(k) if k >= 0 else fallback
 
 
 func _place(car: Vehicle, circuit: Circuit, slot: int) -> void:

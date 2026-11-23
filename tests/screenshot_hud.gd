@@ -24,6 +24,12 @@ func _run() -> void:
 	GameSettings.time_of_day = 1
 	GameSettings.ai_count = 6
 	GameSettings.laps = 3
+	if "--tournament" in OS.get_cmdline_user_args():
+		# A tournament race: player has nitro + slipstream, AI hold nitro on straights.
+		Tournament.start(1, PackedStringArray([GameSettings.track]), 15, 7)
+		Tournament.race_index = 2
+		Tournament.human(1).upgrades = {"nitro": 1, "slipstream": 1, "engine": 1}
+		Tournament.human(1).points = 17
 	var scene := (load("res://scenes/modes/%s.tscn" % scene_name) as PackedScene).instantiate()
 	for node in scene.get_children():
 		if node is Vehicle and node.get_node_or_null("PlayerInput"):
@@ -37,7 +43,10 @@ func _run() -> void:
 	root.add_child(scene)
 	current_scene = scene
 	var race := scene.find_children("*", "RaceDirector", true, false)[0] as RaceDirector
-	for target: Array in [[25.0, "hud_start"], [70.0, "hud_sector"], [175.0, "hud_lap"]]:
+	var targets := [[25.0, "hud_start"], [70.0, "hud_sector"], [175.0, "hud_lap"]]
+	if "--tournament" in OS.get_cmdline_user_args():
+		targets = [[8.0, "hud_tournament_start"], [24.0, "hud_tournament"]]
+	for target: Array in targets:
 		Engine.time_scale = 4.0
 		while race.race_time < float(target[0]):
 			await process_frame

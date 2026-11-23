@@ -20,6 +20,9 @@ var _fade: TextureRect
 var _flow: Control
 var _car_select: CarSelect
 var _track_select: TrackSelect
+var _tour_menu: VBoxContainer
+var _tour_settings: TournamentSettingsPanel
+var _tournament_flow := false
 var _race_settings: RaceSettingsPanel
 var _flow_players := 1
 var _showcase_index: int = -1
@@ -29,6 +32,9 @@ var _showcase_timer: float = 0.0
 func _enter_tree() -> void:
 	InputActions.ensure()
 	GameSettings.ensure_loaded()
+	# Back at the menu: any tournament in progress is over (before the
+	# background circuit picks its track).
+	Tournament.finish()
 
 
 func _ready() -> void:
@@ -101,6 +107,7 @@ func _build_ui() -> void:
 	_main = VBoxContainer.new()
 	_main.add_child(MenuStyle.button("RACE", func() -> void: _start_flow(1)))
 	_main.add_child(MenuStyle.button("SPLIT SCREEN", func() -> void: _start_flow(2)))
+	_main.add_child(MenuStyle.button("TOURNAMENT", _show_tournament_choice))
 	_main.add_child(MenuStyle.button("GARAGE", _show_garage))
 	_main.add_child(MenuStyle.button("PRACTICE", func() -> void: _go(GameSettings.PRACTICE)))
 	_main.add_child(MenuStyle.button("TEST TRACK", func() -> void: _go(GameSettings.TEST_TRACK)))
@@ -108,6 +115,13 @@ func _build_ui() -> void:
 	_main.add_child(MenuStyle.button("CONTROLS", _show_controls))
 	_main.add_child(MenuStyle.button("QUIT", func() -> void: get_tree().quit()))
 	column.add_child(_main)
+	_tour_menu = VBoxContainer.new()
+	_tour_menu.visible = false
+	_tour_menu.add_child(MenuStyle.label("TOURNAMENT", 30, MenuStyle.ACCENT))
+	_tour_menu.add_child(MenuStyle.button("1 PLAYER", func() -> void: _start_flow(1, true)))
+	_tour_menu.add_child(MenuStyle.button("2 PLAYERS (SPLIT SCREEN)", func() -> void: _start_flow(2, true)))
+	_tour_menu.add_child(MenuStyle.button("BACK", _show_main))
+	column.add_child(_tour_menu)
 	var gap2 := Control.new()
 	gap2.custom_minimum_size = Vector2(0, 14)
 	column.add_child(gap2)
@@ -162,6 +176,7 @@ func _show_main() -> void:
 	_controls.visible = false
 	_garage.visible = false
 	_preview.visible = false
+	_tour_menu.visible = false
 	_main.visible = true
 	_title.visible = true
 	_summary.visible = true
@@ -209,7 +224,11 @@ func _build_flow(root: Control) -> void:
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_flow.add_child(dim)
 	_car_select = CarSelect.new()
-	_car_select.done.connect(_show_track_select)
+	_car_select.done.connect(func() -> void:
+		if _tournament_flow:
+			_show_tournament_settings()
+		else:
+			_show_track_select())
 	_car_select.back.connect(_show_main)
 	_flow.add_child(_car_select)
 	_track_select = TrackSelect.new()
@@ -225,9 +244,28 @@ func _build_flow(root: Control) -> void:
 		_go(GameSettings.VERSUS if _flow_players == 2 else GameSettings.RACE))
 	_race_settings.back.connect(_show_track_select)
 	_flow.add_child(_race_settings)
+	_tour_settings = TournamentSettingsPanel.new()
+	_tour_settings.position = Vector2(560, 170)
+	_tour_settings.visible = false
+	_tour_settings.start.connect(func() -> void:
+		GameSettings.save()
+		Tournament.start(_flow_players, _tour_settings.track_pool(), GameSettings.ai_tiers, 8 - _flow_players)
+		_go(Tournament.race_scene()))
+	_tour_settings.back.connect(func() -> void:
+		_car_select.unlock_all()
+		_show_car_select())
+	_flow.add_child(_tour_settings)
 
 
-func _start_flow(players: int) -> void:
+func _show_tournament_choice() -> void:
+	_main.visible = false
+	_tour_menu.visible = true
+	MenuStyle.focus_first(_tour_menu)
+
+
+func _start_flow(players: int, tournament: bool = false) -> void:
+	_tournament_flow = tournament
+	_tour_menu.visible = false
 	_flow_players = players
 	_car_select.open(players)
 	_show_car_select()
@@ -246,6 +284,7 @@ func _show_car_select() -> void:
 	_hide_menu_column()
 	_track_select.visible = false
 	_race_settings.visible = false
+	_tour_settings.visible = false
 	_car_select.visible = true
 	# Leave the menu's selection so the arrow keys don't also move it.
 	var focused := get_viewport().gui_get_focus_owner()
@@ -262,6 +301,15 @@ func _show_track_select() -> void:
 	var focused := get_viewport().gui_get_focus_owner()
 	if focused:
 		focused.release_focus()
+
+
+func _show_tournament_settings() -> void:
+	_hide_menu_column()
+	_car_select.visible = false
+	_track_select.visible = false
+	_race_settings.visible = false
+	_tour_settings.visible = true
+	_tour_settings.open(_flow_players)
 
 
 func _show_race_settings() -> void:

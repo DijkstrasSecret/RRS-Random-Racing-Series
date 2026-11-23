@@ -100,7 +100,7 @@ func _physics_process(delta: float) -> void:
 func _hit(local_pos: Vector3, dv: float, push: Vector3 = Vector3.ZERO) -> void:
 	if dv < HIT_THRESHOLD:
 		return
-	var amount := clampf((dv - HIT_THRESHOLD) / 20.0, 0.0, 0.6)
+	var amount := clampf((dv - HIT_THRESHOLD) / 20.0 * _car.damage_taken, 0.0, 0.6 * maxf(_car.damage_taken, 1.0))
 	var zone := _zone_of(local_pos, push)
 	# One crash shows up over several ticks: count only the strongest part.
 	var extra := amount - _recent[zone]

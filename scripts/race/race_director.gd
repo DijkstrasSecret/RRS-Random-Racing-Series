@@ -32,6 +32,8 @@ var _circuit: Circuit
 var _countdown: float = 0.0
 var _go_flash: float = 0.0
 var _font: Font
+var _tournament_wait := 0.0
+var _tournament_done := false
 
 
 func _ready() -> void:
@@ -43,6 +45,8 @@ func _ready() -> void:
 	if use_game_settings:
 		GameSettings.ensure_loaded()
 		laps = GameSettings.laps
+	if Tournament.active:
+		laps = Tournament.current_laps()
 	for i in vehicle_paths.size():
 		add_racer(get_node(vehicle_paths[i]) as Vehicle, get_node(lap_timer_paths[i]) as LapTimer,
 				player_names[i] if i < player_names.size() else "PLAYER %d" % (i + 1),
@@ -65,7 +69,7 @@ func begin() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("restart"):
+	if event.is_action_pressed("restart") and not Tournament.active:
 		get_tree().reload_current_scene()
 
 
@@ -100,6 +104,13 @@ func _physics_process(delta: float) -> void:
 					finish_order.append(i)
 					finish_times[i] = race_time
 	_go_flash = maxf(_go_flash - delta, 0.0)
+	# Tournament: a few seconds on the results, then the shop / podium.
+	if Tournament.active and state == State.FINISHED:
+		_tournament_wait += delta
+		if _tournament_wait > 5.0 and not _tournament_done:
+			_tournament_done = true
+			Tournament.record(self)
+			get_tree().change_scene_to_file.call_deferred(Tournament.SHOP_SCENE)
 
 
 func _process(_delta: float) -> void:
@@ -273,7 +284,10 @@ func _draw_results(centre: Vector2) -> void:
 		_text_at(Vector2(panel.position.x + 60.0, y), label, 24, r.color)
 		_text_at(Vector2(panel.position.x + 400.0, y), time_text, 22, Color(1, 1, 1, 0.9))
 		y += row_h
-	_big(Vector2(centre.x, panel.end.y - 26.0), "Backspace = race again      Esc / Start = menu", 20, Color(1, 1, 1, 0.8))
+	var footer := "Backspace = race again      Esc / Start = menu"
+	if Tournament.active:
+		footer = "Tournament standings and podium coming up..." if Tournament.is_final() else "To the upgrade shop in a moment..."
+	_big(Vector2(centre.x, panel.end.y - 26.0), footer, 20, Color(1, 1, 1, 0.8))
 
 
 func _text_at(pos: Vector2, text: String, font_size: int, color: Color) -> void:

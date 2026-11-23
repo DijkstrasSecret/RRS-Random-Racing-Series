@@ -76,7 +76,7 @@ func _ready() -> void:
 	add_to_group("circuit")
 	if use_selected_track:
 		GameSettings.ensure_loaded()
-		var track := TrackList.get_track(GameSettings.track)
+		var track := TrackList.get_track(Tournament.current_track() if Tournament.active else GameSettings.track)
 		points = PackedVector2Array(track.points)
 		_track_id = String(track.id)
 		track_name = TrackList.display_name(String(track.id))
