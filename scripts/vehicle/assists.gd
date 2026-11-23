@@ -24,6 +24,12 @@ var air_control: float = 0.5
 var esc: float = 0.6
 ## Traction control steps in once wheelspin passes this x the tyre's best slip.
 var tc_start: float = 1.1
+## Least limited-slip share (0..1): how much drive can move to the wheel that
+## grips when the other spins (power out of corners). Cars with a stronger
+## differential keep theirs.
+var lsd_min: float = 0.3
+## Body slip (degrees) where stability control starts cutting power.
+var esc_start_deg: float = 5.0
 
 var _tc_factor: float = 1.0
 
@@ -35,15 +41,20 @@ func set_profile(p: int) -> void:
 			_apply(1.3, 0.6, 0.6, 1.0, 1.0, 0.92, 1.0)
 			esc = 1.0
 			tc_start = 0.85
+			lsd_min = 0.4
+			esc_start_deg = 6.5
 		Profile.SIM:
 			_apply(2.3, 0.0, 0.0, 0.0, 1.0, 0.7, 0.0)
 			esc = 0.0
 			tc_start = 1.3
+			lsd_min = 0.0
 		_:
 			profile = Profile.SPORT
 			_apply(1.6, 0.45, 0.35, 0.7, 0.8, 0.88, 0.5)
-			esc = 0.75
+			esc = 0.85
 			tc_start = 1.0
+			lsd_min = 0.25
+			esc_start_deg = 4.5
 
 
 func profile_name() -> String:
@@ -89,9 +100,15 @@ func steer_limit(v_long: float, max_steer: float, wheelbase: float, grip: float)
 func traction_factor(driven: Array, peak_slip: float, speed: float = 99.0) -> float:
 	var target := 1.0
 	if traction_control > 0.0:
+		# Slip weighted by load: in a corner the unloaded inside wheel spins
+		# a little while the loaded outside one grips; cutting the power for
+		# the inside wheel alone starved the car out of every corner.
 		var worst := 0.0
+		var load := 0.0
 		for w in driven:
-			worst = maxf(worst, absf(w.slip_ratio))
+			worst += absf(w.slip_ratio) * maxf(w.tire_load, 0.0)
+			load += maxf(w.tire_load, 0.0)
+		worst = worst / load if load > 1.0 else 0.0
 		var excess := clampf((worst - peak_slip * tc_start) / (peak_slip * 1.2), 0.0, 1.0)
 		target = 1.0 - excess * traction_control * 0.95
 		# Pulling away: never strangle the engine (slip readings are rough here).
@@ -107,9 +124,12 @@ func traction_factor(driven: Array, peak_slip: float, speed: float = 99.0) -> fl
 func oversteer_cut(beta: float, speed: float) -> float:
 	if esc <= 0.0 or absf(speed) < 6.0:
 		return 1.0
-	var start := deg_to_rad(3.0 + 7.0 * (1.0 - esc))
-	var over := clampf((absf(beta) - start) / deg_to_rad(8.0), 0.0, 1.0)
-	return 1.0 - over * esc * 0.85
+	# Starts past the slip angle a rear-drive car runs at when it's pushed
+	# out of a tight corner on the throttle, and takes less: power out of
+	# corners, but still catches a real slide before it's a spin.
+	var start := deg_to_rad(esc_start_deg)
+	var over := clampf((absf(beta) - start) / deg_to_rad(9.0), 0.0, 1.0)
+	return 1.0 - over * esc * 0.75
 
 
 ## Brake torque multiplier (0..1). `slip` is the slip ratio signed so that
