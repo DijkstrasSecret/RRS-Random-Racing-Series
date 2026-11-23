@@ -1,0 +1,50 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 1.5
+display_name = "VW Passat 2.0 BiTDI 4MOTION"
+mass = 1700
+center_of_mass = Vector3(0.0, 0.47, -0.15)
+inertia_box_size = Vector3(1.83, 1.35, 4.77)
+wheel_radius = 0.34
+wheel_width = 0.24
+tire_grip = 1.14
+rear_grip_scale = 0.98
+front_spring_rate = 42000
+rear_spring_rate = 40000
+front_damper_bump = 3100
+front_damper_rebound = 4100
+rear_damper_bump = 3000
+rear_damper_rebound = 4000
+front_anti_roll = 15000
+rear_anti_roll = 12000
+idle_rpm = 750
+redline_rpm = 4800
+launch_rpm = 2200
+max_torque = 420
+torque_curve = PackedVector2Array(1000.0, 0.55, 1750.0, 1.0, 2500.0, 1.0, 3800.0, 0.85, 4800.0, 0.6)
+engine_brake_torque = 80
+gear_ratios = PackedFloat32Array(3.56, 2.53, 1.59, 0.94, 0.72, 0.6, 0.5)
+reverse_ratio = 3.2
+final_drive = 4.1
+auto_upshift_rpm = 4400
+auto_downshift_rpm = 1700
+drive_type = 2
+diff_lock = 0.3
+awd_front_split = 0.55
+brake_torque = 8200
+brake_bias = 0.67
+handbrake_torque = 3000
+max_steer_deg = 33
+steer_rate = 3.8
+drag_area = 0.64
+downforce_area = 0.08
+engine_sound_pitch = 0.9
+engine_sound_gain_db = 0.0
+shift_time = 0.1
+turbo = 0.45
+turbo_lag = 0.7
+turbo_spool_rpm = 1500

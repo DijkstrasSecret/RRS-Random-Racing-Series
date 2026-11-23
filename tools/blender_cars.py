@@ -256,6 +256,43 @@ CARS = {
         livery=dict(style="muscle", stripe_set=[(-0.16, 0.16, "white")], side_stripe=False, stripe="white",
                     accent="white", number="05", number_s=2.12, number_z=0.56, sponsor="ROYAL OIL",
                     sponsor_bg=(0.05, 0.3, 0.15), sponsor_s=2.95, sponsor_z=0.56, sponsor_w=0.5, banner="JAGUAR RACING")),
+    "e30": dict(  # 1980s compact sports saloon (BMW 325i E30 inspired)
+        L=4.33, W=1.65, H=1.38, wb=2.57, r=0.30, tw=0.20, fo=0.80, rocker=0.21,
+        belt=0.90, nose=0.74, cowl=0.88, deck=0.94, tail=0.92,
+        windshield=1.52, roof_front=1.98, roof_rear=3.02, deck_start=3.36,
+        tumble=0.86, nose_round=0.03, tail_round=0.03, crown=0.02, tail_drop=0.04,
+        paint=(0.92, 0.92, 0.90), grille="twin_tall", headlight="round_quad",
+        taillight="ribbed", wheel="multi_spoke", bumpers="black", exhaust=1, mirrors="black",
+        detail=True, frame_mat="chrome", belt_chrome=True, rub_strip=True, pillars=[2.48],
+        door_seams=[1.62, 2.48, 3.06], handles=[2.38, 2.96], plate="34 E 325",
+        reverse_lights=[(-0.36, 0.66), (0.36, 0.66)], antenna=(3.25, 1),
+        livery=dict(style="muscle", stripe_set=[(-0.24, -0.17, "lightblue"), (-0.15, -0.08, "blue"), (-0.06, 0.01, "red")],
+                    stripe="blue", accent="red", number="30", number_s=2.0, number_z=0.6, sponsor="RRS RACING",
+                    sponsor_bg=(0.05, 0.22, 0.75), sponsor_s=2.85, sponsor_z=0.6, sponsor_w=0.5)),
+    "troc": dict(  # compact coupe-crossover (VW T-Roc inspired)
+        L=4.23, W=1.82, H=1.57, wb=2.60, r=0.34, tw=0.22, fo=0.86, rocker=0.32,
+        belt=1.08, nose=0.92, cowl=1.06, deck=1.14, tail=1.12,
+        windshield=1.36, roof_front=1.98, roof_rear=3.40, deck_start=3.78,
+        tumble=0.80, nose_round=0.14, tail_round=0.08, crown=0.03, tail_drop=0.08,
+        paint=(0.86, 0.62, 0.08), roof_color="black", grille="wide_slot", headlight="angular",
+        taillight="pair_angular", wheel="spokes_dark", calipers=False, bumpers="black", exhaust=1,
+        mirrors="black", flares="black", roof_rails="black", cladding=True,
+        detail=True, shark_fin=True, pillars=[2.42, 3.2], door_seams=[1.45, 2.42, 3.12], handles=[2.32, 3.02],
+        handle_mat="black", plate="06 TRC 17", reverse_lights=[(-0.45, 0.92), (0.45, 0.92)],
+        livery=dict(style="rally", stripe="black", accent="white", side_z=0.5, number="17", number_s=1.95, number_z=0.8,
+                    sponsor="TRAIL OIL", sponsor_bg=(0.03, 0.03, 0.035), sponsor_s=2.8, sponsor_z=0.8, sponsor_w=0.5)),
+    "passat": dict(  # mid-size saloon (VW Passat B8 inspired)
+        L=4.77, W=1.83, H=1.46, wb=2.79, r=0.34, tw=0.23, fo=0.90, rocker=0.21,
+        belt=0.98, nose=0.76, cowl=0.98, deck=1.04, tail=1.02,
+        windshield=1.50, roof_front=2.18, roof_rear=3.30, deck_start=3.95,
+        tumble=0.80, nose_round=0.12, tail_round=0.08, crown=0.04, tail_drop=0.1,
+        paint=(0.16, 0.19, 0.24), grille="wide_bars", headlight="led_wide",
+        taillight="pair_wide", wheel="spokes_silver", bumpers="body", exhaust=2, mirrors="body",
+        detail=True, belt_chrome=True, shark_fin=True, pillars=[2.62, 3.4], door_seams=[1.62, 2.62, 3.38],
+        handles=[2.52, 3.28], plate="06 PST 24", reverse_lights=[(-0.4, 0.7), (0.4, 0.7)],
+        livery=dict(style="rally", stripe="white", accent="blue", number="24", number_s=2.1, number_z=0.6,
+                    sponsor="VOLTA OIL", sponsor_bg=(0.95, 0.95, 0.93), sponsor_fg=(0.05, 0.22, 0.75), sponsor_s=3.0,
+                    sponsor_z=0.6, sponsor_w=0.5)),
 }
 
 SHARED = {
@@ -1603,6 +1640,7 @@ def build_car(cid, c):
     if c.get("detail"):
         add_details(cid, m, c, M, front_y)
     body = m.build(coll)
+    blender_detail.project_detail_uvs(body)
     livery = build_livery(cid, c, M, front_y, coll)
     if livery:
         lift_livery(livery, body)
@@ -1628,8 +1666,11 @@ import sys
 sys.path.insert(0, os.path.join(PROJECT, "tools"))
 import importlib
 import blender_shade
+import blender_detail
 importlib.reload(blender_shade)
+importlib.reload(blender_detail)
 MATS = shared_mats()
+blender_detail.attach_textures(MATS)
 only = globals().get("CARS_ONLY")
 report = []
 for i, (cid, c) in enumerate(CARS.items()):

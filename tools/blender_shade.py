@@ -52,10 +52,17 @@ def _bake_ao(scn, body, image):
         node.image = image
         mat.node_tree.nodes.active = node
         added.append((mat, node))
+    # Livery decals sit mm off the paint and can be switched off in game:
+    # keep them out of the bake or their outlines show on the plain body.
+    hidden = [o for o in bpy.context.scene.objects if o.name.startswith("livery") and not o.hide_render]
+    for o in hidden:
+        o.hide_render = True
     bpy.ops.object.select_all(action="DESELECT")
     body.select_set(True)
     bpy.context.view_layer.objects.active = body
     bpy.ops.object.bake(type="AO", margin=3, use_clear=True, target="IMAGE_TEXTURES")
+    for o in hidden:
+        o.hide_render = False
     for mat, node in added:
         mat.node_tree.nodes.remove(node)
     bpy.data.objects.remove(ground, do_unlink=True)

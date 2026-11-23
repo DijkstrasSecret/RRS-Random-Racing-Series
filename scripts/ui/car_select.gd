@@ -11,7 +11,7 @@ signal done
 signal back
 
 const P_COLORS: Array[Color] = [Color(0.35, 0.8, 1.0), Color(1.0, 0.38, 0.32)]
-const COLUMNS := 10
+const COLUMNS := 11  ## two full rows of 11 (22 cars); keep rows even when adding cars
 const TILE := Vector2(150, 92)
 const GAP := 10.0
 

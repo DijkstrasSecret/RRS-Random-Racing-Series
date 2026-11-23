@@ -22,6 +22,7 @@ STYLE = {
     "harcourt": "white centre stripe", "mammoth": "yellow / black", "orion": "teal / white",
     "bavaro": "tricolour stripes", "braxton": "white twin stripes", "ashford": "white / red stripes",
     "bellmont": "white coach lines", "hanlong": "red / white",
+    "e30": "M tricolour stripes", "troc": "black / white rally", "passat": "white / blue rally",
 }
 TIERS = "DCBA"
 TIER_COL = {"D": (140, 205, 115), "C": (90, 180, 255), "B": (190, 130, 255), "A": (255, 115, 77)}

@@ -233,6 +233,42 @@ CARS = {
         final_drive=3.8, auto_upshift_rpm=6400, auto_downshift_rpm=2500, drive_type=FWD, diff_lock=0.1,
         brake_torque=6200, brake_bias=0.67, handbrake_torque=2600, max_steer_deg=32, steer_rate=3.6,
         drag_area=0.66, downforce_area=0.05, engine_sound_pitch=1.5, engine_sound_gain_db=0.0),
+    "e30": dict(  # 325i E30: 170 hp, 222 Nm, 1200 kg, 5-speed, RWD
+        wheel_inertia=1.0,
+        display_name="BMW 325i (E30)", mass=1200, center_of_mass=(0, 0.45, -0.05), inertia_box_size=(1.65, 1.3, 4.33),
+        wheel_radius=0.30, wheel_width=0.2, tire_grip=1.06, tire_peak_slip_angle_deg=8.5, rear_grip_scale=0.95,
+        front_spring_rate=30000, rear_spring_rate=28000, front_damper_bump=2300, front_damper_rebound=3100,
+        rear_damper_bump=2200, rear_damper_rebound=3000, front_anti_roll=9000, rear_anti_roll=10000,
+        idle_rpm=800, redline_rpm=6500, launch_rpm=3200, max_torque=200,
+        torque_curve=[(1000, .6), (2500, .85), (4300, 1.0), (5800, .92), (6500, .8)],
+        engine_brake_torque=45, gear_ratios=[3.83, 2.2, 1.4, 1.0, 0.81], reverse_ratio=3.46,
+        final_drive=3.73, auto_upshift_rpm=6200, auto_downshift_rpm=2600, drive_type=RWD, diff_lock=0.25,
+        brake_torque=4600, brake_bias=0.68, handbrake_torque=2500, max_steer_deg=34, steer_rate=3.8,
+        drag_area=0.7, downforce_area=0.0, engine_sound_pitch=1.35, engine_sound_gain_db=0.0),
+    "troc": dict(  # T-Roc 1.5 TSI: 150 hp, 250 Nm, 1320 kg, FWD
+        wheel_inertia=1.3,
+        display_name="VW T-Roc 1.5 TSI", mass=1320, center_of_mass=(0, 0.53, -0.2), inertia_box_size=(1.82, 1.5, 4.23),
+        wheel_radius=0.34, wheel_width=0.22, tire_grip=1.08, rear_grip_scale=0.97,
+        front_spring_rate=36000, rear_spring_rate=32000, front_damper_bump=2700, front_damper_rebound=3600,
+        rear_damper_bump=2500, rear_damper_rebound=3400, front_anti_roll=13000, rear_anti_roll=12000,
+        idle_rpm=750, redline_rpm=6200, launch_rpm=2600, max_torque=230,
+        torque_curve=[(1000, .62), (1500, 1.0), (3500, 1.0), (5000, .82), (6200, .6)],
+        engine_brake_torque=55, gear_ratios=[3.77, 2.24, 1.46, 1.08, 0.86, 0.72], reverse_ratio=3.6,
+        final_drive=3.9, auto_upshift_rpm=5800, auto_downshift_rpm=2000, drive_type=FWD, diff_lock=0.1,
+        brake_torque=6200, brake_bias=0.68, handbrake_torque=2600, max_steer_deg=33, steer_rate=3.8,
+        drag_area=0.88, downforce_area=0.0, engine_sound_pitch=1.15, engine_sound_gain_db=-0.5),
+    "passat": dict(  # Passat 2.0 BiTDI 4MOTION: 240 hp, 500 Nm, 1700 kg, 7-speed DSG
+        wheel_inertia=1.5,
+        display_name="VW Passat 2.0 BiTDI 4MOTION", mass=1700, center_of_mass=(0, 0.47, -0.15), inertia_box_size=(1.83, 1.35, 4.77),
+        wheel_radius=0.34, wheel_width=0.24, tire_grip=1.14, rear_grip_scale=0.98,
+        front_spring_rate=42000, rear_spring_rate=40000, front_damper_bump=3100, front_damper_rebound=4100,
+        rear_damper_bump=3000, rear_damper_rebound=4000, front_anti_roll=15000, rear_anti_roll=12000,
+        idle_rpm=750, redline_rpm=4800, launch_rpm=2200, max_torque=420,
+        torque_curve=[(1000, .55), (1750, 1.0), (2500, 1.0), (3800, .85), (4800, .6)],
+        engine_brake_torque=80, gear_ratios=[3.56, 2.53, 1.59, 0.94, 0.72, 0.6, 0.5], reverse_ratio=3.2,
+        final_drive=4.1, auto_upshift_rpm=4400, auto_downshift_rpm=1700, drive_type=AWD, diff_lock=0.3,
+        awd_front_split=0.55, brake_torque=8200, brake_bias=0.67, handbrake_torque=3000, max_steer_deg=33,
+        steer_rate=3.8, drag_area=0.64, downforce_area=0.08, engine_sound_pitch=0.9, engine_sound_gain_db=0.0),
 }
 
 
@@ -264,7 +300,9 @@ DRIVETRAIN = {
     "mammoth": dict(shift_time=0.2, turbo=0.45, turbo_lag=0.9, turbo_spool_rpm=1400),
     "bastion": dict(shift_time=0.2, turbo=0.4, turbo_lag=0.8, turbo_spool_rpm=1500),
     "bavaro": dict(shift_time=0.15, turbo=0.35, turbo_lag=0.5, turbo_spool_rpm=1700),
-    "braxton": dict(shift_time=0.2),
+    "braxton": dict(shift_time=0.2), "e30": dict(shift_time=0.3),
+    "troc": dict(shift_time=0.12, turbo=0.4, turbo_lag=0.55, turbo_spool_rpm=1500),
+    "passat": dict(shift_time=0.1, turbo=0.45, turbo_lag=0.7, turbo_spool_rpm=1500),
     "ashford": dict(shift_time=0.12, turbo=0.35, turbo_lag=0.45, turbo_spool_rpm=2000),
     "bellmont": dict(shift_time=0.1, turbo=0.35, turbo_lag=0.45, turbo_spool_rpm=1900),
 }
@@ -272,7 +310,11 @@ for cid in CARS:
     if cid in DRIVETRAIN:
         CARS[cid].update(DRIVETRAIN[cid])
 
+import sys
+ONLY = sys.argv[1:]  # e.g. python tools/make_car_configs.py e30 troc (others keep their tuned .tres)
 for cid, props in CARS.items():
+    if ONLY and cid not in ONLY:
+        continue
     out = os.path.join(ROOT, "assets", "cars", cid, cid + ".tres")
     lines = ['[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]', "",
              '[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]', "",
