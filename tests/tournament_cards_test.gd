@@ -20,7 +20,19 @@ func _run() -> void:
 	_check("tyre wear stacks multiplicatively (keep %.3f, want 0.385)" % Upgrades.stat_scale(r, "tire_pres"),
 			absf(Upgrades.stat_scale(r, "tire_pres") - 0.385) < 0.001)
 	_check("power adds up (+%.1f%%, want 7.5)" % (Upgrades.stat_total(r, "power") * 100.0), absf(Upgrades.stat_total(r, "power") - 0.075) < 0.0001)
-	_check("legendary power card costs 18", Upgrades.cost({"id": "power", "tier": 3}) == 18)
+	_check("legendary power card costs 12", Upgrades.cost({"id": "power", "tier": 3}) == 12)
+	# Cards that would do nothing aren't offered.
+	GameSettings.damage = 0
+	GameSettings.tyre_wear = 0.0
+	var none := Tournament._racer("N", "bavaro", Color.WHITE, 1, 0.0)
+	var useless := 0
+	for i in 40:
+		for card: Dictionary in Upgrades.offers(rng_for_test(i), none, 2, 5):
+			if card.id in ["durability", "tire_pres", "overbored", "drift_harvest", "clean_sector"]:
+				useless += 1
+	_check("damage / tyre wear off, no X item: no useless cards offered (%d)" % useless, useless == 0)
+	GameSettings.damage = 2
+	GameSettings.tyre_wear = 100.0
 	var odds0 := Upgrades.odds(0, 5)
 	var odds4 := Upgrades.odds(4, 5)
 	_check("legendary only shows up later (%.2f -> %.2f)" % [odds0[3], odds4[3]], odds0[3] == 0.0 and odds4[3] > 0.05)
@@ -127,6 +139,12 @@ func _run() -> void:
 	Tournament.finish()
 	print("tournament_cards_test %s" % ("PASSED" if _ok else "FAILED"))
 	quit()
+
+
+func rng_for_test(i: int) -> RandomNumberGenerator:
+	var g := RandomNumberGenerator.new()
+	g.seed = 100 + i
+	return g
 
 
 func _car_with(racer: Dictionary) -> Vehicle:
