@@ -41,7 +41,7 @@ func _run() -> void:
 		GameSettings.track = shot[0]
 		GameSettings.time_of_day = shot[1]
 		GameSettings.weather = shot[2]
-		TrackAtmosphere.clear_haze = shot[4] if shot.size() > 4 else 0.5
+		TrackAtmosphere.clear_haze = shot[4] if shot.size() > 4 else 0.25
 		GameSettings.p1_car = "braxton"
 		var scene := (load("res://scenes/modes/circuit_practice.tscn") as PackedScene).instantiate()
 		var car := scene.get_node("Vehicle") as Vehicle

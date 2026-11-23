@@ -50,7 +50,7 @@ var _cloud_threshold := 0.3
 ## CLEAR weather borrows this share of HAZY's air (colour in the sky, depth
 ## in the distance) so a clear day isn't flat; sun, shadows and clouds stay
 ## clear. Static so tests can compare settings.
-static var clear_haze := 0.5
+static var clear_haze := 0.25
 
 
 ## Per-weather value [clear, hazy, fog]; clear leans `clear_haze` of the way
