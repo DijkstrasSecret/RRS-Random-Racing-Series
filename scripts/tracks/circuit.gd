@@ -1029,6 +1029,7 @@ func _static_box(size: Vector3, pos: Vector3, color: Color) -> void:
 
 func _static_box_basis(size: Vector3, pos: Vector3, rot: Basis, color: Color) -> void:
 	var body := StaticBody3D.new()
+	body.name = "TrackProp"
 	body.collision_layer = LAYER_WORLD
 	body.collision_mask = 0
 	body.transform = Transform3D(rot, pos)
@@ -1043,7 +1044,7 @@ func _static_box_basis(size: Vector3, pos: Vector3, rot: Basis, color: Color) ->
 	var mi := MeshInstance3D.new()
 	mi.mesh = box
 	body.add_child(mi)
-	add_child(body)
+	add_child(body, true)
 
 
 ## Small noisy texture (PS2-era style), tiled in world space.

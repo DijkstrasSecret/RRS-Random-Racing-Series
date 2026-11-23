@@ -134,7 +134,8 @@ func _process(delta: float) -> void:
 
 	if mode == Mode.HOOD:
 		global_transform = Transform3D(xf.basis, xf * Vector3(0.0, 1.2, -0.3))
-		fov = base_fov
+		fov = lerpf(fov, _speed_fov(_target.linear_velocity, delta), 1.0 - exp(-2.5 * delta))
+		_apply_rumble(delta, _target.linear_velocity.length())
 		return
 
 	# Swing lazily toward "behind the car", leaning toward the travel direction.
@@ -172,14 +173,56 @@ func _process(delta: float) -> void:
 	_look_point = _look_point.lerp(look_target, 1.0 - exp(-10.0 * delta))
 	look_at(_look_point, Vector3.UP)
 
-	var speed_frac := clampf(car_vel.length() / fov_full_speed, 0.0, 1.0)
-	fov = lerpf(fov, lerpf(base_fov, max_fov, speed_frac), 1.0 - exp(-2.5 * delta))
+	fov = lerpf(fov, _speed_fov(car_vel, delta), 1.0 - exp(-2.5 * delta))
+	_apply_rumble(delta, car_vel.length())
+
+
+## Field of view for this speed: wider and wider as the car goes faster (with
+## SPEED EFFECTS on), plus a kick under hard acceleration, nitro and in a
+## slipstream.
+var _last_speed := 0.0
+var _accel_kick := 0.0
+
+func _speed_fov(car_vel: Vector3, delta: float) -> float:
+	var v := car_vel.length()
+	if not GameSettings.speed_fx:
+		return lerpf(base_fov, max_fov, clampf(v / fov_full_speed, 0.0, 1.0))
+	var f := smoothstep(0.0, 68.0, v)
+	var target := lerpf(62.0, 90.0, f)
+	var accel := (v - _last_speed) / maxf(delta, 0.001)
+	_last_speed = v
+	_accel_kick = lerpf(_accel_kick, clampf((accel - 2.0) * 0.8, 0.0, 4.0), 1.0 - exp(-4.0 * delta))
+	target += _accel_kick
+	var perks := _target.get_node_or_null("Perks") as CarPerks
+	if perks and perks.boosting:
+		target += 6.0
+	var car := _target as Vehicle
+	if car:
+		target += 4.0 * clampf(car.draft * 1.5, 0.0, 1.0)
+	return minf(target, 98.0)
+
+
+## A light, fast shake at high speed, a bigger one on grass / gravel.
+func _apply_rumble(delta: float, v: float) -> void:
+	if not GameSettings.speed_fx:
+		return
+	var amp := 0.012 * pow(clampf(v / 70.0, 0.0, 1.0), 2.0)
+	var car := _target as Vehicle
+	if car and car.off_track and v > 5.0:
+		amp += 0.035
+	if amp <= 0.0005:
+		return
+	var t := _time * 31.0
+	var off := Vector3(sin(t * 1.7) + sin(t * 2.9) * 0.5, sin(t * 2.3) + sin(t * 3.7) * 0.5, 0.0) * amp
+	global_position += global_basis * off
 
 
 func _anchor(xf: Transform3D) -> Vector3:
 	var far_view := mode == Mode.FAR
-	var dist := distance * (1.45 if far_view else 1.0)
-	var lift := height * (1.4 if far_view else 1.0)
+	# At speed the camera drops a little and falls back: the road rushes by.
+	var fast := smoothstep(15.0, 65.0, _target.linear_velocity.length()) if GameSettings.speed_fx else 0.0
+	var dist := distance * (1.45 if far_view else 1.0) * (1.0 + 0.1 * fast)
+	var lift := height * (1.4 if far_view else 1.0) * (1.0 - 0.12 * fast)
 	var bob := sin(_time * 2.4) * hover_amplitude
 	var away := (-_yaw_dir).rotated(Vector3.UP, _angle_now)
 	return xf.origin + away * dist + Vector3.UP * (lift + bob)

@@ -25,6 +25,12 @@ static var handling_profile: int = 1  ## 0 Arcade, 1 Sport, 2 Sim
 static var look: int = 2  ## 1 PS2, 2 PS1 (0 = old Modern look, no longer offered)
 static var fullscreen: bool = false
 static var vibration: bool = true
+## Sense of speed: wider view, camera rumble and edge blur at speed.
+static var speed_fx: bool = true
+## Lens: 0 off, 1 low, 2 medium (single player only).
+static var fisheye: int = 1
+const FISHEYE_NAMES: PackedStringArray = ["OFF", "LOW", "MEDIUM"]
+const FISHEYE_AMOUNTS: PackedFloat32Array = [0.0, 0.07, 0.14]
 static var sound_volume: int = 8  ## 0..10, engines and effects
 static var music_volume: int = 6  ## 0..10
 static var p1_car: String = "bavaro"
@@ -78,6 +84,8 @@ static func ensure_loaded() -> void:
 	if CarRoster.ids().find(p2_car) == -1:
 		p2_car = "quadra"
 	look = cfg.get_value("video", "look", look)
+	speed_fx = cfg.get_value("video", "speed_fx", speed_fx)
+	fisheye = cfg.get_value("video", "fisheye", fisheye)
 	if look < 1 or look > 2:
 		look = 2
 	time_of_day = clampi(cfg.get_value("race", "time_of_day", time_of_day), 0, 3)
@@ -103,6 +111,8 @@ static func save() -> void:
 	cfg.set_value("car", "handling_profile", handling_profile)
 	cfg.set_value("car", "vibration", vibration)
 	cfg.set_value("video", "look", look)
+	cfg.set_value("video", "speed_fx", speed_fx)
+	cfg.set_value("video", "fisheye", fisheye)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("audio", "sound", sound_volume)
 	cfg.set_value("audio", "music", music_volume)

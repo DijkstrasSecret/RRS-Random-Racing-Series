@@ -49,6 +49,36 @@ func _ready() -> void:
 	_apply.call_deferred()
 
 
+## Fisheye and the speed blur follow the settings and the player's speed.
+## (Split screen: off, the lens would bend across both halves.)
+var forced_car: Vehicle  ## (screenshots: use this car as the player's)
+var _blur := 0.0
+
+func _process(delta: float) -> void:
+	var players := 0
+	var car: Vehicle = null
+	for node in get_tree().get_nodes_in_group("vehicles"):
+		var v := node as Vehicle
+		if v and v.input is PlayerInput:
+			players += 1
+			car = v
+	if is_instance_valid(forced_car):
+		players = 1
+		car = forced_car
+	var solo := players == 1
+	_material.set_shader_parameter("fisheye", GameSettings.FISHEYE_AMOUNTS[clampi(GameSettings.fisheye, 0, 2)] if solo else 0.0)
+	var target := 0.0
+	if solo and GameSettings.speed_fx and car:
+		target = smoothstep(28.0, 70.0, car.linear_velocity.length())
+		var perks := car.get_node_or_null("Perks") as CarPerks
+		if perks and perks.boosting:
+			target = minf(target + 0.35, 1.0)
+	_blur = lerpf(_blur, target, 1.0 - exp(-3.0 * delta))
+	_material.set_shader_parameter("speed_blur", _blur)
+	var s := get_viewport().get_visible_rect().size
+	_material.set_shader_parameter("aspect", s.x / maxf(s.y, 1.0))
+
+
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("cycle_look"):
 		set_level(Level.PS1 if level == Level.PS2 else Level.PS2)

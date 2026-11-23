@@ -28,6 +28,10 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.handling_profile = i)
 	_add_row("VISUAL STYLE", PackedStringArray(["PS2", "PS1"]), clampi(GameSettings.look - 1, 0, 1),
 			func(i: int) -> void: GameSettings.look = i + 1)
+	_add_row("SPEED EFFECTS", PackedStringArray(["OFF", "ON"]), int(GameSettings.speed_fx),
+			func(i: int) -> void: GameSettings.speed_fx = i == 1)
+	_add_row("FISHEYE", GameSettings.FISHEYE_NAMES, GameSettings.fisheye,
+			func(i: int) -> void: GameSettings.fisheye = i)
 	_add_row("FULLSCREEN", PackedStringArray(["OFF", "ON"]), int(GameSettings.fullscreen),
 			func(i: int) -> void: GameSettings.fullscreen = i == 1)
 	var volumes := PackedStringArray()

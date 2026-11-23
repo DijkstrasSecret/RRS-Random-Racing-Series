@@ -534,6 +534,17 @@ func _place_building(kind: String, off: float, side: int, extra: float) -> void:
 	var xf := _frame(off, side, extra)
 	if xf.basis.x == Vector3.ZERO:
 		return
+	# A wide building on a bend: its ends can reach past the barrier into the
+	# run-off. Move it back until its whole front is clear, or leave it out.
+	var ok := false
+	for attempt in 5:
+		var short := _footprint_intrusion(kind, xf)
+		if short <= 0.0:
+			ok = true
+			break
+		xf.origin -= xf.basis.z * (short + 1.0)
+	if not ok:
+		return
 	for r in _keep_clear:
 		if r.has_point(Vector2(xf.origin.x, xf.origin.z)):
 			return  # already something here
@@ -541,6 +552,40 @@ func _place_building(kind: String, off: float, side: int, extra: float) -> void:
 	_solid(kind, xf)
 	if kind == "grandstand":
 		_fill_grandstand(xf)
+
+
+## How far (m) the building's footprint reaches inside the barrier line +
+## 2 m anywhere along its width (0 = clear).
+func _footprint_intrusion(kind: String, xf: Transform3D) -> float:
+	var mesh: Mesh = _meshes.get(kind)
+	if mesh == null:
+		return 0.0
+	var aabb := mesh.get_aabb()
+	var s := _samples()
+	# Points along the footprint, checked against every stretch of track
+	# nearby (two parts of a circuit can run side by side).
+	var pts: Array[Vector3] = []
+	var x := aabb.position.x
+	while x <= aabb.end.x + 0.01:
+		for z in [aabb.position.z, aabb.get_center().z, aabb.end.z]:
+			pts.append(xf * Vector3(x, 0.0, z))
+		x += 3.0
+	var reach := aabb.size.length() * 0.5 + 60.0
+	var worst := 0.0
+	for i in s.size():
+		var c := circuit.to_global(s[i].pos)
+		if Vector2(c.x - xf.origin.x, c.z - xf.origin.z).length() > reach:
+			continue
+		var right: Vector3 = circuit.to_global(s[i].pos + s[i].right) - c
+		var fwd := Vector3(right.z, 0.0, -right.x)
+		for p in pts:
+			var d := Vector3(p.x - c.x, 0.0, p.z - c.z)
+			if absf(d.dot(fwd)) > 4.0:
+				continue
+			var lat := d.dot(right)
+			var side := 1 if lat > 0.0 else 0
+			worst = maxf(worst, _barrier_dist[side][i] + 2.0 - absf(lat))
+	return worst
 
 
 ## Fans in the stand: every step of the stand gets a scattering of people.
@@ -558,12 +603,24 @@ func _fill_grandstand(xf: Transform3D) -> void:
 			x += 0.85
 
 
+## Collision shaped like the building itself (a box round the whole model
+## stuck out under roofs and canopies: invisible walls in the run-off).
+static var _solid_shapes: Dictionary = {}
+
 func _solid(kind: String, xf: Transform3D) -> void:
 	var mesh: Mesh = _meshes.get(kind)
 	if mesh == null:
 		return
 	var aabb := mesh.get_aabb()
-	_box_collider(_solid_body, aabb.size, xf * Transform3D(Basis.IDENTITY, aabb.get_center()))
+	var shape: Shape3D = _solid_shapes.get(kind)
+	if shape == null:
+		shape = mesh.create_trimesh_shape()
+		_solid_shapes[kind] = shape
+	var cs := CollisionShape3D.new()
+	cs.name = kind
+	cs.shape = shape
+	cs.transform = xf
+	_solid_body.add_child(cs, true)
 	var corners := [xf * aabb.position, xf * aabb.end, xf * Vector3(aabb.position.x, 0, aabb.end.z),
 		xf * Vector3(aabb.end.x, 0, aabb.position.z)]
 	var r := Rect2(Vector2(corners[0].x, corners[0].z), Vector2.ZERO)
