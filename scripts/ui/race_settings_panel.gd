@@ -17,6 +17,11 @@ func _ready() -> void:
 	add_theme_constant_override("separation", 6)
 	add_child(MenuStyle.label("RACE SETTINGS", 46, MenuStyle.ACCENT))
 	_summary = MenuStyle.label("", 20, MenuStyle.DIM)
+	# Fixed width: the summary changes with the settings and must not
+	# resize the panel.
+	_summary.clip_text = true
+	_summary.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	_summary.custom_minimum_size = Vector2(760, 0)
 	add_child(_summary)
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 14)

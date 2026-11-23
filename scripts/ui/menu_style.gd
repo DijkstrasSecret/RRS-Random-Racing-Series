@@ -1,7 +1,8 @@
 class_name MenuStyle
 extends RefCounted
-## Shared look for the menus: clean text over the scene, no boxes. The
-## selected item turns yellow with a slim accent line on its left.
+## Shared look for the menus: each menu sits on a dark rounded card with an
+## accent line on top; the selected row gets a soft highlight bar with an
+## accent edge (same margins as the others, so nothing shifts).
 ## Works with mouse, keyboard and gamepad (Godot's ui_* actions).
 
 const ACCENT := Color(1.0, 0.78, 0.2)
@@ -21,10 +22,15 @@ static func make_theme() -> Theme:
 	empty.content_margin_top = 4
 	empty.content_margin_bottom = 4
 	var focus := StyleBoxFlat.new()
-	focus.draw_center = false
+	focus.bg_color = Color(ACCENT, 0.13)
 	focus.border_color = ACCENT
-	focus.border_width_left = 4
+	focus.border_width_left = 5
+	focus.corner_radius_top_right = 4
+	focus.corner_radius_bottom_right = 4
 	focus.content_margin_left = 20
+	focus.content_margin_right = 20
+	focus.content_margin_top = 4
+	focus.content_margin_bottom = 4
 	for state: String in ["normal", "hover", "pressed", "disabled", "hover_pressed"]:
 		t.set_stylebox(state, "Button", empty)
 	t.set_stylebox("focus", "Button", focus)
@@ -42,9 +48,42 @@ static func make_theme() -> Theme:
 	t.set_constant("outline_size", "Label", 8)
 	t.set_color("font_outline_color", "Label", Color(0, 0, 0, 0.7))
 
-	t.set_stylebox("panel", "PanelContainer", StyleBoxEmpty.new())
+	t.set_stylebox("panel", "PanelContainer", card_style())
 	t.set_constant("separation", "VBoxContainer", 4)
 	return t
+
+
+## The dark rounded card menus sit on.
+static func card_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.035, 0.04, 0.055, 0.84)
+	sb.border_color = ACCENT
+	sb.border_width_top = 3
+	sb.set_corner_radius_all(10)
+	sb.shadow_color = Color(0, 0, 0, 0.35)
+	sb.shadow_size = 18
+	sb.content_margin_left = 34
+	sb.content_margin_right = 34
+	sb.content_margin_top = 26
+	sb.content_margin_bottom = 26
+	return sb
+
+
+## Draws a card behind `c` (a plain container), `pad` pixels bigger all
+## round. Layout is untouched: the card is only painted.
+static func card(c: Control, pad: Vector2 = Vector2(34, 26)) -> void:
+	var sb := card_style()
+	c.draw.connect(func() -> void:
+		sb.draw(c.get_canvas_item(), Rect2(-pad, c.size + pad * 2.0)))
+	c.resized.connect(c.queue_redraw)
+
+
+## A small section heading inside a menu ("CAMERA").
+static func section(text: String) -> Label:
+	var l := label(text, 17, Color(ACCENT, 0.9))
+	l.custom_minimum_size = Vector2(0, 26)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	return l
 
 
 static func button(text: String, on_press: Callable) -> Button:

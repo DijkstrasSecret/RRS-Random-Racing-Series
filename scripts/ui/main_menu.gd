@@ -123,7 +123,7 @@ func _build_ui() -> void:
 	_tour_menu.add_child(MenuStyle.button("BACK", _show_main))
 	column.add_child(_tour_menu)
 	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(0, 14)
+	gap2.custom_minimum_size = Vector2(0, 36)  # clear of the menu card
 	column.add_child(gap2)
 	_summary = MenuStyle.label("", 18, MenuStyle.DIM)
 	column.add_child(_summary)
@@ -142,7 +142,7 @@ func _build_ui() -> void:
 	column.add_child(_garage)
 	_preview = CarPreview.new()
 	_preview.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
-	_preview.anchor_left = 0.42
+	_preview.anchor_left = 0.47
 	_preview.offset_left = 0
 	_preview.offset_top = 120
 	_preview.offset_bottom = -120
@@ -151,6 +151,9 @@ func _build_ui() -> void:
 	_garage.car_shown.connect(_preview.show_car)
 
 	_build_flow(root)
+	for panel: Control in [_main, _tour_menu, _settings, _controls, _garage, _race_settings, _tour_settings]:
+		if panel:
+			MenuStyle.card(panel)
 
 	var hint := MenuStyle.label("Arrows / D-pad: choose      Enter / A: select      Esc / B: back", 18, MenuStyle.DIM)
 	_hint = hint

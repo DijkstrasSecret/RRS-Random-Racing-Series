@@ -46,10 +46,31 @@ func step(direction: int) -> void:
 func _draw() -> void:
 	var font := get_theme_font("font")
 	var font_size := get_theme_font_size("font_size")
-	var value := "<   %s   >" % choices[index]
-	var w := font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var focused := has_focus()
+	# The value fits between the title and the right edge (long car names
+	# are shortened with "..." instead of running off the row).
+	var title_w := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x + 60.0
+	var arrow_w := font.get_string_size("<", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
+	var room := size.x - title_w - 22.0 - (arrow_w + 26.0) * 2.0
+	var value := _fit(choices[index], font, font_size, room)
+	var vw := font.get_string_size(value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var y := (size.y + font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
-	var pos := Vector2(size.x - w - 22.0, y)
-	var color := MenuStyle.ACCENT if has_focus() else MenuStyle.TEXT
-	draw_string_outline(font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 4, Color(0, 0, 0, 0.8))
-	draw_string(font, pos, value, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, color)
+	var right := size.x - 22.0
+	var arrow_col := Color(MenuStyle.ACCENT, 0.9) if focused else Color(1, 1, 1, 0.35)
+	var value_col := MenuStyle.ACCENT if focused else MenuStyle.TEXT
+	var x_right_arrow := right - arrow_w
+	var x_value := x_right_arrow - 20.0 - vw
+	var x_left_arrow := x_value - 20.0 - arrow_w
+	for part: Array in [[x_left_arrow, "<", arrow_col], [x_value, value, value_col], [x_right_arrow, ">", arrow_col]]:
+		var pos := Vector2(part[0], y)
+		draw_string_outline(font, pos, part[1], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 4, Color(0, 0, 0, 0.8))
+		draw_string(font, pos, part[1], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, part[2])
+
+
+static func _fit(s: String, font: Font, font_size: int, room: float) -> String:
+	if room <= 0.0 or font.get_string_size(s, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x <= room:
+		return s
+	var cut := s
+	while cut.length() > 1 and font.get_string_size(cut + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > room:
+		cut = cut.substr(0, cut.length() - 1)
+	return cut.strip_edges() + "..."

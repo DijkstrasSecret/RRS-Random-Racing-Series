@@ -10,8 +10,10 @@ var _rows: Array[Control] = []
 
 func _ready() -> void:
 	GameSettings.ensure_loaded()
-	add_child(MenuStyle.label("SETTINGS", 40, MenuStyle.ACCENT))
+	add_theme_constant_override("separation", 0)
+	add_child(MenuStyle.label("GAME SETTINGS", 36, MenuStyle.ACCENT))
 
+	add_child(MenuStyle.section("RACE"))
 	var laps := PackedStringArray()
 	for n in GameSettings.LAP_CHOICES:
 		laps.append(str(n))
@@ -24,8 +26,12 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.ai_count = i)
 	_add_row("AI DIFFICULTY", GameSettings.DIFFICULTY_NAMES, GameSettings.ai_difficulty,
 			func(i: int) -> void: GameSettings.ai_difficulty = i)
+	add_child(MenuStyle.section("DRIVING"))
 	_add_row("HANDLING", PackedStringArray(["ARCADE", "SPORT", "SIM"]), GameSettings.handling_profile,
 			func(i: int) -> void: GameSettings.handling_profile = i)
+	_add_row("VIBRATION", PackedStringArray(["OFF", "ON"]), int(GameSettings.vibration),
+			func(i: int) -> void: GameSettings.vibration = i == 1)
+	add_child(MenuStyle.section("CAMERA"))
 	_add_row("VISUAL STYLE", PackedStringArray(["PS2", "PS1"]), clampi(GameSettings.look - 1, 0, 1),
 			func(i: int) -> void: GameSettings.look = i + 1)
 	_add_slider("FIELD OF VIEW", 50.0, 85.0, 1.0, GameSettings.fov, "%d°",
@@ -36,6 +42,7 @@ func _ready() -> void:
 			func(v: float) -> void: GameSettings.fisheye = v)
 	_add_row("SPEED SHAKE & BLUR", PackedStringArray(["OFF", "ON"]), int(GameSettings.speed_fx),
 			func(i: int) -> void: GameSettings.speed_fx = i == 1)
+	add_child(MenuStyle.section("DISPLAY & SOUND"))
 	_add_row("FULLSCREEN", PackedStringArray(["OFF", "ON"]), int(GameSettings.fullscreen),
 			func(i: int) -> void: GameSettings.fullscreen = i == 1)
 	var volumes := PackedStringArray()
@@ -45,18 +52,17 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.music_volume = i)
 	_add_row("SOUND VOLUME", volumes, GameSettings.sound_volume,
 			func(i: int) -> void: GameSettings.sound_volume = i)
-	_add_row("VIBRATION", PackedStringArray(["OFF", "ON"]), int(GameSettings.vibration),
-			func(i: int) -> void: GameSettings.vibration = i == 1)
 
-	add_child(MenuStyle.label("Laps, AI opponents and difficulty apply to the next race.", 18, MenuStyle.DIM))
 	var back := MenuStyle.button("BACK", func() -> void: closed.emit())
-	back.custom_minimum_size = Vector2(560, 0)
+	back.custom_minimum_size = Vector2(640, 0)
 	add_child(back)
 	_rows.append(back)
 
 
 func _add_row(row_title: String, choices: PackedStringArray, start: int, apply: Callable) -> void:
 	var row := OptionRow.create(row_title, choices, start)
+	row.custom_minimum_size = Vector2(640, 0)
+	row.add_theme_font_size_override("font_size", 26)
 	row.value_changed.connect(func(i: int) -> void:
 		apply.call(i)
 		GameSettings.save()
@@ -68,6 +74,8 @@ func _add_row(row_title: String, choices: PackedStringArray, start: int, apply: 
 func _add_slider(row_title: String, from: float, to: float, step_by: float, start: float, fmt: String,
 		apply: Callable) -> void:
 	var row := SliderRow.create(row_title, from, to, step_by, start, fmt)
+	row.custom_minimum_size = Vector2(640, 0)
+	row.add_theme_font_size_override("font_size", 26)
 	row.value_changed.connect(func(v: float) -> void:
 		apply.call(v)
 		GameSettings.save())

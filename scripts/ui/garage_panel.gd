@@ -25,7 +25,7 @@ func _ready() -> void:
 	_p1_livery = OptionRow.create("P1 LIVERY", PackedStringArray(["OFF", "ON"]), int(GameSettings.p1_livery))
 	_p2_livery = OptionRow.create("P2 LIVERY", PackedStringArray(["OFF", "ON"]), int(GameSettings.p2_livery))
 	for row: OptionRow in [_p1, _p1_livery, _p2, _p2_livery]:
-		row.custom_minimum_size = Vector2(760, 0)
+		row.custom_minimum_size = Vector2(640, 0)
 		add_child(row)
 		row.focus_entered.connect(_refresh)
 	_p1_livery.value_changed.connect(func(i: int) -> void:
@@ -49,11 +49,14 @@ func _ready() -> void:
 	gap.custom_minimum_size = Vector2(0, 12)
 	add_child(gap)
 	_name = MenuStyle.label("", 34, MenuStyle.TEXT)
-	add_child(_name)
 	_tagline = MenuStyle.label("", 19, MenuStyle.DIM)
-	add_child(_tagline)
 	_specs = MenuStyle.label("", 20, MenuStyle.ACCENT)
-	add_child(_specs)
+	# Fixed width: switching cars must not resize the panel.
+	for l: Label in [_name, _tagline, _specs]:
+		l.clip_text = true
+		l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		l.custom_minimum_size = Vector2(640, 0)
+		add_child(l)
 	_bars = StatBars.new()
 	_bars.custom_minimum_size = Vector2(560, 6 * 30)
 	add_child(_bars)
