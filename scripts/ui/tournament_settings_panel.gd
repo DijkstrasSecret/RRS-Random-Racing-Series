@@ -31,7 +31,8 @@ func _ready() -> void:
 	_row("TIME OF DAY", GameSettings.TIME_NAMES, GameSettings.time_of_day, func(i: int) -> void: GameSettings.time_of_day = i)
 	_row("WEATHER", GameSettings.WEATHER_NAMES, GameSettings.weather, func(i: int) -> void: GameSettings.weather = i)
 	_row("DAMAGE", GameSettings.DAMAGE_NAMES, GameSettings.damage, func(i: int) -> void: GameSettings.damage = i)
-	_row("TYRE WEAR", GameSettings.TYRE_WEAR_NAMES, GameSettings.tyre_wear, func(i: int) -> void: GameSettings.tyre_wear = i)
+	_slider("DURABILITY", 25.0, 300.0, 25.0, GameSettings.durability, func(v: float) -> void: GameSettings.durability = v)
+	_slider("TYRE WEAR", 0.0, 300.0, 25.0, GameSettings.tyre_wear, func(v: float) -> void: GameSettings.tyre_wear = v)
 	var gap2 := Control.new()
 	gap2.custom_minimum_size = Vector2(0, 18)
 	add_child(gap2)
@@ -47,6 +48,13 @@ func _row(row_title: String, choices: PackedStringArray, start_index: int, apply
 	var row := OptionRow.create(row_title, choices, start_index)
 	row.custom_minimum_size = Vector2(760, 0)
 	row.value_changed.connect(func(i: int) -> void: apply.call(i))
+	add_child(row)
+
+
+func _slider(row_title: String, from: float, to: float, step_by: float, start: float, apply: Callable) -> void:
+	var row := SliderRow.create(row_title, from, to, step_by, start, "%d%%")
+	row.custom_minimum_size = Vector2(760, 0)
+	row.value_changed.connect(func(v: float) -> void: apply.call(v))
 	add_child(row)
 
 

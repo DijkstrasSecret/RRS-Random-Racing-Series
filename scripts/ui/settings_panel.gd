@@ -28,10 +28,14 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.handling_profile = i)
 	_add_row("VISUAL STYLE", PackedStringArray(["PS2", "PS1"]), clampi(GameSettings.look - 1, 0, 1),
 			func(i: int) -> void: GameSettings.look = i + 1)
-	_add_row("SPEED EFFECTS", PackedStringArray(["OFF", "ON"]), int(GameSettings.speed_fx),
+	_add_slider("FIELD OF VIEW", 50.0, 85.0, 1.0, GameSettings.fov, "%d°",
+			func(v: float) -> void: GameSettings.fov = v)
+	_add_slider("SPEED FOV", 0.0, 100.0, 5.0, GameSettings.speed_fov, "%d%%",
+			func(v: float) -> void: GameSettings.speed_fov = v)
+	_add_slider("FISHEYE", 0.0, 100.0, 5.0, GameSettings.fisheye, "%d%%",
+			func(v: float) -> void: GameSettings.fisheye = v)
+	_add_row("SPEED SHAKE & BLUR", PackedStringArray(["OFF", "ON"]), int(GameSettings.speed_fx),
 			func(i: int) -> void: GameSettings.speed_fx = i == 1)
-	_add_row("FISHEYE", GameSettings.FISHEYE_NAMES, GameSettings.fisheye,
-			func(i: int) -> void: GameSettings.fisheye = i)
 	_add_row("FULLSCREEN", PackedStringArray(["OFF", "ON"]), int(GameSettings.fullscreen),
 			func(i: int) -> void: GameSettings.fullscreen = i == 1)
 	var volumes := PackedStringArray()
@@ -57,6 +61,16 @@ func _add_row(row_title: String, choices: PackedStringArray, start: int, apply: 
 		apply.call(i)
 		GameSettings.save()
 		GameSettings.apply_live(get_tree()))
+	add_child(row)
+	_rows.append(row)
+
+
+func _add_slider(row_title: String, from: float, to: float, step_by: float, start: float, fmt: String,
+		apply: Callable) -> void:
+	var row := SliderRow.create(row_title, from, to, step_by, start, fmt)
+	row.value_changed.connect(func(v: float) -> void:
+		apply.call(v)
+		GameSettings.save())
 	add_child(row)
 	_rows.append(row)
 

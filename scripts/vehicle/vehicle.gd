@@ -142,7 +142,7 @@ func _ready() -> void:
 	GameSettings.ensure_loaded()
 	for w in wheels:
 		w.setup(self, config)
-		w.wear_rate = [0.0, 1.0, 2.0][clampi(GameSettings.tyre_wear, 0, 2)]
+		w.wear_rate = GameSettings.tyre_wear / 100.0
 		if w.is_front:
 			front_wheels.append(w)
 		else:
@@ -180,6 +180,8 @@ func _setup_damage() -> void:
 		return
 	if get_tree().get_first_node_in_group("no_damage") != null:
 		return
+	# DURABILITY (race setting): 200% = half the damage from the same crash.
+	damage_taken *= 100.0 / maxf(GameSettings.durability, 1.0)
 	damage = CarDamage.new()
 	damage.name = "Damage"
 	add_child(damage)

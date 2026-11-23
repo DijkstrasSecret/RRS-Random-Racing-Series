@@ -66,7 +66,7 @@ func _process(delta: float) -> void:
 		players = 1
 		car = forced_car
 	var solo := players == 1
-	_material.set_shader_parameter("fisheye", GameSettings.FISHEYE_AMOUNTS[clampi(GameSettings.fisheye, 0, 2)] if solo else 0.0)
+	_material.set_shader_parameter("fisheye", GameSettings.fisheye / 100.0 * GameSettings.FISHEYE_MAX if solo else 0.0)
 	var target := 0.0
 	if solo and GameSettings.speed_fx and car:
 		target = smoothstep(28.0, 70.0, car.linear_velocity.length())

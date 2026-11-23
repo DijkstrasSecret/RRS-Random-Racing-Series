@@ -97,6 +97,7 @@ func _run() -> void:
 		tiers.toggle(i)
 	tiers.toggle(0)  # last class can't be switched off
 	_check("AI classes: only D left on (mask %d)" % GameSettings.ai_tiers, GameSettings.ai_tiers == 1)
+	GameSettings.ai_count = 5  # (the player's own settings may have no AI)
 	await _action("ui_accept")
 	await _frames(40)
 	_check("race scene loaded", current_scene != null and current_scene.name == "CircuitRace")
@@ -108,7 +109,7 @@ func _run() -> void:
 	for v in race_setup.ai_vehicles:
 		if CarRoster.tier(v.get_meta(&"car_id")) != 0:
 			all_d = false
-	_check("AI cars are all class D (%d cars)" % race_setup.ai_vehicles.size(), all_d)
+	_check("AI cars are all class D (%d cars, ai_count %d, tiers %d)" % [race_setup.ai_vehicles.size(), GameSettings.ai_count, GameSettings.ai_tiers], all_d)
 	var pause := current_scene.get_tree().get_first_node_in_group("pause_menu") as PauseMenu
 	_check("race has a pause menu", pause != null)
 	await _action("pause")

@@ -33,8 +33,10 @@ func _ready() -> void:
 			func(i: int) -> void: GameSettings.weather = i)
 	_add_row("DAMAGE", GameSettings.DAMAGE_NAMES, GameSettings.damage,
 			func(i: int) -> void: GameSettings.damage = i)
-	_add_row("TYRE WEAR", GameSettings.TYRE_WEAR_NAMES, GameSettings.tyre_wear,
-			func(i: int) -> void: GameSettings.tyre_wear = i)
+	_add_slider("DURABILITY", 25.0, 300.0, 25.0, GameSettings.durability, "%d%%",
+			func(v: float) -> void: GameSettings.durability = v)
+	_add_slider("TYRE WEAR", 0.0, 300.0, 25.0, GameSettings.tyre_wear, "%d%%",
+			func(v: float) -> void: GameSettings.tyre_wear = v)
 	_add_row("AI DIFFICULTY", GameSettings.DIFFICULTY_NAMES, GameSettings.ai_difficulty,
 			func(i: int) -> void: GameSettings.ai_difficulty = i)
 	var tiers := TierToggleRow.create("AI CAR CLASSES", GameSettings.ai_tiers)
@@ -72,6 +74,18 @@ func _add_row(row_title: String, choices: PackedStringArray, start_index: int, a
 	row.custom_minimum_size = Vector2(760, 0)
 	row.value_changed.connect(func(i: int) -> void:
 		apply.call(i)
+		GameSettings.save()
+		_update_summary())
+	add_child(row)
+	_rows.append(row)
+
+
+func _add_slider(row_title: String, from: float, to: float, step_by: float, start: float, fmt: String,
+		apply: Callable) -> void:
+	var row := SliderRow.create(row_title, from, to, step_by, start, fmt)
+	row.custom_minimum_size = Vector2(760, 0)
+	row.value_changed.connect(func(v: float) -> void:
+		apply.call(v)
 		GameSettings.save()
 		_update_summary())
 	add_child(row)

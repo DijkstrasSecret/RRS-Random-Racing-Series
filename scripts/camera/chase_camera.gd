@@ -185,21 +185,20 @@ var _accel_kick := 0.0
 
 func _speed_fov(car_vel: Vector3, delta: float) -> float:
 	var v := car_vel.length()
-	if not GameSettings.speed_fx:
-		return lerpf(base_fov, max_fov, clampf(v / fov_full_speed, 0.0, 1.0))
+	var widen := GameSettings.speed_fov / 100.0
 	var f := smoothstep(0.0, 68.0, v)
-	var target := lerpf(62.0, 90.0, f)
+	var target := GameSettings.fov + 28.0 * widen * f
 	var accel := (v - _last_speed) / maxf(delta, 0.001)
 	_last_speed = v
 	_accel_kick = lerpf(_accel_kick, clampf((accel - 2.0) * 0.8, 0.0, 4.0), 1.0 - exp(-4.0 * delta))
-	target += _accel_kick
+	target += _accel_kick * widen
 	var perks := _target.get_node_or_null("Perks") as CarPerks
 	if perks and perks.boosting:
-		target += 6.0
+		target += 6.0 * widen
 	var car := _target as Vehicle
 	if car:
-		target += 4.0 * clampf(car.draft * 1.5, 0.0, 1.0)
-	return minf(target, 98.0)
+		target += 4.0 * widen * clampf(car.draft * 1.5, 0.0, 1.0)
+	return minf(target, 110.0)
 
 
 ## A light, fast shake at high speed, a bigger one on grass / gravel.

@@ -5,7 +5,7 @@ extends SceneTree
 ##   Godot.exe --path . -s res://tests/screenshot_speed.gd
 
 const OUT := "user://screenshots"
-const SETS := [[false, 0, "speed_off"], [true, 0, "speed_on"], [true, 1, "speed_on_fisheye_low"], [true, 2, "speed_on_fisheye_medium"]]
+const SETS := [[0.0, 0.0, "fov_static"], [100.0, 0.0, "speed_fov_100"], [100.0, 35.0, "fisheye_35"], [100.0, 100.0, "fisheye_100"]]
 
 
 func _init() -> void:
@@ -32,7 +32,8 @@ func _run() -> void:
 	await _wait(2.0)
 	var circuit := scene.find_children("*", "Circuit", true, false)[0] as Circuit
 	for s: Array in SETS:
-		GameSettings.speed_fx = s[0]
+		GameSettings.speed_fov = s[0]
+		GameSettings.speed_fx = s[0] > 0.0
 		GameSettings.fisheye = s[1]
 		var off := 40.0
 		var dir := circuit.direction_at(off)
