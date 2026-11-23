@@ -1,6 +1,6 @@
 class_name Upgrades
 extends RefCounted
-## Tournament shop cards (see docs/tournament_upgrades.md):
+## Tournament shop cards (see docs/design/tournament_upgrades.md):
 ## - STAT cards in four rarities (Common x1, Rare x1.5, Epic x2, Legendary x3);
 ##   the rarity scales both the effect and the price. Additive stats add up,
 ##   reductions stack multiplicatively (never reach 100%).

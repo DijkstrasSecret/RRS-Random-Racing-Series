@@ -1,4 +1,4 @@
-"""Builds docs/RRS_car_lineup.pdf: 3 cars per page, livery off / livery on.
+"""Builds docs/design/RRS_car_lineup.pdf: 3 cars per page, livery off / livery on.
 
 Names, classes and livery flags come from scripts/core/car_roster.gd; number
 and sponsor from tools/blender_cars.py. Pictures first:
@@ -13,7 +13,7 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT = os.path.join(ROOT, "docs", "RRS_car_lineup.pdf")
+OUT = os.path.join(ROOT, "docs", "design", "RRS_car_lineup.pdf")
 # Colours / pattern of each livery (the rest is read from the generator).
 STYLE = {
     "kartal": "white rally stripes", "mirelle": "cup yellow / black", "kerkenez": "yellow rally stripes",

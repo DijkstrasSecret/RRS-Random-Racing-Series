@@ -1,34 +1,34 @@
 # Multiplayer: must-fix before netcode work
 
-*Review date: 2026-11-23. Static code review only (Godot not run).*
+*Snapshot · 2026-11-23 · static code review only (Godot not run).*
 
 **Target:** up to 8 players online, 2-player split-screen that can also join online races, Windows + Web cross-play, either platform can host (listen server), dedicated server later. Jolt physics, 120 Hz.
 
 **Must-fix** = blocks networking/Web, guarantees desync, or makes later rework much more expensive. Smaller items are in [multiplayer_nice_to_have.md](multiplayer_nice_to_have.md).
 
-**Method:** two independent reviewers got the same brief; findings were merged and the key citations spot-checked. *Found by* shows who reported each issue: **A**, **B**, or **both**.
+**Method:** two independent reviewers got the same brief; findings were merged and the key citations spot-checked. Fixed items are marked `✅ Fixed in #<PR>` next to their heading. *Found by* shows who reported each issue: **A**, **B**, or **both**.
 
 ## Summary
 
-| # | Issue | Severity | Effort | Found by |
+| ID | Issue | Severity | Effort | Found by |
 |---|-------|----------|--------|----------|
-| 1 | No network model or transport chosen; Web hosting needs WebRTC | blocker | M–L | A |
-| 2 | Forward+ renderer can't run on Web | blocker | M | both |
-| 3 | Race rules read from each machine's local `GameSettings` | blocker | M | both |
-| 4 | Handling profile and restart/recover are local, not per-racer | blocker | S–M | both |
-| 5 | Human players are fixed scene nodes; racers identified by index/name | blocker | L | both |
-| 6 | Race authority and scene flow live in a UI node, run on every peer | high | M | both |
-| 7 | Input layer isn't network-shaped; P1/P2 hard-coded | high | M | both (B rated it nice-to-have) |
-| 8 | Vehicle mixes simulation and visuals; no state snapshot | high | L | both |
-| 9 | Gameplay randomness uses the unseeded global RNG | high | S | both |
-| 10 | Web host CPU budget at 120 Hz is unmeasured | high | M | both |
-| 11 | Tournament is single-machine static state | high | M | both (A rated it nice-to-have) |
+| MF-1 | No network model or transport chosen; Web hosting needs WebRTC | blocker | M–L | A |
+| MF-2 | Forward+ renderer can't run on Web | blocker | M | both |
+| MF-3 | Race rules read from each machine's local `GameSettings` | blocker | M | both |
+| MF-4 | Handling profile and restart/recover are local, not per-racer | blocker | S–M | both |
+| MF-5 | Human players are fixed scene nodes; racers identified by index/name | blocker | L | both |
+| MF-6 | Race authority and scene flow live in a UI node, run on every peer | high | M | both |
+| MF-7 | Input layer isn't network-shaped; P1/P2 hard-coded | high | M | both (B rated it nice-to-have) |
+| MF-8 | Vehicle mixes simulation and visuals; no state snapshot | high | L | both |
+| MF-9 | Gameplay randomness uses the unseeded global RNG | high | S | both |
+| MF-10 | Web host CPU budget at 120 Hz is unmeasured | high | M | both |
+| MF-11 | Tournament is single-machine static state | high | M | both (A rated it nice-to-have) |
 
-Suggested order: **1 and 2 first** (they're decisions that shape everything), then **3, 4, 9** (small and cheap), then **5, 6, 7, 8** (the big refactors), with **10** measured alongside. **11** builds on 3, 5 and 6.
+Suggested order: **MF-1 and MF-2 first** (they're decisions that shape everything), then **MF-3, MF-4, MF-9** (small and cheap), then **MF-5, MF-6, MF-7, MF-8** (the big refactors), with **MF-10** measured alongside. **MF-11** builds on MF-3, MF-5 and MF-6.
 
 ---
 
-## 1. No network model or transport chosen; Web hosting needs WebRTC
+## MF-1. No network model or transport chosen; Web hosting needs WebRTC
 - **Evidence:** no networking code anywhere; no `export_presets.cfg` (git-ignored); `addons/` is empty.
 - **Why it matters:**
   - A browser can't accept incoming connections, so a Web player can't host over WebSocket. Web hosting means `WebRTCMultiplayerPeer`, which needs a signalling server and STUN/TURN.
@@ -37,7 +37,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** pick the model now: server-authoritative snapshots with interpolated remote cars (recommended), or owner-simulated cars checked by the host. Prototype a WebRTC host from both Windows and Web, with signalling and TURN, before writing any gameplay networking. Add Windows, Web and Linux-server export presets.
 - **Effort:** M–L
 
-## 2. Forward+ renderer can't run on Web
+## MF-2. Forward+ renderer can't run on Web
 - **Evidence:** `project.godot:16` (features "Forward Plus"), `project.godot:43` (`rendering_method="forward_plus"`).
 - **Why it matters:** a Web build fails or renders differently, so there's no Web host or client and no cross-play.
 - **Things to check under the Compatibility renderer** (support uncertain until tested):
@@ -49,7 +49,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** switch to `gl_compatibility` on all platforms (simplest, and Windows and Web then look the same), or use a per-platform override. Port and test the items above, and do all future visual work in that renderer.
 - **Effort:** M
 
-## 3. Race rules read from each machine's local `GameSettings`
+## MF-3. Race rules read from each machine's local `GameSettings`
 - **Evidence:** every value below is a `static var` loaded from `user://settings.cfg` (`game_settings.gd:21-61, 67-114`):
   - Track: `circuit.gd:88`
   - Laps: `race_director.gd:51-55`
@@ -61,7 +61,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** add a serializable `RaceConfig` (track id, laps, damage, wear, durability, weather, seed, AI list, per-racer car, paint and profile). The host builds it from its menus and sends it to every peer. Gameplay code reads only `RaceConfig`; `GameSettings` keeps menu defaults and video/audio settings.
 - **Effort:** M
 
-## 4. Handling profile and restart/recover are local, not per-racer
+## MF-4. Handling profile and restart/recover are local, not per-racer
 - **Evidence:**
   - Every Vehicle, including AI and remote humans, takes the local `GameSettings.handling_profile` (`vehicle.gd:171`). The profile changes tyre shape and assists (`vehicle.gd:208-214`, `assists.gd:30-46`).
   - The P key changes the profile mid-race and saves it to disk (`vehicle.gd:592-595`). `apply_live` applies it to every `PlayerInput` car, so both split-screen players share one profile (`game_settings.gd:185-188`).
@@ -70,7 +70,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** make the profile a per-racer field in `RaceConfig`, locked during the race. Restart, recover and profile changes become requests the host carries out.
 - **Effort:** S–M
 
-## 5. Human players are fixed scene nodes; racers identified by index/name
+## MF-5. Human players are fixed scene nodes; racers identified by index/name
 - **Evidence:**
   - `circuit_race.tscn` has 1 player car; `versus_race.tscn` has fixed `Car1`/`Car2`, LapTimer1/2, HUD1/2 and Camera1/2.
   - The race scene is chosen by local player count: `players == 2 ? VERSUS : RACE` (`tournament.gd:332-333`).
@@ -80,7 +80,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** one race scene that spawns every car (human and AI) from `RaceConfig` entries with a stable `racer_id`, `owner_peer`, `local_slot`, car and control type. Name nodes by `racer_id` and key all race and tournament data by it. Create a camera, viewport and HUD per local slot at runtime, so split-screen becomes "this peer has 2 local slots".
 - **Effort:** L
 
-## 6. Race authority and scene flow live in a UI node, run on every peer
+## MF-6. Race authority and scene flow live in a UI node, run on every peer
 - **Evidence:**
   - `RaceDirector extends Control` (`race_director.gd:1-2`) and handles both the race logic and the drawing.
   - Countdown, finish order and DNF timers are local (`race_director.gd:84-90, 95-115, 136-159`).
@@ -96,7 +96,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** move race logic into a plain host-only `RaceState` node: integer race tick, countdown, laps, finish order and retirements, sent to peers as events. RaceDirector and the HUD only display that state. Online, pause is a local overlay; restart and scene changes become host actions; a finish timer starts after the first finisher.
 - **Effort:** M
 
-## 7. Input layer isn't network-shaped; P1/P2 hard-coded
+## MF-7. Input layer isn't network-shaped; P1/P2 hard-coded
 - **Evidence:**
   - `PlayerInput.poll` reads the global `Input` singleton during the car's physics update (`player_input.gd:57-87`).
   - Button presses are one-tick bools (`vehicle_input.gd:13-20`) that are lost or doubled under packet loss.
@@ -107,7 +107,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** define `InputCommand {tick, steer, throttle, brake, handbrake, buttons}` and work out presses by comparing buttons with the previous tick. The Vehicle copies the command and never changes it. Add a `NetworkInput` subclass and a local "player slot" object (slot index, device, key map) instead of string prefixes.
 - **Effort:** M
 
-## 8. Vehicle mixes simulation and visuals; no state snapshot
+## MF-8. Vehicle mixes simulation and visuals; no state snapshot
 - **Evidence:**
   - Physics forces and visual updates run in the same physics update: wheel visuals and dirt particles, brake lamps (`vehicle.gd:231-332, 324`; `wheel.gd:327-335`).
   - Audio reads live simulation fields directly (`car_audio.gd:77-122`).
@@ -117,7 +117,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** add a `simulated` / `proxy` mode to Vehicle. In proxy mode it skips forces and drives the visuals from replicated state. Add `get_net_state()` / `apply_net_state()` covering transform, velocity, steer, per-wheel spin and suspension, rpm, gear, pedals, damage zones and perk energy. Damage outcomes are decided only on the host and sent as events.
 - **Effort:** L
 
-## 9. Gameplay randomness uses the unseeded global RNG
+## MF-9. Gameplay randomness uses the unseeded global RNG
 - **Evidence:**
   - Damage rolls for wheel off, toe, puncture and roll-over use global `randf()` (`car_damage.gd:61-67, 193`).
   - `race_setup.gd:62, 70` use global `shuffle()` for AI skills and cars, bypassing the local `rng`, which is itself `randomize()`d (`:56`).
@@ -126,7 +126,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
 - **Fix:** one host-owned seed per race or tournament, passed in `RaceConfig`. Route all gameplay randomness through `RandomNumberGenerator` instances made from that seed (`Upgrades.offers` already takes an rng). Damage results come only from the host.
 - **Effort:** S
 
-## 10. Web host CPU budget at 120 Hz is unmeasured
+## MF-10. Web host CPU budget at 120 Hz is unmeasured
 - **Evidence:**
   - Physics runs at 120 Hz with up to 12 catch-up steps per frame (`project.godot:36-38`).
   - Each car per tick: 4 wheels × 4 substeps of GDScript tyre maths (`vehicle.gd:314-324`), and about 4–6 brute-force `Curve3D.get_closest_*` queries on a curve baked at 1 m (`lap_timer.gd:85`, `race_director.gd:286`, `ai_driver.gd:44, 80`, `vehicle.gd:465, 483`, `car_perks.gd:284`).
@@ -138,7 +138,7 @@ Suggested order: **1 and 2 first** (they're decisions that shape everything), th
   - Profile `tests/fps_test.gd` with 8–9 cars in a Web build before designing netcode around 120 Hz. Then decide the network rate (e.g. 60 Hz network over a 120 Hz simulation) and lower the catch-up step cap.
 - **Effort:** M
 
-## 11. Tournament is single-machine static state
+## MF-11. Tournament is single-machine static state
 - **Evidence:**
   - All tournament state is `static var` (`tournament.gd:23-37`).
   - Humans are hard-coded as "YOU" / "PLAYER 1/2", with cars taken from the p1/p2 settings (`tournament.gd:53-57`).

@@ -1,7 +1,10 @@
 # RRS — Directory Tree
 
+*Current · updated 2026-11-23*
+
 ```
 RRS-Random-Racing-Series/
+├── CLAUDE.md              Rules and architecture notes for AI coding agents working on the repo.
 ├── project.godot          Godot 4.7 project config: Jolt physics at 120 Hz, the main menu as the start scene, and the Music autoload.
 ├── .mcp.json              MCP server config the author uses to drive Godot and Blender from Claude.
 ├── addons/                Empty; reserved for Godot plugins.
@@ -15,7 +18,7 @@ RRS-Random-Racing-Series/
 │   ├── ui/                Logo, cover and splash images.
 │   │   └── track_clips/   Short .ogv preview videos for each track on the track select screen.
 │   └── vfx/shaders/       The PS1-style lit and decal shaders, cloud shaders and the preview-screen shader.
-├── docs/                  Design concept (v0.1), car lineup, damage research and tournament upgrade notes.
+├── docs/                  Project docs by purpose: design/, architecture/, decisions/ (ADRs), research/, reviews/; index in docs/README.md.
 ├── scenes/
 │   ├── modes/             Playable mode scenes: free roam, practice, circuit race and versus race.
 │   ├── tracks/            The procedural circuit scene and a test track.
