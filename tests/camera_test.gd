@@ -1,6 +1,6 @@
 extends SceneTree
-## Camera view angles: Z / X (or the right stick left / right) swing to 45
-## degrees rear left / rear right and no further; right stick forward / B
+## Camera view angles: Z / X (or the right stick left / right) look 45
+## degrees left / right (camera swings to the opposite rear corner), no further; right stick forward / B
 ## cuts to the look-back camera while held, leaving the normal camera put.
 ## Run: Godot_console.exe --headless --fixed-fps 60 --path . -s res://tests/camera_test.gd
 ## With a window and -- --shots, also saves pictures of the views.
@@ -30,14 +30,14 @@ func _run() -> void:
 	await _action("camera_right")
 	await _frames(150)
 	var p := _side(cam, car)
-	_check("X -> rear right (%s, %.1f / %.1f)" % [cam.view_name(), p.x, p.z], cam.view_angle == 1 and p.x > 2.5 and p.z > 2.5)
+	_check("X -> look right: camera on the rear left (%s, %.1f / %.1f)" % [cam.view_name(), p.x, p.z], cam.view_angle == 1 and p.x < -2.5 and p.z > 2.5)
 	await _action("camera_right")
 	_check("X again stays at 45 degrees", cam.view_angle == 1)
 	await _action("camera_left")
 	await _action("camera_left")
 	await _frames(150)
 	p = _side(cam, car)
-	_check("Z Z -> rear left (%s, %.1f / %.1f)" % [cam.view_name(), p.x, p.z], cam.view_angle == -1 and p.x < -2.5 and p.z > 2.5)
+	_check("Z Z -> look left: camera on the rear right (%s, %.1f / %.1f)" % [cam.view_name(), p.x, p.z], cam.view_angle == -1 and p.x > 2.5 and p.z > 2.5)
 	await _action("camera_right")
 	await _frames(150)
 	_check("back behind (%s)" % cam.view_name(), cam.view_angle == 0 and absf(_side(cam, car).x) < 1.0)

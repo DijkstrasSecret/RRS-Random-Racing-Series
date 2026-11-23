@@ -5,9 +5,9 @@ extends Camera3D
 ## car speeds up, drifts closer under braking, swings round slowly in slides
 ## and bobs gently, but never falls far behind at a steady speed.
 ## C cycles chase / far / hood view.
-## View angle: behind, or 45 degrees to the rear left / rear right. Z / X
-## (player 2: numpad 4 / 6) or the right stick left / right; the camera swings
-## round gently. Right stick forward or B (player 2: numpad 8) cuts to a
+## View angle: behind, or looking 45 degrees left / right. Z / X (player 2:
+## numpad 4 / 6) or the right stick left / right; the camera swings round
+## gently to the opposite rear corner, so you look the way you pushed. Right stick forward or B (player 2: numpad 8) cuts to a
 ## separate look-back camera ahead of the car, looking back over it, while
 ## held; the normal camera stays where it is.
 
@@ -17,8 +17,8 @@ enum Mode { CHASE, FAR, HOOD }
 ## Input action that switches view (split screen gives each player their own).
 @export var cycle_action: StringName = &"cycle_camera"
 @export var distance: float = 7.8
-@export var height: float = 3.0
-@export var look_height: float = 0.9
+@export var height: float = 3.6
+@export var look_height: float = 1.0
 ## How far ahead of the car the camera aims, in metres.
 @export var look_ahead_distance: float = 4.0
 ## Spring stiffness of the string (higher = tighter).
@@ -39,11 +39,12 @@ enum Mode { CHASE, FAR, HOOD }
 ## How quickly the camera swings to a new view angle (lower = gentler).
 @export var angle_swing_speed: float = 2.6
 
-const VIEW_NAMES: PackedStringArray = ["REAR LEFT", "BEHIND", "REAR RIGHT"]
+const VIEW_NAMES: PackedStringArray = ["LOOK LEFT", "BEHIND", "LOOK RIGHT"]
 const LOOK_BACK := 2
 
 var mode: int = Mode.CHASE
-## Chosen view angle: -1 rear left, 0 behind, 1 rear right (45 degree steps).
+## Chosen view angle: -1 look left, 0 behind, 1 look right (45 degree steps;
+## the camera sits on the opposite rear corner).
 var view_angle: int = 0
 ## Seconds since the view angle last changed (the HUD shows its name).
 var view_changed_ago: float = 99.0
@@ -201,7 +202,8 @@ func _update_view_angle(delta: float) -> void:
 		view_changed_ago = 0.0
 	view_changed_ago += delta
 	_looking_back = back
-	var goal := wanted * PI * 0.25
+	# Looking right = camera swung round to the rear left (and vice versa).
+	var goal := -wanted * PI * 0.25
 	_angle_now += (goal - _angle_now) * (1.0 - exp(-angle_swing_speed * delta))
 
 
