@@ -48,13 +48,17 @@ The race ends once every human player has finished or is out.
 ## Stat cards
 | Stat | Base value | Base price | Stacking |
 |---|---|---|---|
-| Power | +3% torque | 6 | additive |
+| Power | +3% engine power | 6 | additive |
 | Top Speed | +2% | 5 | additive |
 | Grip | +3% | 6 | additive |
 | Braking | +4% | 4 | additive |
 | Weight | −2% mass | 5 | multiplicative |
 | Tire Preservation | −15% wear | 4 | multiplicative |
 | Durability | −3% damage | 4 | multiplicative |
+
+Wording: every "+% power" in the game (Power cards, nitro, KERS, Push-to-Pass, Engine Map,
+Overbored Engine, Perfect Shift) works the same way: it scales the engine's torque at every rpm,
+which is the same as scaling its power. They multiply together.
 
 How Top Speed works: drag is divided by (1+s)³ and the final drive by (1+s).
 

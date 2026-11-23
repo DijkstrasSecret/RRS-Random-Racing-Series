@@ -31,7 +31,7 @@ const MAX_LEVEL := 3
 ## Stat cards: base value (fraction), whether it's a reduction (multiplicative),
 ## base price.
 const STATS := {
-	"power": {"name": "POWER", "value": 0.03, "reduce": false, "cost": 6, "fmt": "+%s%% engine torque"},
+	"power": {"name": "POWER", "value": 0.03, "reduce": false, "cost": 6, "fmt": "+%s%% engine power"},
 	"top_speed": {"name": "TOP SPEED", "value": 0.02, "reduce": false, "cost": 5, "fmt": "+%s%% top speed"},
 	"grip": {"name": "GRIP", "value": 0.03, "reduce": false, "cost": 6, "fmt": "+%s%% cornering grip"},
 	"braking": {"name": "BRAKING", "value": 0.04, "reduce": false, "cost": 4, "fmt": "+%s%% brake force"},
@@ -44,7 +44,7 @@ const STATS := {
 const UNLOCKS := {
 	# Skill passives (max 4 owned).
 	"perfect_shift": {"name": "PERFECT SHIFT", "kind": Kind.PASSIVE, "cost": 10,
-		"desc": "Upshift (RB / E) right at the redline: a short torque boost. Levels widen the window."},
+		"desc": "Upshift (RB / E) right at the redline: a short power boost. Levels widen the window."},
 	"heel_toe": {"name": "HEEL-TOE", "kind": Kind.PASSIVE, "cost": 9,
 		"desc": "Downshift (LB / Q) while braking: steadies the rear and fills a meter. Full meter: extra grip out of the next corner."},
 	"drift_harvest": {"name": "DRIFT HARVEST", "kind": Kind.PASSIVE, "cost": 9,
