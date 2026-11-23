@@ -64,6 +64,11 @@ static func ensure() -> void:
 	# Nitro: left Shift for player 1, right Shift for player 2 (plus each pad's X).
 	_add("p1_nitro", [_key_at(KEY_SHIFT, KEY_LOCATION_LEFT), _button(JOY_BUTTON_X, 0)])
 	_add("p2_nitro", [_key_at(KEY_SHIFT, KEY_LOCATION_RIGHT), _button(JOY_BUTTON_X, 1)])
+	# Tactical (tournament Y slot): R / pad Y for player 1 (same as recover,
+	# which tournaments don't have), right Ctrl / pad 2's Y for player 2.
+	_add("tactical", [_key(KEY_R), _button(JOY_BUTTON_Y)])
+	_add("p1_tactical", [_key(KEY_R), _button(JOY_BUTTON_Y, 0)])
+	_add("p2_tactical", [_key_at(KEY_CTRL, KEY_LOCATION_RIGHT), _button(JOY_BUTTON_Y, 1)])
 	# Godot's built-in menu actions only listen to the keyboard for select /
 	# back: add every gamepad's A and B so pads can pick menu items.
 	_add_event_if_missing("ui_accept", _button(JOY_BUTTON_A))

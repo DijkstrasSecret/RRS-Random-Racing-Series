@@ -75,6 +75,8 @@ const WEAR_PER_J := 3.6e-7
 ## towards 1 (flat); toe: bent suspension, extra steer angle (radians);
 ## detached: the wheel has come off.
 var punctured := false
+## Tournament grip bonuses (CarPerks sets it every tick).
+var perk_grip := 1.0
 var deflate := 0.0
 var toe := 0.0
 var detached := false
@@ -335,7 +337,7 @@ func update_visual(dt: float) -> void:
 
 func _mu_load() -> float:
 	var load_factor := clampf(1.0 - load_sensitivity * (tire_load / nominal_load - 1.0), 0.5, 1.3)
-	return grip * surface_grip * tire_load * load_factor * condition() * (1.0 - 0.55 * deflate)
+	return grip * surface_grip * tire_load * load_factor * condition() * (1.0 - 0.55 * deflate) * perk_grip
 
 
 func _build_visual() -> void:

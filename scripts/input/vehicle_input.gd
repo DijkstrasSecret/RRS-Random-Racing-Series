@@ -7,13 +7,15 @@ var throttle: float = 0.0  ## 0..1
 var brake: float = 0.0  ## 0..1
 var steer: float = 0.0  ## -1 (left) .. +1 (right)
 var handbrake: float = 0.0  ## 0..1
-var nitro: bool = false  ## held: fire the nitro (if the car has a nitro kit)
+var nitro: bool = false  ## held: the Power (X) item (tournament)
+var tactical: bool = false  ## held: the Tactical (Y) item (tournament)
 
 # One-tick "pressed" pulses.
 var shift_up_pressed: bool = false
 var shift_down_pressed: bool = false
 var toggle_transmission_pressed: bool = false
 var recover_pressed: bool = false
+var tactical_pressed: bool = false
 var restart_pressed: bool = false
 var cycle_profile_pressed: bool = false
 

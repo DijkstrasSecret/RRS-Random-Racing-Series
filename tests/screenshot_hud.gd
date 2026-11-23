@@ -25,11 +25,19 @@ func _run() -> void:
 	GameSettings.ai_count = 6
 	GameSettings.laps = 3
 	if "--tournament" in OS.get_cmdline_user_args():
-		# A tournament race: player has nitro + slipstream, AI hold nitro on straights.
+		# A scored tournament race: X = nitro charges, Y = DRS, two passives.
 		Tournament.start(1, PackedStringArray([GameSettings.track]), 15, 7)
-		Tournament.race_index = 2
-		Tournament.human(1).upgrades = {"nitro": 1, "slipstream": 1, "engine": 1}
-		Tournament.human(1).points = 17
+		Tournament.race_index = 4
+		var me := Tournament.human(1)
+		me.power_slot = "nitro_charges"
+		me.power_level = 1
+		me.tactical_slot = "drs"
+		me.tactical_level = 1
+		me.unlocks = {"heel_toe": 1, "clean_sector": 1}
+		me.stats = [{"id": "power", "tier": 2}]
+		me.points = 31
+		me.wallet = 9
+		me.score = 8
 	var scene := (load("res://scenes/modes/%s.tscn" % scene_name) as PackedScene).instantiate()
 	for node in scene.get_children():
 		if node is Vehicle and node.get_node_or_null("PlayerInput"):

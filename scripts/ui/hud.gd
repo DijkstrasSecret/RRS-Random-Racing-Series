@@ -394,35 +394,84 @@ func _draw_damage(o: Vector2, k: float) -> void:
 	draw_rect(Rect2(o, Vector2(w, h)), Color(1, 1, 1, 0.55), false, 2.0 * k)
 
 
-## Nitro bottle (tournament upgrade): a bar above the dial, glowing while used.
+## Tournament X / Y item gauges above the dial, plus the passives' state.
 func _draw_nitro(o: Vector2, k: float) -> void:
 	var perks := _vehicle.get_node_or_null("Perks") as CarPerks
-	if perks == null or perks.nitro_capacity <= 0.0:
+	if perks == null:
 		return
 	var w := 300.0 * k
 	var h := 18.0 * k
-	var r := Rect2(o, Vector2(w, h))
-	draw_rect(r.grow(3.0 * k), Color(0.05, 0.05, 0.07, 0.85))
-	var col := Color(1.0, 0.4, 0.9) if perks.nitro_active else Color(0.75, 0.3, 0.95)
-	draw_rect(Rect2(o, Vector2(w * perks.nitro / perks.nitro_capacity, h)), col)
-	_label(o + Vector2(0, -8.0 * k), "NITRO", int(16 * k), col)
+	var y := o.y
+	if perks.capacity > 0.0:
+		var r := Rect2(Vector2(o.x, y), Vector2(w, h))
+		draw_rect(r.grow(3.0 * k), Color(0.05, 0.05, 0.07, 0.85))
+		var col := Color(1.0, 0.45, 0.9) if perks.boosting else Color(0.75, 0.3, 0.95)
+		draw_rect(Rect2(r.position, Vector2(w * perks.energy / perks.capacity, h)), col)
+		# Pulse items: one segment per use.
+		var seg := perks.pulse_length()
+		if seg > 0.0:
+			var n := roundi(perks.capacity / seg)
+			for k2 in range(1, n):
+				var x := r.position.x + w * k2 / float(n)
+				draw_line(Vector2(x, r.position.y), Vector2(x, r.end.y), Color(0.05, 0.05, 0.07), 3.0 * k)
+		_label(Vector2(o.x, y - 8.0 * k), "X  " + String(Upgrades.UNLOCKS[perks.power_id].name), int(16 * k), col)
+		y -= 44.0 * k
+	if perks.tactical_id != "":
+		var txt := ""
+		var col := Color(0.3, 0.9, 0.85)
+		if perks.tactical_id == "engine_map":
+			txt = "Y  MAP: " + ("STABILITY" if perks.map_stability else "POWER")
+		else:
+			txt = "Y  DRS " + ("OPEN" if perks.drs_open else ("READY" if perks.drs_available else "—"))
+			col = Color(0.4, 1.0, 0.5) if perks.drs_open else (col if perks.drs_available else DIM)
+		_label(Vector2(o.x, y + 10.0 * k), txt, int(18 * k), col)
+		y -= 30.0 * k
+	# Passives that are doing something right now.
+	var tags := PackedStringArray()
+	if perks.shift_bonus > 0.0:
+		tags.append("PERFECT SHIFT")
+	if perks.grip_bonus > 0.0:
+		tags.append("GRIP+")
+	if perks.heel_armed:
+		tags.append("HEEL-TOE READY")
+	if perks.late_armed:
+		tags.append("LATE BRAKE")
+	if perks.level("clean_sector") > 0 and perks.clean_time > CarPerks.CLEAN_TIME:
+		tags.append("CLEAN")
+	if perks.engine_heat > CarPerks.HEAT_LIMIT * 0.5:
+		tags.append("ENGINE HOT!")
+	if not tags.is_empty():
+		_label(Vector2(o.x, y + 10.0 * k), "  ·  ".join(tags), int(16 * k), Color(1.0, 0.85, 0.3))
+	if perks.level("heel_toe") > 0 and perks.heel_meter > 0.0:
+		var m := Rect2(Vector2(o.x + w + 14.0 * k, o.y - 40.0 * k), Vector2(10.0 * k, 58.0 * k))
+		draw_rect(m.grow(2.0 * k), Color(0.05, 0.05, 0.07, 0.85))
+		draw_rect(Rect2(Vector2(m.position.x, m.end.y - m.size.y * perks.heel_meter), Vector2(m.size.x, m.size.y * perks.heel_meter)),
+				Color(0.55, 0.9, 0.4))
 
 
 
-## Tournament banner: which race, and this player's points.
+## Tournament banner: which race, this player's points and score, and the
+## DNF countdown when the car is wrecked.
 func _draw_tournament(k: float) -> void:
 	var me := Tournament.human(2 if player_name == "PLAYER 2" else 1)
 	var text := Tournament.race_title()
-	if not Tournament.is_final():
-		text += "   ·   %d PTS" % int(me.get("points", 0))
-	else:
-		text += "   ·   ONLY THIS RESULT COUNTS"
+	text += "   ·   %d PTS" % int(me.get("wallet", 0))
+	if Tournament.is_scored():
+		text += "   ·   SCORE %d" % int(me.get("score", 0))
 	var font_size := int(22 * k)
 	var tw := _bold.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x
 	var r := Rect2(size.x * 0.5 - tw * 0.5 - 20.0 * k, 24.0 * k, tw + 40.0 * k, 40.0 * k)
 	draw_rect(r, F1_DARK)
-	draw_rect(Rect2(r.position, Vector2(r.size.x, 3.0 * k)), Color(1.0, 0.45, 0.85) if Tournament.is_final() else F1_RED)
+	draw_rect(Rect2(r.position, Vector2(r.size.x, 3.0 * k)), Color(1.0, 0.45, 0.85) if Tournament.is_scored() else F1_RED)
 	_bold_text(r.position + Vector2(20.0 * k, 28.0 * k), text, font_size, TEXT)
+	if _race:
+		var i := _race.index_of(_vehicle)
+		if i >= 0 and _race.is_retired(i):
+			_label(Vector2(size.x * 0.5, size.y * 0.32), "DNF  ·  OUT OF THIS RACE", int(40 * k), HOT, true)
+		elif i >= 0:
+			var warn := _race.wreck_warning(i)
+			if warn != "":
+				_label(Vector2(size.x * 0.5, size.y * 0.32), warn, int(32 * k), HOT, true)
 
 
 ## Shows the camera view name for a moment after it changes.

@@ -50,12 +50,22 @@ func _fake_state(players: int) -> void:
 			r.wallet = int(r.wallet) + Tournament.POINTS[pos]
 		Tournament.race_index += 1
 		Tournament._prepare_shop()
-	# The players already bought something last time.
-	Tournament.human(1).upgrades = {"engine": 1, "nitro": 1}
-	Tournament.human(1).wallet = 14
+	# The players already bought something last time, and carry some wear.
+	var p1 := Tournament.human(1)
+	p1.power_slot = "nitro_burst"
+	p1.power_level = 1
+	p1.unlocks = {"perfect_shift": 1, "interest": 1}
+	p1.stats = [{"id": "grip", "tier": 1}]
+	p1.wallet = 24
+	p1.tyre_wear = [0.42, 0.38, 0.35, 0.33]
+	p1.damage = [0.3, 0.0, 0.12, 0.0, 0.0]
+	p1.notes = ["Interest: +2"]
 	if players == 2:
-		Tournament.human(2).upgrades = {"tyres": 1}
-		Tournament.human(2).wallet = 9
+		var p2 := Tournament.human(2)
+		p2.tactical_slot = "engine_map"
+		p2.tactical_level = 1
+		p2.wallet = 15
+		p2.tyre_wear = [0.2, 0.2, 0.25, 0.25]
 
 
 func _wait(seconds: float) -> void:

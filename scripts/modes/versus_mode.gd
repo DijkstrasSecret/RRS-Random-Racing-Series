@@ -20,7 +20,7 @@ func _enter_tree() -> void:
 			var paint := Color(0.85, 0.12, 0.1) if i == 1 and picks[0] == picks[1] else Color(0, 0, 0, 0)
 			CarRoster.apply(car, picks[i], paint, GameSettings.p1_livery if i == 0 else GameSettings.p2_livery)
 			if Tournament.active:
-				Upgrades.apply_to(car, Tournament.human(i + 1).get("upgrades", {}))
+				Upgrades.apply_to(car, Tournament.human(i + 1))
 
 
 func _ready() -> void:

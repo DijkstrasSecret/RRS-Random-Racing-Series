@@ -76,8 +76,13 @@ func _drive_humans(scene: Node) -> void:
 func _shop_for_humans() -> void:
 	for p in Tournament.players:
 		var r := Tournament.human(p + 1)
-		for id: String in Array(r.offers):
-			Tournament.buy(r, id)
+		if Tournament.tyre_wear_avg(r) > 0.25:
+			Tournament.buy_tyres(r)
+		if Tournament.damage_total(r) > 0.2:
+			Tournament.repair(r)
+		for card: Dictionary in Array(r.offers):
+			Tournament.buy(r, card)
+		print("    %s bought: %s  (wallet %d)" % [r.name, Upgrades.describe(r), int(r.wallet)])
 
 
 func _report_race() -> void:
@@ -88,7 +93,8 @@ func _report_race() -> void:
 	order.sort_custom(func(a: int, b: int) -> bool: return int(Tournament.racers[a].points) > int(Tournament.racers[b].points))
 	for i in order:
 		var r: Dictionary = Tournament.racers[i]
-		line.append("%s %d (P%d)" % [r.name, int(r.points), int((r.results as Array).back())])
+		var last := int((r.results as Array).back())
+		line.append("%s %d/%d (%s)" % [r.name, int(r.points), int(r.score), "DNF" if last == 0 else "P%d" % last])
 	print("  after race %d: %s" % [Tournament.race_index, ", ".join(line)])
 	var total := 0
 	for r in Tournament.racers:
@@ -97,11 +103,18 @@ func _report_race() -> void:
 
 
 func _report_final() -> void:
-	print("  FINAL (%s):" % Tournament.tracks[Tournament.RACES])
+	_report_race()
+	print("  FINAL STANDINGS (last %d races scored):" % Tournament.SCORED)
 	for n in Tournament.final_order.size():
 		var r: Dictionary = Tournament.racers[Tournament.final_order[n]]
-		print("    %d. %s  %s  (%d pts earned, %s)" % [n + 1, r.name, CarRoster.config(r.car).display_name,
-				int(r.points), Upgrades.describe(r.upgrades)])
+		print("    %d. %s  %s  score %d  (%d pts earned, results %s, %s)" % [n + 1, r.name, CarRoster.config(r.car).display_name,
+				int(r.score), int(r.points), str(r.results), Upgrades.describe(r)])
+	var best := int(Tournament.racers[Tournament.final_order[0]].score)
+	_check("champion has the top score", best >= int(Tournament.racers[Tournament.final_order[-1]].score))
+	var dnfs := 0
+	for r in Tournament.racers:
+		dnfs += (r.results as Array).count(0)
+	print("  DNFs in the tournament: %d" % dnfs)
 
 
 func _check(what: String, ok: bool) -> void:

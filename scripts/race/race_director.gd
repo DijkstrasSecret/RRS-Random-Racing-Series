@@ -25,6 +25,12 @@ var race_time: float = 0.0
 ## Indices of the racers in the order they crossed the finish line.
 var finish_order: Array[int] = []
 var finish_times: Dictionary = {}
+## Tournament: cars out of the race (stuck / upside down / a wheel off, no
+## recovery), in the order they dropped out.
+var retired: Array[int] = []
+const DNF_UPSIDE_DOWN := 5.0
+const DNF_STUCK := 8.0
+var _wreck_time: Dictionary = {}  ## racer -> [upside down s, stuck s, wheel off s]
 
 ## One entry per racer: {vehicle, timer, name, color, human}.
 var _racers: Array[Dictionary] = []
@@ -84,8 +90,10 @@ func _physics_process(delta: float) -> void:
 					r.vehicle.controls_locked = false
 		State.RACING:
 			race_time += delta
+			if Tournament.active:
+				_watch_wrecks(delta)
 			for i in _racers.size():
-				if i in finish_order:
+				if i in finish_order or i in retired:
 					continue
 				if completed_laps(i) >= laps:
 					finish_order.append(i)
@@ -93,14 +101,16 @@ func _physics_process(delta: float) -> void:
 			# The race is over once every human has finished.
 			var humans_left := false
 			for i in _racers.size():
-				if _racers[i].human and not (i in finish_order):
+				if _racers[i].human and not (i in finish_order) and not (i in retired):
 					humans_left = true
 			if not humans_left:
 				state = State.FINISHED
 		State.FINISHED:
 			race_time += delta
+			if Tournament.active:
+				_watch_wrecks(delta)
 			for i in _racers.size():
-				if not (i in finish_order) and completed_laps(i) >= laps:
+				if not (i in finish_order) and not (i in retired) and completed_laps(i) >= laps:
 					finish_order.append(i)
 					finish_times[i] = race_time
 	_go_flash = maxf(_go_flash - delta, 0.0)
@@ -115,6 +125,50 @@ func _physics_process(delta: float) -> void:
 
 func _process(_delta: float) -> void:
 	queue_redraw()
+
+
+func is_retired(i: int) -> bool:
+	return i in retired
+
+
+## No recovery in a tournament: 5 s upside down, or 8 s stuck or with a
+## wheel off, and the car is out of the race.
+func _watch_wrecks(delta: float) -> void:
+	if race_time < 3.0:
+		return
+	for i in _racers.size():
+		if i in finish_order or i in retired:
+			continue
+		var car: Vehicle = _racers[i].vehicle
+		var t: Array = _wreck_time.get(i, [0.0, 0.0, 0.0])
+		t[0] = t[0] + delta if car.global_basis.y.y < 0.3 else 0.0
+		t[1] = t[1] + delta if absf(car.forward_speed) < 1.0 else 0.0
+		var wheel_off := false
+		for w in car.wheels:
+			wheel_off = wheel_off or w.detached
+		t[2] = t[2] + delta if wheel_off else 0.0
+		_wreck_time[i] = t
+		if t[0] > DNF_UPSIDE_DOWN or t[1] > DNF_STUCK or t[2] > DNF_STUCK:
+			retire(i)
+
+
+func retire(i: int) -> void:
+	if i in retired or i in finish_order:
+		return
+	retired.append(i)
+	_racers[i].vehicle.controls_locked = true
+
+
+## What is stopping a car right now (for the HUD's countdown), or "".
+func wreck_warning(i: int) -> String:
+	var t: Array = _wreck_time.get(i, [0.0, 0.0, 0.0])
+	if t[0] > 1.0:
+		return "UPSIDE DOWN  ·  OUT IN %d" % ceili(DNF_UPSIDE_DOWN - t[0])
+	if t[2] > 1.0:
+		return "WHEEL OFF  ·  OUT IN %d" % ceili(DNF_STUCK - t[2])
+	if t[1] > 3.0:
+		return "STUCK  ·  OUT IN %d" % ceili(DNF_STUCK - t[1])
+	return ""
 
 
 func car_count() -> int:
@@ -183,10 +237,12 @@ func index_of(vehicle: Vehicle) -> int:
 func position_of(i: int) -> int:
 	if i in finish_order:
 		return finish_order.find(i) + 1
+	if i in retired:
+		return _racers.size() - retired.find(i)  # first out = last place
 	var mine := _race_distance(i)
 	var pos := finish_order.size() + 1
 	for j in _racers.size():
-		if j != i and not (j in finish_order) and _race_distance(j) > mine:
+		if j != i and not (j in finish_order) and not (j in retired) and _race_distance(j) > mine:
 			pos += 1
 	return pos
 
@@ -269,14 +325,16 @@ func _draw_results(centre: Vector2) -> void:
 	var panel := Rect2(centre - Vector2(360, panel_h * 0.5), Vector2(720, panel_h))
 	draw_rect(panel, Color(0, 0, 0, 0.75))
 	var top := panel.position.y
-	var winner := finish_order[0]
+	var winner: int = finish_order[0] if not finish_order.is_empty() else standings()[0]
 	_big(Vector2(centre.x, top + 40.0), "%s WINS!" % _racers[winner].name, 46, _racers[winner].color)
 	var y := top + 92.0
 	for i in standings():
 		var r := _racers[i]
 		var place := position_of(i)
 		var time_text := "racing..."
-		if i in finish_order:
+		if i in retired:
+			time_text = "DNF"
+		elif i in finish_order and finish_times.has(winner):
 			time_text = LapTimer.format_time(finish_times[i])
 			if place > 1:
 				time_text += "  +%.3f" % (finish_times[i] - finish_times[winner])
@@ -286,7 +344,7 @@ func _draw_results(centre: Vector2) -> void:
 		y += row_h
 	var footer := "Backspace = race again      Esc / Start = menu"
 	if Tournament.active:
-		footer = "Tournament standings and podium coming up..." if Tournament.is_final() else "To the upgrade shop in a moment..."
+		footer = "Tournament podium coming up..." if Tournament.is_final() else "To the upgrade shop in a moment..."
 	_big(Vector2(centre.x, panel.end.y - 26.0), footer, 20, Color(1, 1, 1, 0.8))
 
 

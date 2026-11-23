@@ -89,6 +89,8 @@ func poll(delta: float) -> void:
 	# (Standing in the pit box being serviced is not stuck.)
 	var stuck := absf(v) < 1.0 and not _vehicle.controls_locked and _vehicle.pit_service_left <= 0.0 and not (_pitting and _vehicle.in_pit_lane)
 	_lost_time = _lost_time + delta if (off_line or wrong_way or stuck) else 0.0
+	if _lost_time > reset_after and Tournament.active and _wrecked():
+		_lost_time = 0.0  # no recovery in a tournament: the race director retires it
 	if _lost_time > reset_after:
 		if OS.get_cmdline_user_args().has("--log-resets"):
 			print("    reset %s at %.0f m (%s%s%s)" % [_vehicle.name, off, "off line " if off_line else "",
@@ -114,6 +116,7 @@ func poll(delta: float) -> void:
 	handbrake = 0.0
 	# Nitro on the straights: flat out, wheel straight, and the road ahead fast.
 	nitro = throttle > 0.95 and turning < 0.15 and target_speed > v + 4.0
+	tactical = nitro
 
 
 func _setup() -> bool:
@@ -234,6 +237,16 @@ func _read_traffic(v: float) -> Vector2:
 			# Side by side: give each other room.
 			shift = -signf(side) * 1.5
 	return Vector2(shift, cap)
+
+
+## Upside down / on its side, or a wheel gone.
+func _wrecked() -> bool:
+	if _vehicle.global_basis.y.y < 0.5:
+		return true
+	for w in _vehicle.wheels:
+		if w.detached:
+			return true
+	return false
 
 
 ## Put the car back on the centre line, pointing the right way.

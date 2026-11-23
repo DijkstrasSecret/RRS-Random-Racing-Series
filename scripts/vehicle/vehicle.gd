@@ -581,7 +581,7 @@ func _handle_meta_inputs() -> bool:
 	if input.restart_pressed:
 		reset_to_start()
 		return true
-	if input.recover_pressed:
+	if input.recover_pressed and not Tournament.active:
 		recover()
 		return true
 	return false

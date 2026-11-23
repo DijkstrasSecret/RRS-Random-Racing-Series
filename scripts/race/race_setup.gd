@@ -87,7 +87,7 @@ func _build() -> void:
 		used.append(car_id)
 		CarRoster.apply(car, car_id, paint)
 		if Tournament.active:
-			Upgrades.apply_to(car, t_racer.upgrades)
+			Upgrades.apply_to(car, t_racer)
 		var player_input := car.get_node_or_null("PlayerInput")
 		if player_input:
 			car.remove_child(player_input)

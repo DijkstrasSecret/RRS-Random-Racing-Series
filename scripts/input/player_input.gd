@@ -77,6 +77,8 @@ func poll(delta: float) -> void:
 	shift_up_pressed = Input.is_action_just_pressed(_a("shift_up"))
 	shift_down_pressed = Input.is_action_just_pressed(_a("shift_down"))
 	recover_pressed = Input.is_action_just_pressed(_a("recover"))
+	tactical = Input.is_action_pressed(_a("tactical"))
+	tactical_pressed = Input.is_action_just_pressed(_a("tactical"))
 	# Game-wide keys only for a single player (in split screen the race
 	# director owns restart, and P / M would affect both cars).
 	var solo := action_prefix.is_empty()

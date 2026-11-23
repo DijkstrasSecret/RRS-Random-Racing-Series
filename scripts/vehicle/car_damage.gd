@@ -76,6 +76,24 @@ func _rim_sparks() -> Vector3:
 	return Vector3.INF
 
 
+## Tournament: the damage carried over from the last race (zones), with
+## dents where it was.
+func restore(saved: PackedFloat32Array) -> void:
+	var spots := [Vector3(0, 0.6, -_half_length), Vector3(0, 0.6, _half_length), Vector3(-0.9, 0.6, 0),
+			Vector3(0.9, 0.6, 0), Vector3(0, _roof_y + 0.1, 0)]
+	for z in mini(saved.size(), zones.size()):
+		if saved[z] > 0.005:
+			_dent(spots[z], saved[z], z)
+			zones[z] = saved[z]
+	_apply_effects()
+
+
+## Overbored engine cooking itself: front (engine) damage without a crash.
+func engine_heat(amount: float) -> void:
+	zones[Zone.FRONT] = minf(zones[Zone.FRONT] + amount, 1.0)
+	_apply_effects()
+
+
 ## Pit stop: straightens the body, new paint, lamps and handling back to normal.
 func repair() -> void:
 	zones.fill(0.0)
