@@ -482,10 +482,49 @@ func _place_segment(kind: String, a: Vector3, b: Vector3, side: int, seg_len: fl
 	var xf := Transform3D(rot.scaled_local(Vector3(length / seg_len, 1.0, 1.0)), mid)
 	_add(kind, xf)
 	if solid:
-		var depth := 1.3 if kind == "tirewall" else 0.6
-		var back := -0.3 if kind == "tirewall" else 0.0
-		_box_collider(_barrier_body, Vector3(length, 1.1, depth),
-				Transform3D(rot, mid + rot * Vector3(0.0, 0.55, back)))
+		# The box is the barrier piece's own size (it used to be 1.1 m tall
+		# and 0.6 m deep for every kind: invisible wall above low concrete
+		# blocks and in front of the thin armco rail).
+		# Shaped like the piece (sloped concrete, tyre stacks, the rail and its
+		# posts), stretched to this segment's length.
+		var base := _barrier_points(kind, seg_len)
+		var sx := length / seg_len
+		var pts := PackedVector3Array()
+		for p in base:
+			pts.append(Vector3(p.x * sx, p.y, p.z))
+		var shape := ConvexPolygonShape3D.new()
+		shape.points = pts
+		var cs := CollisionShape3D.new()
+		cs.shape = shape
+		cs.transform = Transform3D(rot, mid)
+		_barrier_body.add_child(cs)
+
+
+## Hull points of a barrier piece (cached per kind); a box of the old size if
+## the kit has no mesh for it. Thin rails get at least 25 cm of depth.
+static var _barrier_hulls: Dictionary = {}
+
+func _barrier_points(kind: String, seg_len: float) -> PackedVector3Array:
+	if _barrier_hulls.has(kind):
+		return _barrier_hulls[kind]
+	var pts := PackedVector3Array()
+	if _meshes.has(kind):
+		var hull := (_meshes[kind] as Mesh).create_convex_shape(true, false) as ConvexPolygonShape3D
+		pts = hull.points
+		var aabb: AABB = (_meshes[kind] as Mesh).get_aabb()
+		if aabb.size.z < 0.25:
+			var mid_z := aabb.get_center().z
+			var extra := PackedVector3Array()
+			for p in pts:
+				extra.append(Vector3(p.x, p.y, mid_z + 0.125 * signf(p.z - mid_z + 0.0001)))
+			pts.append_array(extra)
+	else:
+		for x in [-seg_len * 0.5, seg_len * 0.5]:
+			for y in [0.0, 1.1]:
+				for z in [-0.3, 0.3]:
+					pts.append(Vector3(x, y, z))
+	_barrier_hulls[kind] = pts
+	return pts
 
 
 # --- people & buildings --------------------------------------------------------------

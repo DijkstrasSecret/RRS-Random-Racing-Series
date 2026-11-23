@@ -793,32 +793,140 @@ func _fit_collision_to_model() -> void:
 	if body == null:
 		return
 	var key := body.mesh.resource_path if body.mesh.resource_path != "" else str(body.mesh.get_instance_id())
-	var shape: ConvexPolygonShape3D = _hull_cache.get(key)
-	if shape == null:
-		var to_car := global_transform.affine_inverse() * body.global_transform
-		var bottom := 0.32
-		var seen := {}
-		var pts := PackedVector3Array()
-		for sidx in body.mesh.get_surface_count():
-			var verts: PackedVector3Array = body.mesh.surface_get_arrays(sidx)[Mesh.ARRAY_VERTEX]
-			for v in verts:
-				var p := to_car * v
-				p.y = maxf(p.y, bottom)
-				# One point per 8 cm cell is plenty for the hull.
-				var cell := Vector3i((p / 0.08).round())
-				if not seen.has(cell):
-					seen[cell] = true
-					pts.append(p)
-		shape = ConvexPolygonShape3D.new()
-		shape.points = pts
-		_hull_cache[key] = shape
+	var shapes: Array = _hull_cache.get(key, [])
+	if shapes.is_empty():
+		shapes = _build_hulls(body)
+		_hull_cache[key] = shapes
+	# shapes = [lower piece 0 .. LOWER_PIECES-1, cabin]: one lower piece on
+	# CollisionBody, the cabin on CollisionCabin, the rest on extra shapes.
+	var main := LOWER_PIECES / 2
 	var lower := get_node_or_null("CollisionBody") as CollisionShape3D
 	if lower:
-		lower.shape = shape
+		lower.shape = shapes[main]
 		lower.transform = Transform3D.IDENTITY
 	var cabin := get_node_or_null("CollisionCabin") as CollisionShape3D
 	if cabin:
-		cabin.disabled = true
+		cabin.shape = shapes[LOWER_PIECES]
+		cabin.transform = Transform3D.IDENTITY
+		cabin.disabled = shapes[LOWER_PIECES] == null
+	for k in LOWER_PIECES:
+		if k == main:
+			continue
+		var part_name := "CollisionPart%d" % k
+		var part := get_node_or_null(part_name) as CollisionShape3D
+		if part == null:
+			part = CollisionShape3D.new()
+			part.name = part_name
+			add_child(part)
+		part.shape = shapes[k]
+		part.disabled = shapes[k] == null
+
+
+## Hulls hugging the model: the lower body (up to the belt line) in pieces
+## along the car so it follows the bonnet and boot slopes, and the cabin
+## (glasshouse) on top. One hull round the whole car bridged from the mirrors,
+## over the bonnet and over the narrower cabin: empty space you could hit.
+## Antenna tips and mirrors are left out.
+const LOWER_PIECES := 6
+
+func _build_hulls(body: MeshInstance3D) -> Array:
+	var to_car := global_transform.affine_inverse() * body.global_transform
+	var bottom := 0.32
+	var seen := {}
+	var pts: Array[Vector3] = []
+	for sidx in body.mesh.get_surface_count():
+		var verts: PackedVector3Array = body.mesh.surface_get_arrays(sidx)[Mesh.ARRAY_VERTEX]
+		for v in verts:
+			var p := to_car * v
+			p.y = maxf(p.y, bottom)
+			# One point per 8 cm cell is plenty for the hulls.
+			var cell := Vector3i((p / 0.08).round())
+			if not seen.has(cell):
+				seen[cell] = true
+				pts.append(p)
+	var ys: Array[float] = []
+	for p in pts:
+		ys.append(p.y)
+	ys.sort()
+	var top := ys[int(ys.size() * 0.985)]
+	var belt := bottom + (top - bottom) * 0.5
+	# Widths: the lower body without mirror tips, the cabin narrower.
+	var xs_lower: Array[float] = []
+	var xs_upper: Array[float] = []
+	var high_z: Array[float] = []
+	var peak := Vector3(0, -INF, 0)
+	for p in pts:
+		if p.y > top + 0.03:
+			continue  # antenna, tall aerials
+		if p.y <= belt + 0.04:
+			xs_lower.append(absf(p.x))
+		else:
+			xs_upper.append(absf(p.x))
+		if p.y > belt + 0.2:
+			high_z.append(p.z)
+		if p.y > peak.y:
+			peak = p
+	xs_lower.sort()
+	xs_upper.sort()
+	# The glasshouse: the run of high points round the roof's peak; a rear
+	# wing or a roll bar further along (a gap of 30 cm+) isn't part of it.
+	high_z.sort()
+	var cabin_z := Vector2(peak.z, peak.z)
+	var at := high_z.bsearch(peak.z)
+	var i := clampi(at, 0, high_z.size() - 1)
+	while i > 0 and high_z[i] - high_z[i - 1] < 0.3:
+		i -= 1
+	if not high_z.is_empty():
+		cabin_z.x = minf(high_z[i], peak.z)
+	i = clampi(at, 0, high_z.size() - 1)
+	while i < high_z.size() - 1 and high_z[i + 1] - high_z[i] < 0.3:
+		i += 1
+	if not high_z.is_empty():
+		cabin_z.y = maxf(high_z[i], peak.z)
+	var lower_w := xs_lower[int(xs_lower.size() * 0.99)] if not xs_lower.is_empty() else 1.0
+	var cabin_w := xs_upper[int(xs_upper.size() * 0.85)] + 0.04 if not xs_upper.is_empty() else 1.0
+	var z_front := INF
+	var z_back := -INF
+	for p in pts:
+		z_front = minf(z_front, p.z)
+		z_back = maxf(z_back, p.z)
+	var step := (z_back - z_front) / LOWER_PIECES
+	var parts: Array[Array] = []
+	for k in LOWER_PIECES:
+		parts.append([])
+	var lower_all := PackedVector3Array()
+	var upper := PackedVector3Array()
+	for p in pts:
+		if p.y > top + 0.03:
+			continue
+		if p.y <= belt + 0.04 and absf(p.x) <= lower_w + 0.01:
+			lower_all.append(p)
+			for k in LOWER_PIECES:
+				# Overlap 10 cm so there's no gap between the pieces.
+				if p.z >= z_front + step * k - 0.1 and p.z <= z_front + step * (k + 1) + 0.1:
+					parts[k].append(p)
+		# The glasshouse only: between the screen bottoms, not over the bonnet.
+		if p.y >= belt - 0.04 and absf(p.x) <= cabin_w and p.z >= cabin_z.x - 0.05 and p.z <= cabin_z.y + 0.05:
+			upper.append(p)
+	var out: Array = []
+	for k in LOWER_PIECES:
+		var part := PackedVector3Array(parts[k])
+		if part.size() >= 8:
+			var sh := ConvexPolygonShape3D.new()
+			sh.points = part
+			out.append(sh)
+		else:
+			out.append(null)
+	if out[LOWER_PIECES / 2] == null:  # never leave the car without a body shape
+		var sh := ConvexPolygonShape3D.new()
+		sh.points = lower_all
+		out[LOWER_PIECES / 2] = sh
+	var upper_shape: ConvexPolygonShape3D = null
+	if upper.size() >= 8:
+		upper_shape = ConvexPolygonShape3D.new()
+		upper_shape.points = upper
+	out.append(upper_shape)
+	return out
 
 
 var _shade_tex: Texture2D
