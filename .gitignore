@@ -35,3 +35,6 @@ desktop.ini
 
 # Local engine overrides (used for unattended screenshots)
 override.cfg
+
+# Licensed music: kept on this PC, not in the (public) repo.
+soundtrack/*.mp3
