@@ -258,7 +258,10 @@ func _physics_process(delta: float) -> void:
 	# --- Steering ---
 	var target := assists.steer_target(input.steer, forward_speed, lateral_speed,
 			deg_to_rad(config.max_steer_deg), _wheelbase, config.tire_grip)
-	steer_angle = move_toward(steer_angle, target, config.steer_rate * delta)
+	# At speed the wheels turn more slowly (the usable lock is small there):
+	# about 0.2 s to full lock, so a flick of the stick can't make the car dart.
+	var steer_speed := minf(config.steer_rate, maxf(current_steer_limit() * 5.0, 0.35))
+	steer_angle = move_toward(steer_angle, target, steer_speed * delta)
 	for w in front_wheels:
 		w.steer_angle = steer_angle + steer_pull
 
@@ -286,6 +289,7 @@ func _physics_process(delta: float) -> void:
 		w.prepare_tire(b, velocity_at_point(w.contact_point))
 
 	var tc := assists.traction_factor(driven_wheels, config.tire_peak_slip_ratio, forward_speed)
+	tc *= assists.oversteer_cut(atan2(lateral_speed, maxf(absf(forward_speed), 0.5)), forward_speed)
 	throttle_out = thr * tc
 	tc_active = thr > 0.05 and tc < 0.95
 	var wheel_torque := drivetrain.update(_driven_mean_omega(), throttle_out, delta) * power_scale * perk_power
@@ -507,13 +511,22 @@ func _measure_draft() -> float:
 	return clampf(best * 1.6, 0.0, 1.0)
 
 
-## Yaw damping when the car rotates faster than the steering asks for.
+## Yaw damping when the car rotates faster than the steering asks for, and
+## (at speed) against sudden swings of the rotation, so turn-in doesn't
+## overshoot and the car settles into the corner instead of wagging.
+var _yaw_smooth := 0.0
+
 func _apply_stability() -> void:
 	stability_active = false
+	var up := global_basis.y
+	var yaw_now := angular_velocity.dot(up)
+	_yaw_smooth = lerpf(_yaw_smooth, yaw_now, clampf(get_physics_process_delta_time() / 0.25, 0.0, 1.0))
 	if assists.stability <= 0.0 or airborne or forward_speed < 3.0:
 		return
-	var up := global_basis.y
-	var yaw_rate := angular_velocity.dot(up)
+	var fast := clampf((forward_speed - 10.0) / 20.0, 0.0, 1.0)
+	if fast > 0.0:
+		apply_torque(up * (-(yaw_now - _yaw_smooth) * assists.stability * inertia.y * 6.0 * fast))
+	var yaw_rate := yaw_now
 	var desired := -forward_speed * tan(steer_angle) / _wheelbase
 	# The tyres cannot turn the car faster than grip allows, so cap the target.
 	var grip_limit := config.tire_grip * 9.81 / maxf(forward_speed, 1.0) * 1.15

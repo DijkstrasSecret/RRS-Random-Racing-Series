@@ -236,10 +236,10 @@ CARS = {
     "e30": dict(  # 325i E30: 170 hp, 222 Nm, 1200 kg, 5-speed, RWD
         wheel_inertia=1.0,
         display_name="BMW 325i (E30)", mass=1200, center_of_mass=(0, 0.45, -0.05), inertia_box_size=(1.65, 1.3, 4.33),
-        wheel_radius=0.30, wheel_width=0.2, tire_grip=1.06, tire_peak_slip_angle_deg=8.5, rear_grip_scale=0.95,
+        wheel_radius=0.30, wheel_width=0.2, tire_grip=1.0, tire_peak_slip_angle_deg=8.5, rear_grip_scale=0.99,
         front_spring_rate=30000, rear_spring_rate=28000, front_damper_bump=2300, front_damper_rebound=3100,
-        rear_damper_bump=2200, rear_damper_rebound=3000, front_anti_roll=9000, rear_anti_roll=10000,
-        idle_rpm=800, redline_rpm=6500, launch_rpm=3200, max_torque=200,
+        rear_damper_bump=2200, rear_damper_rebound=3000, front_anti_roll=10500, rear_anti_roll=8500,
+        idle_rpm=800, redline_rpm=6500, launch_rpm=3200, max_torque=190,
         torque_curve=[(1000, .6), (2500, .85), (4300, 1.0), (5800, .92), (6500, .8)],
         engine_brake_torque=45, gear_ratios=[3.83, 2.2, 1.4, 1.0, 0.81], reverse_ratio=3.46,
         final_drive=3.73, auto_upshift_rpm=6200, auto_downshift_rpm=2600, drive_type=RWD, diff_lock=0.25,

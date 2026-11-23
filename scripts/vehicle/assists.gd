@@ -19,6 +19,11 @@ var abs_strength: float = 0.8
 ## Fraction of peak grip a sliding tyre keeps.
 var tire_falloff: float = 0.85
 var air_control: float = 0.5
+## Stability control: cuts power when the rear slides (body slip past a
+## few degrees), like a road car's ESC. 0 = off.
+var esc: float = 0.6
+## Traction control steps in once wheelspin passes this x the tyre's best slip.
+var tc_start: float = 1.1
 
 var _tc_factor: float = 1.0
 
@@ -28,11 +33,17 @@ func set_profile(p: int) -> void:
 	match p:
 		Profile.ARCADE:
 			_apply(1.3, 0.6, 0.6, 1.0, 1.0, 0.92, 1.0)
+			esc = 1.0
+			tc_start = 0.85
 		Profile.SIM:
 			_apply(2.3, 0.0, 0.0, 0.0, 1.0, 0.7, 0.0)
+			esc = 0.0
+			tc_start = 1.3
 		_:
 			profile = Profile.SPORT
-			_apply(1.8, 0.45, 0.25, 0.5, 0.8, 0.88, 0.5)
+			_apply(1.6, 0.45, 0.35, 0.7, 0.8, 0.88, 0.5)
+			esc = 0.75
+			tc_start = 1.0
 
 
 func profile_name() -> String:
@@ -81,13 +92,24 @@ func traction_factor(driven: Array, peak_slip: float, speed: float = 99.0) -> fl
 		var worst := 0.0
 		for w in driven:
 			worst = maxf(worst, absf(w.slip_ratio))
-		var excess := clampf((worst - peak_slip * 1.3) / (peak_slip * 1.5), 0.0, 1.0)
-		target = 1.0 - excess * traction_control * 0.9
+		var excess := clampf((worst - peak_slip * tc_start) / (peak_slip * 1.2), 0.0, 1.0)
+		target = 1.0 - excess * traction_control * 0.95
 		# Pulling away: never strangle the engine (slip readings are rough here).
 		if absf(speed) < 3.0:
 			target = maxf(target, 0.6)
 	_tc_factor = lerpf(_tc_factor, target, 0.35)
 	return _tc_factor
+
+
+## Throttle multiplier (0..1) from stability control: the more the car is
+## sliding sideways (body slip `beta`, radians), the more power it takes away,
+## so a power slide is caught instead of turning into a spin.
+func oversteer_cut(beta: float, speed: float) -> float:
+	if esc <= 0.0 or absf(speed) < 6.0:
+		return 1.0
+	var start := deg_to_rad(3.0 + 7.0 * (1.0 - esc))
+	var over := clampf((absf(beta) - start) / deg_to_rad(8.0), 0.0, 1.0)
+	return 1.0 - over * esc * 0.85
 
 
 ## Brake torque multiplier (0..1). `slip` is the slip ratio signed so that
