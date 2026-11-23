@@ -43,3 +43,4 @@ drag_area = 0.9
 downforce_area = 0.05
 engine_sound_pitch = 1.35
 engine_sound_gain_db = 1.5
+shift_time = 0.2

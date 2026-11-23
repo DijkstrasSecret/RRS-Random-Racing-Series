@@ -12,6 +12,10 @@ var rpm: float = 900.0
 var automatic: bool = true
 var shift_timer: float = 0.0
 var clutch_slipping: bool = false
+## Turbo boost 0..1 (1 = full boost; always 1 without a turbo).
+var boost: float = 1.0
+## True while the rev limiter is cutting the engine (it bounces off the limit).
+var limiter_active: bool = false
 
 
 func setup(cfg: VehicleConfig) -> void:
@@ -24,6 +28,8 @@ func reset() -> void:
 	rpm = config.idle_rpm
 	shift_timer = 0.0
 	clutch_slipping = false
+	boost = 1.0 if config.turbo <= 0.0 else 0.2
+	limiter_active = false
 
 
 func gear_count() -> int:
@@ -104,14 +110,29 @@ func update(wheel_omega: float, throttle: float, dt: float) -> float:
 		rpm = coupled_rpm
 	rpm = clampf(rpm, 0.0, config.redline_rpm + 300.0)
 
+	_update_boost(throttle, dt)
+	# Hard rev limiter: cuts at the redline, back on 250 rpm lower (the bounce).
+	if rpm >= config.redline_rpm:
+		limiter_active = true
+	elif rpm < config.redline_rpm - 250.0:
+		limiter_active = false
 	var torque := 0.0
-	if throttle > 0.01:
-		torque = engine_torque_at(rpm) * throttle
-		# Soft rev limiter.
-		torque *= clampf((config.redline_rpm - rpm) / 150.0, 0.0, 1.0)
+	if throttle > 0.01 and not limiter_active:
+		torque = engine_torque_at(rpm) * throttle * (1.0 - config.turbo + config.turbo * boost)
 	elif not clutch_slipping:
 		torque = -config.engine_brake_torque * clampf(rpm / config.redline_rpm, 0.0, 1.0)
 	return torque * ratio * config.drivetrain_efficiency
+
+
+## Turbo spools up with throttle and revs, and drops off when you lift.
+func _update_boost(throttle: float, dt: float) -> void:
+	if config.turbo <= 0.0:
+		boost = 1.0
+		return
+	var spooling := throttle > 0.4 and rpm > config.turbo_spool_rpm
+	var target := clampf((rpm - config.turbo_spool_rpm * 0.6) / (config.turbo_spool_rpm * 0.8), 0.0, 1.0) * throttle if spooling else 0.15
+	var rate := 1.0 / maxf(config.turbo_lag, 0.05)
+	boost = move_toward(boost, target, (rate if target > boost else rate * 2.5) * dt)
 
 
 ## Automatic gearbox: shift on engine speed.

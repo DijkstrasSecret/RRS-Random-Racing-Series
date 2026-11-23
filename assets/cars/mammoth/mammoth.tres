@@ -45,3 +45,7 @@ drag_area = 1.15
 downforce_area = -0.05
 engine_sound_pitch = 0.8
 engine_sound_gain_db = 2.0
+shift_time = 0.2
+turbo = 0.45
+turbo_lag = 0.9
+turbo_spool_rpm = 1400

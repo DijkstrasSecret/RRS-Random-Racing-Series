@@ -77,7 +77,7 @@ func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
 	inertia = cfg.wheel_inertia
 	rest_length = cfg.rest_length
 	bump_length = maxf(cfg.rest_length - cfg.max_travel, 0.0)
-	spring_rate = cfg.front_spring_rate if is_front else cfg.rear_spring_rate
+	spring_rate = (cfg.front_spring_rate if is_front else cfg.rear_spring_rate) * Vehicle.SPRING_SCALE
 	damper_bump = cfg.front_damper_bump if is_front else cfg.rear_damper_bump
 	damper_rebound = cfg.front_damper_rebound if is_front else cfg.rear_damper_rebound
 	grip = cfg.tire_grip * (1.0 if is_front else cfg.rear_grip_scale)

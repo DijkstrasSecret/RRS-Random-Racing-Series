@@ -20,7 +20,7 @@ const ALL := {
 	"gearbox": {"name": "CLOSE GEARS", "kind": Kind.PART, "cost": 5, "max": 2, "desc": "+5% acceleration, slightly lower top speed."},
 	"suspension": {"name": "STIFF SUSPENSION", "kind": Kind.PART, "cost": 4, "max": 1, "desc": "Less body roll, sharper turn-in."},
 	"rocket": {"name": "ROCKET START", "kind": Kind.PERK, "cost": 5, "max": 1, "desc": "+60% power for 3 s after the start."},
-	"slipstream": {"name": "SLIPSTREAM", "kind": Kind.PERK, "cost": 6, "max": 1, "desc": "-35% drag when tucked in behind a car."},
+	"slipstream": {"name": "SLIPSTREAM", "kind": Kind.PERK, "cost": 6, "max": 1, "desc": "Doubles the slipstream: much less drag tucked in behind a car."},
 	"armour": {"name": "ROLL CAGE", "kind": Kind.PERK, "cost": 4, "max": 1, "desc": "Takes half the crash damage."},
 	"underdog": {"name": "UNDERDOG", "kind": Kind.PERK, "cost": 6, "max": 1, "desc": "+10% power while outside the top 3."},
 	"nitro": {"name": "NITRO KIT", "kind": Kind.NITRO, "cost": 7, "max": 1, "desc": "Nitro bottle: +45% power while held (Shift / X). Refills slowly."},

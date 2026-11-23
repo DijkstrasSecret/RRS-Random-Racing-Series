@@ -56,6 +56,12 @@ enum DriveType { FWD, RWD, AWD }
 	Vector2(5500.0, 0.97), Vector2(6500.0, 0.85), Vector2(7200.0, 0.7),
 ])
 @export var engine_brake_torque: float = 75.0
+## Turbo: share of the torque that comes from boost (0 = no turbo) and how
+## long the boost takes to build (seconds). Boost needs throttle and revs
+## above turbo_spool_rpm.
+@export_range(0.0, 0.7) var turbo: float = 0.0
+@export var turbo_lag: float = 0.6
+@export var turbo_spool_rpm: float = 1800.0
 
 @export_group("Gearbox & Drive")
 @export var gear_ratios: PackedFloat32Array = PackedFloat32Array([3.4, 2.1, 1.5, 1.15, 0.95, 0.8])

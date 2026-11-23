@@ -252,6 +252,26 @@ def fmt(v):
     return str(v)
 
 
+# Gear shift times (s, engine cut while changing) and turbos (share of torque
+# from boost, lag in seconds) per car.
+DRIVETRAIN = {
+    "kartal": dict(shift_time=0.35), "atmaca": dict(shift_time=0.3), "kerkenez": dict(shift_time=0.3),
+    "mirelle": dict(shift_time=0.3, turbo=0.4, turbo_lag=0.8, turbo_spool_rpm=1500),
+    "quadra": dict(shift_time=0.12, turbo=0.4, turbo_lag=0.7, turbo_spool_rpm=1500),
+    "romola": dict(shift_time=0.25, turbo=0.4, turbo_lag=0.7, turbo_spool_rpm=1500),
+    "kaze": dict(shift_time=0.25), "piccolo": dict(shift_time=0.25), "harcourt": dict(shift_time=0.3),
+    "dingo": dict(shift_time=0.2, turbo=0.35, turbo_lag=0.6, turbo_spool_rpm=1800),
+    "mammoth": dict(shift_time=0.2, turbo=0.45, turbo_lag=0.9, turbo_spool_rpm=1400),
+    "bastion": dict(shift_time=0.2, turbo=0.4, turbo_lag=0.8, turbo_spool_rpm=1500),
+    "bavaro": dict(shift_time=0.15, turbo=0.35, turbo_lag=0.5, turbo_spool_rpm=1700),
+    "braxton": dict(shift_time=0.2),
+    "ashford": dict(shift_time=0.12, turbo=0.35, turbo_lag=0.45, turbo_spool_rpm=2000),
+    "bellmont": dict(shift_time=0.1, turbo=0.35, turbo_lag=0.45, turbo_spool_rpm=1900),
+}
+for cid in CARS:
+    if cid in DRIVETRAIN:
+        CARS[cid].update(DRIVETRAIN[cid])
+
 for cid, props in CARS.items():
     out = os.path.join(ROOT, "assets", "cars", cid, cid + ".tres")
     lines = ['[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]', "",

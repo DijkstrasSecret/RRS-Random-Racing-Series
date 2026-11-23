@@ -94,6 +94,10 @@ var steer_pull: float = 0.0  ## radians, + = pulls right
 var perk_power: float = 1.0
 var perk_drag: float = 1.0
 var damage_taken: float = 1.0
+## Slipstream: 0..1, how well tucked in behind another car this car is
+## (closer and more in line = stronger). Up to 20% less drag.
+var draft: float = 0.0
+const DRAFT_RANGE := 30.0
 var _head_broken := false
 var _brake_broken := false
 var _head_energy := 2.2
@@ -103,6 +107,11 @@ var _body_pitch_vel: float = 0.0
 var _body_roll: float = 0.0
 var _body_roll_vel: float = 0.0
 const BODY_PIVOT := Vector3(0.0, 0.35, 0.0)
+## Real weight transfer: springs and anti-roll bars a bit softer than the
+## configs, so the body really pitches and rolls on its suspension (load moves
+## between the tyres through the springs) instead of a painted-on lean.
+const SPRING_SCALE := 0.8
+const ANTI_ROLL_SCALE := 0.7
 
 
 func _ready() -> void:
@@ -301,7 +310,7 @@ func _physics_process(delta: float) -> void:
 	_apply_stability()
 	if airborne:
 		_apply_air_control()
-	_update_body_motion(delta)
+	# (The old painted-on body lean is off: the body moves on its springs now.)
 
 
 ## Slow, springy body tilt on top of the real suspension movement, so speeding
@@ -375,7 +384,7 @@ func _apply_anti_roll(pair: Array[Wheel], stiffness: float) -> void:
 	var l := pair[0]
 	var r := pair[1]
 	var diff := (l.rest_length - l.spring_length) - (r.rest_length - r.spring_length)
-	var force := diff * stiffness
+	var force := diff * stiffness * ANTI_ROLL_SCALE
 	if l.grounded:
 		l.tire_load = maxf(l.tire_load + force, 0.0)
 	if r.grounded:
@@ -418,11 +427,36 @@ func _apply_aero() -> void:
 	var v2 := v.length_squared()
 	if v2 < 0.01:
 		return
-	apply_central_force(-v.normalized() * 0.5 * AIR_DENSITY * v2 * config.drag_area * drag_scale * perk_drag)
+	if Engine.get_physics_frames() % 4 == 0:
+		draft = _measure_draft()
+	var slip := 1.0 - 0.2 * draft
+	apply_central_force(-v.normalized() * 0.5 * AIR_DENSITY * v2 * config.drag_area * drag_scale * perk_drag * slip)
 	var down := 0.5 * AIR_DENSITY * forward_speed * forward_speed * config.downforce_area
 	var b := global_basis
 	apply_force(-b.y * down * config.aero_balance, b * Vector3(0.0, 0.3, _front_axle_z))
 	apply_force(-b.y * down * (1.0 - config.aero_balance), b * Vector3(0.0, 0.3, _rear_axle_z))
+
+
+## How strongly this car is in another car's wake (0 = clean air).
+func _measure_draft() -> float:
+	if forward_speed < 15.0:
+		return 0.0
+	var fwd := -global_basis.z
+	var best := 0.0
+	for node in get_tree().get_nodes_in_group("vehicles"):
+		var other := node as Vehicle
+		if other == null or other == self:
+			continue
+		var to := other.global_position - global_position
+		var d := to.length()
+		if d < 3.0 or d > DRAFT_RANGE:
+			continue
+		var line := to.normalized().dot(fwd)
+		if line < 0.96:
+			continue
+		# Strongest close behind and right in line.
+		best = maxf(best, (1.0 - d / DRAFT_RANGE) * smoothstep(0.96, 0.995, line))
+	return clampf(best * 1.6, 0.0, 1.0)
 
 
 ## Yaw damping when the car rotates faster than the steering asks for.
@@ -447,6 +481,8 @@ func _apply_air_control() -> void:
 	if assists.air_control <= 0.0:
 		return
 	var up := global_basis.y
+	if up.y < 0.64:
+		return  # past ~50 degrees: a real crash, let it roll over
 	var level := up.cross(Vector3.UP)
 	var w := angular_velocity
 	var spin := w - Vector3.UP * w.dot(Vector3.UP)
@@ -533,7 +569,7 @@ func _attach_model() -> void:
 			var hub := to_local(src.global_position)
 			# Mount sits one static spring length above the hub.
 			var corner_load := config.mass * 9.81 * 0.25
-			var rate := config.front_spring_rate if w.is_front else config.rear_spring_rate
+			var rate := (config.front_spring_rate if w.is_front else config.rear_spring_rate) * SPRING_SCALE
 			w.position = Vector3(hub.x, hub.y + config.rest_length - corner_load / rate, hub.z)
 		w.custom_visual = src
 	_fit_collision_to_model()
@@ -645,30 +681,43 @@ func set_livery(on: bool) -> void:
 			liv.visible = on
 
 
-## Size the collision boxes to the model's body (lower body + cabin).
+## Collision shape: a rounded hull wrapped round the model's body (so cars
+## slide off each other, roll over and tumble naturally instead of acting like
+## two boxes). The floor of the hull stays above the wheels' contact so the
+## body doesn't scrape on kerbs. Worked out once per car model.
+static var _hull_cache: Dictionary = {}
+
 func _fit_collision_to_model() -> void:
 	var body := _model.find_child("body*", true, false) as MeshInstance3D
 	if body == null:
 		return
-	var box := body.mesh.get_aabb()
-	var origin := to_local(body.global_transform * box.position)
-	var size := box.size
-	var bottom := 0.32
-	var belt := origin.y + size.y * 0.62
-	var top := origin.y + size.y
-	var centre := Vector3(origin.x + size.x * 0.5, 0.0, origin.z + size.z * 0.5)
+	var key := body.mesh.resource_path if body.mesh.resource_path != "" else str(body.mesh.get_instance_id())
+	var shape: ConvexPolygonShape3D = _hull_cache.get(key)
+	if shape == null:
+		var to_car := global_transform.affine_inverse() * body.global_transform
+		var bottom := 0.32
+		var seen := {}
+		var pts := PackedVector3Array()
+		for sidx in body.mesh.get_surface_count():
+			var verts: PackedVector3Array = body.mesh.surface_get_arrays(sidx)[Mesh.ARRAY_VERTEX]
+			for v in verts:
+				var p := to_car * v
+				p.y = maxf(p.y, bottom)
+				# One point per 8 cm cell is plenty for the hull.
+				var cell := Vector3i((p / 0.08).round())
+				if not seen.has(cell):
+					seen[cell] = true
+					pts.append(p)
+		shape = ConvexPolygonShape3D.new()
+		shape.points = pts
+		_hull_cache[key] = shape
 	var lower := get_node_or_null("CollisionBody") as CollisionShape3D
 	if lower:
-		var shape := BoxShape3D.new()
-		shape.size = Vector3(size.x * 0.96, belt - bottom, size.z * 0.97)
 		lower.shape = shape
-		lower.position = centre + Vector3(0.0, (belt + bottom) * 0.5, 0.0)
+		lower.transform = Transform3D.IDENTITY
 	var cabin := get_node_or_null("CollisionCabin") as CollisionShape3D
 	if cabin:
-		var shape := BoxShape3D.new()
-		shape.size = Vector3(size.x * 0.8, maxf(top - belt, 0.2), size.z * 0.48)
-		cabin.shape = shape
-		cabin.position = centre + Vector3(0.0, (belt + top) * 0.5, size.z * 0.04)
+		cabin.disabled = true
 
 
 func _collect_retro_surfaces(node: Node) -> void:

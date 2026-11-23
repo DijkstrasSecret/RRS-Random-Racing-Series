@@ -71,6 +71,9 @@ func _draw() -> void:
 		_draw_telemetry(Vector2(s.x - 500.0, 150.0))
 	_draw_view_name(k)
 	_draw_nitro(Vector2(s.x - r * 2.0 - 36.0 * k, s.y - r * 2.0 - 84.0 * k), k)
+	if _vehicle.draft > 0.15:
+		var dx := s.x - r * 2.0 - 36.0 * k
+		_label(Vector2(dx + 200.0 * k, s.y - r * 2.0 - 92.0 * k), "SLIPSTREAM", int(16 * k), Color(0.5, 0.9, 1.0, 0.5 + 0.5 * _vehicle.draft))
 	if Tournament.active:
 		_draw_tournament(k)
 	if _vehicle.off_track and fmod(Time.get_ticks_msec() / 1000.0, 0.6) < 0.4:
@@ -357,8 +360,7 @@ func _draw_nitro(o: Vector2, k: float) -> void:
 	var col := Color(1.0, 0.4, 0.9) if perks.nitro_active else Color(0.75, 0.3, 0.95)
 	draw_rect(Rect2(o, Vector2(w * perks.nitro / perks.nitro_capacity, h)), col)
 	_label(o + Vector2(0, -8.0 * k), "NITRO", int(16 * k), col)
-	if perks.drafting:
-		_label(o + Vector2(w - 90.0 * k, -8.0 * k), "SLIPSTREAM", int(14 * k), Color(0.5, 0.9, 1.0))
+
 
 
 ## Tournament banner: which race, and this player's points.

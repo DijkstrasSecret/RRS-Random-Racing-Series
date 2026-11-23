@@ -57,10 +57,10 @@ func _physics_process(delta: float) -> void:
 		var me := race.index_of(_car)
 		if me >= 0 and race.position_of(me) > 3:
 			power *= 1.1
-	# Slipstream: less drag tucked in behind another car.
-	drafting = has("slipstream") and _behind_a_car()
-	if drafting:
-		drag *= 0.65
+	# Slipstream perk: the wake helps about twice as much as for everyone else.
+	drafting = _car.draft > 0.1
+	if has("slipstream"):
+		drag *= 1.0 - 0.25 * _car.draft
 	# Nitro: held button, while there's some left.
 	nitro_active = false
 	if nitro_capacity > 0.0 and racing:
@@ -73,23 +73,7 @@ func _physics_process(delta: float) -> void:
 			var refill := NITRO_REFILL * nitro_capacity
 			if has("nitro_drift"):
 				var sliding := absf(_car.lateral_speed) > 2.5 and _car.forward_speed > 8.0
-				refill *= 1.0 + (5.0 if sliding else 0.0) + (3.0 if _behind_a_car() else 0.0)
+				refill *= 1.0 + (5.0 if sliding else 0.0) + (3.0 if drafting else 0.0)
 			nitro = minf(nitro + refill * delta, nitro_capacity)
 	_car.perk_power = power
 	_car.perk_drag = drag
-
-
-## True if another car is close ahead (within 28 m, roughly in line).
-func _behind_a_car() -> bool:
-	var fwd := -_car.global_basis.z
-	for node in get_tree().get_nodes_in_group("vehicles"):
-		var other := node as Vehicle
-		if other == null or other == _car:
-			continue
-		var to := other.global_position - _car.global_position
-		var d := to.length()
-		if d < 4.0 or d > 28.0:
-			continue
-		if to.normalized().dot(fwd) > 0.97:
-			return true
-	return false
