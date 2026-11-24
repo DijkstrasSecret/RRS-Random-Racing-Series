@@ -72,7 +72,7 @@ If a change makes a doc wrong and you can't fix it in this PR, add a `> ⚠️ O
 - **Finding IDs are stable and never reused.** Each review gets a prefix (`MF-` for multiplayer must-fix, `NH-` for multiplayer nice-to-have); a new review picks its own prefix.
 - **Each finding has:** ID, title, severity, evidence (`file:line`), why it matters (a concrete scenario), the fix, effort (S/M/L), and who found it.
 - **Fixed findings stay in the doc,** marked `✅ Fixed in #<PR>`, so the history is kept. A finding that turns out wrong is marked `❌ Not an issue: <reason>`.
-- Reference IDs in commits and PRs (`Fixes MF-9`).
+- Each finding gets its own GitHub issue (review ID in the title). Commits and PRs reference the issue number (see the Git workflow in `CLAUDE.md`) and mention the review ID in the body.
 
 ## Code documentation (GDScript)
 
