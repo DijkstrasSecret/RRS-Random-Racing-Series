@@ -110,15 +110,36 @@ The Vehicle calls `input.poll()` once per physics tick. Input actions are regist
   - Comments describe the code as it is now, not its history.
 - **Plain English:** short sentences, no filler, and numbers with units.
 
-## Git workflow
+## Git workflow: issue → branch → PR
 
-- **Never commit or push to `main`.** Use one branch per change, named `feat/`, `fix/`, `refactor/`, `docs/`, `test/` or `chore/` plus a kebab-case name (e.g. `refactor/race-config`), and merge through a PR.
+**Always start from a GitHub issue.** Every change, however small, has an issue. If none exists, create one before writing code (`gh issue create`), and say what's wrong or wanted and how to tell it's done. Review findings (MF-x / NH-x) get one issue each, with the review ID in the title and a link to the review doc.
+
+Classic git conventions apply. For issue **#42** that fixes the lap timer:
+
+| What | Format | Example |
+|------|--------|---------|
+| Branch | `<type>/<issue>-<kebab-summary>` | `fix/42-lap-timer-reset` |
+| Commit | `<type>: <summary> #<issue>` | `fix: lap timer resets on pit exit #42` |
+| PR title | `<kebab-summary>-<type>-(<issue>)` | `lap-timer-reset-fix-(42)` |
+
+- **Types (Conventional Commits):**
+  - `feat`: new behaviour
+  - `fix`: bug fix
+  - `refactor`: no behaviour change
+  - `docs`
+  - `test`
+  - `perf`
+  - `chore`: tooling, config, assets housekeeping
+- **The issue number is required** on the branch, every commit and the PR title. It's what links them together.
 - **Commit messages:**
-  - A short imperative summary line.
-  - Then a bullet body explaining what changed and why, in player-visible terms where possible.
-  - Reference review items as `MF-3` / `NH-8`.
+  - The summary is lower case and imperative ("fix", not "fixed"), with no full stop, and 72 characters or fewer including ` #42`.
+  - Optionally a blank line, then a bullet body: what changed and why, in player-visible terms where possible, mentioning review IDs (`MF-3`) where relevant.
+  - Keep commits small and focused; one issue per branch.
+- **Never commit or push to `main`.** Everything merges through a PR.
 - **PR description:**
-  - What changed and why, plus the review items it closes.
+  - Starts with `Closes #<issue>`, so the issue closes on merge.
+  - What changed and why.
   - The tests you ran, with their PASSED/FAILED lines pasted, or "not run: no Godot available".
   - Screenshots for visual changes.
   - The docs you updated.
+- **After merging,** mark fixed review findings `✅ Fixed in #<PR>` (see `docs/README.md`).
