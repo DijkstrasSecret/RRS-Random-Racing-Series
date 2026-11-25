@@ -60,10 +60,11 @@ static func start(player_count: int, track_pool: PackedStringArray, ai_tiers: in
 		roster = Array(CarRoster.ids())
 	roster.shuffle()
 	var skill_range := GameSettings.ai_skill_range()
+	var drivers := RaceSetup.driver_order()
 	for i in ai_count:
 		var skill := lerpf(skill_range.x, skill_range.y, float(i) / maxf(ai_count - 1, 1))
-		racers.append(_racer(RaceSetup.AI_NAMES[i], roster[i % roster.size()],
-				RaceSetup.AI_COLORS[i % RaceSetup.AI_COLORS.size()], 0, skill))
+		racers.append(_racer(RaceSetup.AI_NAMES[drivers[i]], roster[i % roster.size()],
+				RaceSetup.AI_COLORS[drivers[i] % RaceSetup.AI_COLORS.size()], 0, skill))
 
 
 static func _racer(racer_name: String, car: String, color: Color, player: int, skill: float) -> Dictionary:

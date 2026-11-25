@@ -161,9 +161,36 @@ func _draw_tower(o: Vector2, k: float, me: int) -> void:
 		var gap := _race.interval(i)
 		if i in _race.finish_order and n == 0:
 			gap = "FINISH"
+		if _race.state == RaceDirector.State.COUNTDOWN:
+			gap = DriverStyle.label(_race.name_at(i))  # who you are up against
 		draw_string(_font, Vector2(o.x + w - 10.0 * k - 110.0 * k, y + row * 0.72), gap, HORIZONTAL_ALIGNMENT_RIGHT,
 				110.0 * k, int(16 * k), Color(0.2, 0.2, 0.25) if mine else Color(0.82, 0.83, 0.86))
 		y += row
+	_draw_rival_news(Vector2(o.x, y + 10.0 * k), k, me)
+
+
+const NEWS_FRAMES := 300  ## 2.5 s at 120 Hz
+const NEWS_RANGE := 130.0
+
+
+## What a rival near you just did ("RUIZ  RUNS WIDE"), under the tower.
+func _draw_rival_news(o: Vector2, k: float, me: int) -> void:
+	if _race.state != RaceDirector.State.RACING:
+		return
+	var y := o.y
+	for i in _race.car_count():
+		if i == me:
+			continue
+		var car := _race.vehicle_at(i)
+		var ai := car.input as AIDriver
+		if ai == null or Engine.get_physics_frames() - ai.event_frame > NEWS_FRAMES:
+			continue
+		if car.global_position.distance_to(_vehicle.global_position) > NEWS_RANGE:
+			continue
+		draw_rect(Rect2(o.x, y, 262.0 * k, 30.0 * k), F1_DARK)
+		draw_rect(Rect2(o.x, y, 5.0 * k, 30.0 * k), _race.color_at(i))
+		_bold_text(Vector2(o.x + 14.0 * k, y + 21.0 * k), "%s %s" % [_race.name_at(i), ai.event], int(16 * k), F1_YELLOW)
+		y += 34.0 * k
 
 
 ## Lap timer: current lap time, three sector boxes coloured F1 style, last and best lap.

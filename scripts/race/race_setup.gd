@@ -54,7 +54,10 @@ func _build() -> void:
 		rng.seed = random_seed
 	else:
 		rng.randomize()
-	var names := Array(AI_NAMES)
+	# A different set of drivers every race (a tournament keeps its own).
+	var drivers := driver_order()
+	var names: Array = drivers.map(func(d: int) -> String: return AI_NAMES[d])
+	var colors: Array = drivers.map(func(d: int) -> Color: return AI_COLORS[d % AI_COLORS.size()])
 	var skills: Array[float] = []
 	for i in ai_count:
 		skills.append(lerpf(ai_skill_min, ai_skill_max, float(i) / maxf(ai_count - 1, 1)))
@@ -82,8 +85,9 @@ func _build() -> void:
 		if Tournament.active:
 			car_id = t_racer.car
 			names[i] = t_racer.name
+			colors[i] = t_racer.color
 			skills[i] = t_racer.skill
-		var paint := AI_COLORS[i % AI_COLORS.size()] if car_id in used else Color(0, 0, 0, 0)
+		var paint: Color = colors[i] if car_id in used else Color(0, 0, 0, 0)
 		used.append(car_id)
 		CarRoster.apply(car, car_id, paint)
 		if Tournament.active:
@@ -95,6 +99,7 @@ func _build() -> void:
 		var ai := AIDriver.new()
 		ai.name = "AIDriver"
 		ai.skill = skills[i]
+		DriverStyle.apply(ai, names[i])
 		ai.lane_bias = rng.randf_range(-0.8, 0.8)
 		car.add_child(ai)
 		root.add_child(car)
@@ -105,7 +110,7 @@ func _build() -> void:
 		root.add_child(timer)
 		timer.setup(circuit, car)
 		if director:
-			director.add_racer(car, timer, names[i], AI_COLORS[i % AI_COLORS.size()], false)
+			director.add_racer(car, timer, names[i], colors[i], false)
 			car.set_meta(&"driver_name", names[i])
 		ai_vehicles.append(car)
 
@@ -121,6 +126,15 @@ func _build() -> void:
 				player_colors[i] if i < player_colors.size() else Color.WHITE, true)
 	if director:
 		director.begin()
+
+
+## The AI drivers (indices into AI_NAMES / AI_COLORS) in random order.
+static func driver_order() -> Array[int]:
+	var order: Array[int] = []
+	for i in AI_NAMES.size():
+		order.append(i)
+	order.shuffle()
+	return order
 
 
 ## Tournament: the grid goes by points, the leader starts at the back.

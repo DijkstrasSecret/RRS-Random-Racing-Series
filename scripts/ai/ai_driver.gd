@@ -5,12 +5,21 @@ extends VehicleInput
 ## - Speed: a per-lap speed plan (corner limits + braking zones) built once
 ##   from the circuit, scaled by `skill`.
 ## - Line: drifts toward the inside of the coming corner, using the road width.
-## - Traffic: moves over to pass slower cars and brakes rather than ram them.
+## - Racing: tucks into the slipstream, picks a side and commits to a pass,
+##   covers the inside when attacked, gives room side by side, and makes
+##   mistakes (more of them under pressure). How much of each is the driver's
+##   character: see DriverStyle.
 ## - If it ends up lost (off the road or facing the wrong way) for a few
 ##   seconds, it is put back on the track like in most racing games.
 
 ## 0 = cautious, 1 = right on the limit.
 @export_range(0.0, 1.0) var skill: float = 0.8
+@export_group("Character")
+@export_range(0.0, 1.0) var aggression: float = 0.5
+@export_range(0.0, 1.0) var defence: float = 0.5
+@export_range(0.0, 1.0) var nerve: float = 0.7
+@export_range(0.0, 1.0) var consistency: float = 0.8
+@export_group("Driving")
 ## Personal preference for one side of the road (metres, + = right).
 @export var lane_bias: float = 0.0
 @export var lookahead_base: float = 8.0
@@ -25,6 +34,14 @@ extends VehicleInput
 var resets: int = 0
 var target_speed: float = 0.0
 var lane: float = 0.0
+## Counted for tests and the HUD.
+var dives: int = 0
+var defends: int = 0
+var mistakes: int = 0
+## Set for a moment when something worth telling the player happens
+## ("RUNS WIDE", "LOCKS UP", ...); event_frame is in physics frames.
+var event: String = ""
+var event_frame: int = -100000
 
 var _vehicle: Vehicle
 var _circuit: Circuit
@@ -41,15 +58,33 @@ func poll(delta: float) -> void:
 	_check_tyres(delta)
 	var v := _vehicle.forward_speed
 	var pos := _vehicle.global_position
-	var off := _circuit.progress_at(pos)
+	_refresh_field()
+	var here: Array = _field[_vehicle.get_instance_id()]
+	var off: float = here[1]
 	var road_half := _circuit.road_width * 0.5 - 1.7
 
 	# --- Where on the road: inside of the next corner, plus traffic moves.
 	var curv_ahead := _circuit.curvature_at(off + 12.0 + maxf(v, 0.0) * 0.6)
 	var line := -clampf(curv_ahead * 220.0, -1.0, 1.0) * road_half * 0.75  # + curv = left turn
-	var traffic := _read_traffic(v)
-	var lane_target := clampf(line + lane_bias + traffic.x, -road_half, road_half)
-	lane = move_toward(lane, lane_target, 3.5 * delta)
+	_look_for_corner(off)
+	_measure_bend(off, v)
+	_feel_pressure(delta, off, v)
+	_think_mistakes(delta, off, v)
+	# Hairpins: turn in late. Going for the inside early means arriving at the
+	# apex still pointing straight on, and running wide.
+	if _corner_dist > 0.0 and _corner_dist < 60.0:
+		line *= lerpf(1.0, 0.2, clampf((_corner_curv - 0.018) / 0.008, 0.0, 1.0))
+	var traffic := _race_others(delta, off, here[2], v, clampf(line + lane_bias, -road_half, road_half), road_half)
+	var planned := _circuit.profile_speed(_profile, off + maxf(v, 0.0) * 0.3)
+	var lane_rate := 4.5 if _attack != null else 3.5
+	# Hard on the brakes for a corner the tyres have no grip left to change
+	# lanes with: most of that has to be done before.
+	if _corner_dist < 40.0 and v > planned + 1.0:
+		lane_rate = 1.8
+	# Drifting outward in a bend uses up the same grip.
+	if _bend > 0.35 and (traffic.x - lane) * _bend_side < 0.0:
+		lane_rate = minf(lane_rate, 1.5)
+	lane = move_toward(lane, traffic.x, lane_rate * delta)
 	_think_pits(off)
 
 	# --- Steering: pure pursuit to a point ahead on that line.
@@ -66,7 +101,13 @@ func poll(delta: float) -> void:
 	steer = clampf(wheel_angle / _vehicle.current_steer_limit(), -max_steer_input, max_steer_input)
 
 	# --- Speed: follow the plan, respect traffic, back off when sliding.
-	target_speed = minf(_circuit.profile_speed(_profile, off + maxf(v, 0.0) * 0.3), traffic.y)
+	target_speed = planned * _pace_scale
+	# Right on the inside the bend is tighter than the speed plan thinks.
+	if _corner_dist < 25.0:
+		var tight := clampf((_corner_curv - 0.022) / 0.016, 0.0, 1.0)
+		var tucked := maxf(lane * _corner_side - lerpf(road_half * 0.75, 0.5, tight), 0.0)
+		target_speed *= sqrt(clampf(1.0 - _corner_curv * tucked, 0.7, 1.0))
+	target_speed = minf(target_speed, traffic.y)
 	if _pitting:
 		target_speed = minf(target_speed, _pit_speed(off))
 	var slip := absf(atan2(_vehicle.lateral_speed, maxf(absf(v), 0.5)))
@@ -114,6 +155,14 @@ func poll(delta: float) -> void:
 		# At full lock a front-drive car needs its front grip for turning.
 		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * 0.9, 0.08, 1.0)
 	handbrake = 0.0
+	if _mistake == Mistake.MISSED_GEAR:
+		# It happens when the power goes back on, not while braking.
+		if throttle > 0.4 and v > 10.0:
+			if _mistake_time >= MISTAKE_SECONDS[_mistake]:
+				_announce("MISSES A GEAR")
+			throttle = 0.0
+		else:
+			_mistake_time += delta
 	# Nitro on the straights: flat out, wheel straight, and the road ahead fast.
 	nitro = throttle > 0.95 and turning < 0.15 and target_speed > v + 4.0
 	tactical = nitro
@@ -212,31 +261,356 @@ func _check_tyres(delta: float) -> void:
 		_build_profile()
 
 
-## Returns (lane shift in metres, speed cap in m/s) caused by nearby cars.
-func _read_traffic(v: float) -> Vector2:
-	var shift := 0.0
-	var cap := 999.0
+# --- Racing the others -------------------------------------------------------
+
+## Where every car is along and across the track, worked out once per physics
+## frame and shared by all AI drivers: instance id -> [car, off, lateral, speed].
+static var _field := {}
+static var _field_frame := -1
+static var _field_circuit := 0
+
+enum Mistake { NONE, LATE_BRAKE, LOCK_UP, WIDE, MISSED_GEAR }
+
+const MISTAKE_SECONDS := {Mistake.LATE_BRAKE: 1.6, Mistake.LOCK_UP: 1.8, Mistake.WIDE: 2.6, Mistake.MISSED_GEAR: 1.0}
+const CORNER_CURV := 0.008  ## tighter than a 125 m radius counts as a corner
+const PASS_LANE := 3.0  ## metres beside the car being passed
+const CAR_LENGTH := 4.6
+
+## 0..1: how long someone has been right behind.
+var pressure := 0.0
+
+var _corner_dist := 999.0  ## metres to the next corner (0 = in one)
+var _corner_side := 0.0  ## its inside: -1 left, +1 right
+var _corner_curv := 0.0  ## how tight it gets
+var _bend := 0.0
+var _bend_side := 0.0
+var _corner_id := -1
+var _rolled_corner := -1
+var _attack: Vehicle
+var _attack_side := 0.0
+var _attack_time := 0.0
+var _attack_wait := 0.0
+var _dived := false
+var _defend_lane := NAN
+var _defended_corner := -1
+var _mistake := Mistake.NONE
+var _mistake_time := 0.0
+var _pace_scale := 1.0
+var _grudge: Vehicle
+var _grudge_time := 0.0
+var _last_velocity := Vector3.ZERO
+var _race: RaceDirector
+
+
+func _refresh_field() -> void:
+	var frame := Engine.get_physics_frames()
+	if frame == _field_frame and _field_circuit == _circuit.get_instance_id() and _field.has(_vehicle.get_instance_id()):
+		return
+	_field_frame = frame
+	_field_circuit = _circuit.get_instance_id()
+	_field.clear()
 	for node in get_tree().get_nodes_in_group("vehicles"):
-		var other := node as Vehicle
-		if other == null or other == _vehicle:
+		var car := node as Vehicle
+		if car == null:
 			continue
-		var rel := _vehicle.to_local(other.global_position)
-		var ahead := -rel.z
-		var side := rel.x
-		if ahead > 0.0 and ahead < 28.0 and absf(side) < 2.8:
-			# Someone in our path: pass on the side with more room.
-			var closing := v - other.forward_speed
-			if closing > -1.0:
-				var go_right := side < 0.0
-				if absf(lane) > 2.0:
-					go_right = lane < 0.0  # already near one edge: use the other side
-				shift = 3.0 if go_right else -3.0
-			if ahead < 10.0 and closing > 0.0:
-				cap = minf(cap, other.forward_speed - 0.5)
-		elif absf(ahead) < 5.0 and absf(side) < 3.2:
-			# Side by side: give each other room.
-			shift = -signf(side) * 1.5
-	return Vector2(shift, cap)
+		var off := _circuit.progress_at(car.global_position)
+		var lat := (car.global_position - _circuit.point_at(off)).dot(_circuit.right_at(off))
+		_field[car.get_instance_id()] = [car, off, lat, car.linear_velocity.dot(_circuit.direction_at(off))]
+
+
+## Signed distance along the track from `from` to `to` (+ = ahead).
+func _gap(from: float, to: float) -> float:
+	return fposmod(to - from + _circuit.length * 0.5, _circuit.length) - _circuit.length * 0.5
+
+
+## The next corner within 170 m (a few looks per second would do, but the
+## curvature table is cheap).
+func _look_for_corner(off: float) -> void:
+	_corner_dist = 999.0
+	var d := 0.0
+	while d <= 170.0:
+		var c := _circuit.curvature_at(off + d)
+		if absf(c) > CORNER_CURV:
+			_corner_dist = d
+			_corner_side = -signf(c)
+			_corner_id = int(fposmod(off + d, _circuit.length) / 25.0)
+			_corner_curv = 0.0
+			for step: float in [0.0, 12.0, 24.0, 36.0]:
+				_corner_curv = maxf(_corner_curv, absf(_circuit.curvature_at(off + d + step)))
+			return
+		d += 8.0
+
+
+## How much of the tyres' grip the bend here and just ahead needs at this
+## speed (about 0.6 = as much as the driver dares), and its inside.
+func _measure_bend(off: float, v: float) -> void:
+	var k := 0.0
+	for t: float in [0.0, 0.35, 0.7, 1.1]:
+		var c := _circuit.curvature_at(off + v * t)
+		if absf(c) > absf(k):
+			k = c
+	_bend_side = -signf(k)
+	_bend = absf(k) * v * v / (_vehicle.config.tire_grip * 9.81 * float(Circuit.SURFACE_GRIP[_circuit.surface_at(off)]))
+
+
+func _find_race() -> RaceDirector:
+	if _race == null:
+		_race = get_tree().get_first_node_in_group("race_director") as RaceDirector
+	return _race
+
+
+## True if that car is racing us for position (not lapping or being lapped).
+func _same_lap(other: Vehicle) -> bool:
+	var race := _find_race()
+	if race == null:
+		return true
+	var a := race.index_of(_vehicle)
+	var b := race.index_of(other)
+	if a < 0 or b < 0:
+		return true
+	return absf(race._race_distance(a) - race._race_distance(b)) < _circuit.length * 0.5
+
+
+func _announce(text: String) -> void:
+	event = text
+	event_frame = Engine.get_physics_frames()
+
+
+## Somebody close behind wears a driver down; contact starts a grudge.
+func _feel_pressure(delta: float, off: float, v: float) -> void:
+	var chased := false
+	var knock := (_vehicle.linear_velocity - _last_velocity).length()
+	_last_velocity = _vehicle.linear_velocity
+	for id in _field:
+		var e: Array = _field[id]
+		if e[0] == _vehicle:
+			continue
+		var gap := _gap(off, e[1])
+		if gap < 0.0 and gap > -14.0 and v > 12.0 and _same_lap(e[0]):
+			chased = true
+		if knock > 1.0 and v > 8.0 and (e[0] as Vehicle).global_position.distance_to(_vehicle.global_position) < 5.5:
+			_grudge = e[0]
+			_grudge_time = 25.0
+	pressure = clampf(pressure + (delta / 6.0 if chased else -delta / 4.0), 0.0, 1.0)
+	_grudge_time -= delta
+	if _grudge_time <= 0.0 or not is_instance_valid(_grudge):
+		_grudge = null
+
+
+## Once per corner: does this driver get it wrong? Each kind costs time
+## (about half a second to two seconds), none throws the car off the road.
+func _think_mistakes(delta: float, off: float, v: float) -> void:
+	if _mistake != Mistake.NONE:
+		_mistake_time -= delta
+		if _mistake_time <= 0.0:
+			_mistake = Mistake.NONE
+	_pace_scale = 1.0
+	match _mistake:
+		Mistake.LATE_BRAKE:
+			_pace_scale = 1.05
+		Mistake.LOCK_UP:
+			_pace_scale = 0.6
+		Mistake.WIDE:
+			_pace_scale = 0.94
+	if _corner_dist > 70.0 or _corner_dist < 20.0 or _pitting or v < 18.0 or _corner_id == _rolled_corner:
+		return
+	# (The id moves a little while the corner comes closer: one roll per approach.)
+	if absi(_corner_id - _rolled_corner) <= 1 or _mistake != Mistake.NONE:
+		_rolled_corner = _corner_id
+		return
+	_rolled_corner = _corner_id
+	var race := _find_race()
+	if race != null and (race.state != RaceDirector.State.RACING or race.race_time < 8.0):
+		return
+	var chance := (1.0 - consistency) * 0.14 + pressure * (1.0 - nerve) * 0.4
+	if randf() >= chance * lerpf(1.3, 0.6, skill):
+		return
+	_start_mistake([Mistake.LATE_BRAKE, Mistake.LOCK_UP, Mistake.WIDE, Mistake.MISSED_GEAR].pick_random(), off)
+
+
+func _start_mistake(kind: Mistake, off: float) -> void:
+	_mistake = kind
+	# Too late on the brakes on gravel or over the water would be a crash.
+	var ahead := off + _corner_dist
+	if kind == Mistake.LATE_BRAKE and (_circuit.surface_at(ahead) != "tarmac" or _circuit.surface_at(off) != "tarmac" 			or _circuit.on_bridge(off) or _circuit.on_bridge(ahead)):
+		_mistake = Mistake.LOCK_UP
+	_mistake_time = MISTAKE_SECONDS[_mistake]
+	mistakes += 1
+	if _mistake != Mistake.MISSED_GEAR:
+		_announce({Mistake.LATE_BRAKE: "BRAKES TOO LATE", Mistake.LOCK_UP: "LOCKS UP", Mistake.WIDE: "RUNS WIDE"}[_mistake])
+
+
+## Returns (lane to aim for, speed cap). Everything in track coordinates, so
+## it works the same on a straight and round a bend.
+func _race_others(delta: float, off: float, lat: float, v: float, line: float, road_half: float) -> Vector2:
+	var cap := 999.0
+	var edge := road_half + 0.5
+	var front: Array = []
+	var front_gap := 999.0
+	var chaser: Array = []
+	var chaser_gap := -999.0
+	for id in _field:
+		var e: Array = _field[id]
+		if e[0] == _vehicle or (e[0] as Vehicle).in_pit_lane:
+			continue
+		var gap := _gap(off, e[1])
+		if gap > 70.0 or gap < -20.0:
+			continue
+		var dlat: float = e[2] - lat
+		var ov: float = e[3]
+		if gap > 0.0:
+			var in_path := minf(absf(dlat), absf(e[2] - lane)) < 2.4
+			if in_path and gap < front_gap:
+				front = e
+				front_gap = gap
+			# Never faster than it can still slow down to the car in front.
+			if absf(dlat) < 2.2:
+				var stop := lerpf(8.0, 6.2, aggression)
+				cap = minf(cap, maxf(ov, 0.0) - 0.5 + sqrt(10.0 * maxf(gap - stop, 0.0)))
+		elif gap > chaser_gap and gap < -CAR_LENGTH:
+			chaser = e
+			chaser_gap = gap
+
+	var target := line
+	if _mistake == Mistake.WIDE or _mistake == Mistake.LATE_BRAKE:
+		target = -_corner_side * road_half * 0.5
+	_attack_wait -= delta
+	_think_attack(delta, off, lat, v, front, front_gap, edge)
+	if _attack != null:
+		_defend_lane = NAN
+		target = clampf(float(_field[_attack.get_instance_id()][2]) + _attack_side * PASS_LANE, -edge, edge)
+	elif _mistake == Mistake.NONE:
+		_think_defend(lat, v, chaser, chaser_gap, road_half)
+		if not is_nan(_defend_lane):
+			target = _defend_lane
+		elif front_gap < 32.0 and front_gap > 9.0 and v > 24.0 and _corner_dist > 60.0:
+			# A straight: sit in the slipstream until there is a gap to go for.
+			target = clampf(front[2], -road_half, road_half)
+
+	# Side by side: always leave the other car its space.
+	var room := lerpf(2.9, 2.4, aggression)
+	for id in _field:
+		var e: Array = _field[id]
+		if e[0] == _vehicle:
+			continue
+		var gap := _gap(off, e[1])
+		if absf(gap) > 6.0:
+			continue
+		var dlat: float = e[2] - lat
+		if absf(dlat) > 4.0 or absf(dlat) < 0.8 and gap > 0.0:
+			continue  # (right behind it: that is the speed cap's business)
+		if dlat > 0.0:
+			target = minf(target, float(e[2]) - room)
+		else:
+			target = maxf(target, float(e[2]) + room)
+		# Squeezed with nowhere to go and not in front: back out of it.
+		if absf(dlat) < 2.0 and gap > 0.5:
+			cap = minf(cap, maxf(float(e[3]) - 1.0, 4.0))
+	target = clampf(target, -edge, edge)
+	# Into a fast or tight bend nobody hangs on round the outside edge of the road:
+	# stay off it, and drop in behind whoever is in the way.
+	if _bend > 0.3:
+		var outside := road_half * lerpf(0.6, 0.2, clampf((_bend - 0.3) / 0.25, 0.0, 1.0))
+		if -target * _bend_side > outside:
+			target = -_bend_side * outside
+			for id in _field:
+				var e: Array = _field[id]
+				if e[0] != _vehicle and absf(float(e[2]) - target) < 2.4 and _gap(off, e[1]) > -2.0 and _gap(off, e[1]) < 9.0:
+					cap = minf(cap, maxf(float(e[3]) - 1.5, 4.0))
+	return Vector2(target, cap)
+
+
+## Picks a side to pass on and sticks with it until it works or clearly won't.
+func _think_attack(delta: float, off: float, lat: float, v: float, front: Array, front_gap: float, edge: float) -> void:
+	if _attack != null:
+		if not is_instance_valid(_attack) or not _field.has(_attack.get_instance_id()):
+			_attack = null
+			return
+		var e: Array = _field[_attack.get_instance_id()]
+		var gap := _gap(off, e[1])
+		_attack_time += delta
+		# Out-braking: on the inside and nearly there, hold on a little longer.
+		var inside := _attack_side == _corner_side
+		if inside and _corner_dist < 90.0 and _corner_dist > 8.0 and gap < 9.0 and gap > -3.0 and _mistake == Mistake.NONE:
+			_pace_scale = maxf(_pace_scale, 1.0 + (0.06 if _corner_curv < 0.03 else 0.02) * _bold_against(_attack))
+			if not _dived:
+				_dived = true
+				dives += 1
+		var round_outside := _attack_side == -_bend_side and _bend > 0.4 and gap > -2.0
+		var blocked := (float(e[2]) + _attack_side * 2.4) * _attack_side > edge
+		if gap < -7.0 or gap > 40.0 or _attack_time > 9.0 or round_outside or (blocked and gap > 5.0) or _pitting or v < 8.0:
+			if gap > 0.0:
+				_attack_wait = lerpf(4.0, 0.8, aggression)
+			_attack = null
+		return
+	if front.is_empty() or _attack_wait > 0.0 or _pitting or v < 12.0 or _mistake != Mistake.NONE:
+		return
+	var other: Vehicle = front[0]
+	var bold := _bold_against(other)
+	var closing := v - float(front[3])
+	# (A much slower car: start going round it early.)
+	if front_gap > maxf(lerpf(14.0, 28.0, bold), closing * 2.4) or closing < -1.0:
+		return
+	# A careful driver doesn't try it in the middle of a corner.
+	if _corner_dist < 10.0 and closing < lerpf(6.0, 0.5, bold):
+		return
+	var best := 0.0
+	var best_score := -99.0
+	for side: float in [-1.0, 1.0]:
+		var want: float = front[2] + side * PASS_LANE
+		if want * side > edge + 0.4:
+			continue  # no road there
+		var score: float = (edge - want * side) * 0.15  # room left over
+		score += 0.6 if (lat - float(front[2])) * side > 0.3 else 0.0  # already that way
+		if _corner_dist < 150.0:
+			score += side * _corner_side * lerpf(0.4, 1.2, bold)
+		for id in _field:  # somebody else already there
+			var o: Array = _field[id]
+			if o[0] == _vehicle or o[0] == other:
+				continue
+			if absf(float(o[2]) - want) < 2.2 and _gap(off, o[1]) > -7.0 and _gap(off, o[1]) < front_gap + 8.0:
+				score -= 3.0
+		if score > best_score:
+			best_score = score
+			best = side
+	if best == 0.0 or best_score < -1.5:
+		return
+	_attack = other
+	_attack_side = best
+	_attack_time = 0.0
+	_dived = false
+
+
+func _bold_against(other: Vehicle) -> float:
+	return clampf(aggression + (0.35 if other == _grudge else 0.0), 0.0, 1.0)
+
+
+## One move per straight: cover the inside of the next corner while the
+## car behind is close but not yet alongside.
+func _think_defend(lat: float, v: float, chaser: Array, chaser_gap: float, road_half: float) -> void:
+	if not is_nan(_defend_lane):
+		if _corner_dist < 14.0 or _corner_dist > 200.0 or chaser.is_empty() or chaser_gap < -24.0:
+			_defend_lane = NAN
+		return
+	if chaser.is_empty() or chaser_gap < -15.0 or _corner_dist < 40.0 or v < 18.0:
+		return
+	if absi(_corner_id - _defended_corner) <= 2:
+		return
+	if float(chaser[3]) - v < -0.5 or not _same_lap(chaser[0]):
+		return
+	var will := clampf(defence + (0.3 if chaser[0] == _grudge else 0.0), 0.0, 1.0)
+	if will < 0.25:
+		return
+	var cover := _corner_side * road_half * lerpf(0.4, 0.9, will)
+	# The gap is already taken: moving over now would be a crash, not a block.
+	if chaser_gap > -8.0 and (float(chaser[2]) - lat) * _corner_side > 1.2:
+		return
+	_defended_corner = _corner_id
+	# Not every driver does it every time.
+	if randf() > will:
+		return
+	_defend_lane = cover
+	defends += 1
 
 
 ## Upside down / on its side, or a wheel gone.
@@ -257,6 +631,10 @@ func _reset_onto_track(off: float, track_dir: Vector3) -> void:
 	_build_profile()
 	_lost_time = 0.0
 	lane = 0.0
+	_attack = null
+	_defend_lane = NAN
+	_mistake = Mistake.NONE
+	_pace_scale = 1.0
 	# Put it back on a clear patch of road: several cars stuck in one pile
 	# would otherwise all reset onto the same spot and crash again.
 	var spot := off

@@ -54,6 +54,25 @@ func _run() -> void:
 	var targets := [[25.0, "hud_start"], [70.0, "hud_sector"], [175.0, "hud_lap"]]
 	if "--tournament" in OS.get_cmdline_user_args():
 		targets = [[8.0, "hud_tournament_start"], [24.0, "hud_tournament"]]
+	if "--rivals" in OS.get_cmdline_user_args():
+		# The line-up in the countdown, then what a rival just did.
+		while race.state != RaceDirector.State.COUNTDOWN:
+			await process_frame
+		for i in 60:
+			await process_frame
+		await _shot("hud_lineup", scene_name)
+		Engine.time_scale = 4.0
+		while race.race_time < 9.0:
+			await process_frame
+		Engine.time_scale = 1.0
+		for i in mini(2, race.car_count()):
+			var ai := race.vehicle_at(i).input as AIDriver
+			ai._announce(["LOCKS UP", "BRAKES TOO LATE"][i])
+		for i in 6:
+			await process_frame
+		await _shot("hud_news", scene_name)
+		quit()
+		return
 	for target: Array in targets:
 		Engine.time_scale = 4.0
 		while race.race_time < float(target[0]):
@@ -65,3 +84,9 @@ func _run() -> void:
 		root.get_texture().get_image().save_png("%s/%s_%s.png" % [OUT, target[1], scene_name])
 		print("saved ", target[1])
 	quit()
+
+
+func _shot(shot: String, scene_name: String) -> void:
+	await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("%s/%s_%s.png" % [OUT, shot, scene_name])
+	print("saved ", shot)
