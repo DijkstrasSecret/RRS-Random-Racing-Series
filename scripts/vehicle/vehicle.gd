@@ -285,10 +285,15 @@ func _physics_process(delta: float) -> void:
 	for w in wheels:
 		if w.grounded and w.tire_load > 0.0:
 			apply_force(b.y * w.tire_load, w.contact_point - global_position)
+			# What the car stands on feels its weight (a seesaw tips).
+			var under := w.pushable_ground()
+			if under:
+				under.apply_force(-b.y * w.tire_load, w.contact_point - under.global_position)
 
 	# --- Tyres, engine and brakes ---
 	for w in wheels:
-		w.prepare_tire(b, velocity_at_point(w.contact_point))
+		# Relative to the ground under the tyre (it may be a lift or a turntable).
+		w.prepare_tire(b, velocity_at_point(w.contact_point) - w.ground_velocity())
 
 	var tc := assists.traction_factor(driven_wheels, config.tire_peak_slip_ratio, forward_speed)
 	tc *= assists.oversteer_cut(atan2(lateral_speed, maxf(absf(forward_speed), 0.5)), forward_speed)
@@ -320,6 +325,9 @@ func _physics_process(delta: float) -> void:
 		var tire_force := w.finish_tire(SUBSTEPS)
 		if w.grounded:
 			apply_force(tire_force, w.contact_point - global_position)
+			var under := w.pushable_ground()
+			if under:
+				under.apply_force(-tire_force, w.contact_point - under.global_position)
 		w.update_tyre(delta)
 		w.update_visual(delta)
 

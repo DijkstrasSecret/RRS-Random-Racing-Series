@@ -110,7 +110,9 @@ func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
 	rolling_resistance = cfg.rolling_resistance
 
 	target_position = Vector3(0.0, -(rest_length + radius), 0.0)
-	collision_mask = 1  # World only (ground, ramps, walls).
+	# World (ground, ramps, walls) + wheels-only surfaces (a loop: the car
+	# body would scrape the tight curve, the tyres ride it).
+	collision_mask = 1 | 8
 	add_exception(vehicle)
 	enabled = true
 	_build_visual()
@@ -195,6 +197,34 @@ func prepare_tire(body_basis: Basis, contact_velocity: Vector3) -> void:
 	_fx_sum = 0.0
 	_fy_sum = 0.0
 	mu_load = _mu_load()
+
+
+## Velocity of whatever the tyre stands on at the contact point: zero for
+## the ground, the deck's motion on a lift, seesaw or turntable, the belt
+## speed of a conveyor / roller (StaticBody3D constant velocities).
+func ground_velocity() -> Vector3:
+	if not grounded:
+		return Vector3.ZERO
+	var c := get_collider()
+	if c is RigidBody3D or c is AnimatableBody3D:
+		var st := PhysicsServer3D.body_get_direct_state((c as CollisionObject3D).get_rid())
+		if st:
+			return st.get_velocity_at_local_position(contact_point - st.transform.origin)
+	elif c is StaticBody3D:
+		var sb := c as StaticBody3D
+		if sb.constant_linear_velocity != Vector3.ZERO or sb.constant_angular_velocity != Vector3.ZERO:
+			return sb.constant_linear_velocity + sb.constant_angular_velocity.cross(contact_point - sb.global_position)
+	return Vector3.ZERO
+
+
+## The body the tyre stands on, if it can be pushed (a seesaw, a loose plank).
+func pushable_ground() -> RigidBody3D:
+	if not grounded:
+		return null
+	var c := get_collider() as RigidBody3D
+	if c and not c.freeze:
+		return c
+	return null
 
 
 ## Step 3 (run several times per tick): tyre force + implicit wheel-spin update.

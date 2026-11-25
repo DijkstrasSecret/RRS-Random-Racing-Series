@@ -10,6 +10,7 @@ const RACE := "res://scenes/modes/circuit_race.tscn"
 const VERSUS := "res://scenes/modes/versus_race.tscn"
 const PRACTICE := "res://scenes/modes/circuit_practice.tscn"
 const TEST_TRACK := "res://scenes/modes/free_roam.tscn"
+const OBSTACLE_COURSE := "res://scenes/modes/obstacle_course.tscn"
 
 const LAP_CHOICES: PackedInt32Array = [1, 2, 3, 5, 10]
 const TIME_NAMES: PackedStringArray = ["MORNING", "NOON", "SUNSET", "NIGHT"]

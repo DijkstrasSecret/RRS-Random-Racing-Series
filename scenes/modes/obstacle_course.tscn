@@ -1,0 +1,43 @@
+[gd_scene load_steps=7 format=3]
+
+[ext_resource type="Script" path="res://scripts/modes/drive_mode.gd" id="1_mode"]
+[ext_resource type="Script" path="res://scripts/tracks/obstacle_course.gd" id="2_track"]
+[ext_resource type="PackedScene" path="res://scenes/vehicle/psx_hatch.tscn" id="3_vehicle"]
+[ext_resource type="Script" path="res://scripts/camera/chase_camera.gd" id="4_camera"]
+[ext_resource type="Script" path="res://scripts/ui/hud.gd" id="5_hud"]
+[ext_resource type="Script" path="res://scripts/fx/retro_look.gd" id="6_retro"]
+
+[node name="ObstacleCourseMode" type="Node3D"]
+script = ExtResource("1_mode")
+other_scene = ""
+track_path = NodePath("Course")
+vehicle_path = NodePath("Vehicle")
+
+[node name="Course" type="Node3D" parent="."]
+script = ExtResource("2_track")
+
+[node name="Vehicle" parent="." instance=ExtResource("3_vehicle")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+
+[node name="ChaseCamera" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 6)
+current = true
+script = ExtResource("4_camera")
+target_path = NodePath("../Vehicle")
+
+[node name="RetroLook" type="CanvasLayer" parent="."]
+script = ExtResource("6_retro")
+
+[node name="HUDLayer" type="CanvasLayer" parent="."]
+layer = 10
+
+[node name="HUD" type="Control" parent="HUDLayer"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("5_hud")
+vehicle_path = NodePath("../../Vehicle")
