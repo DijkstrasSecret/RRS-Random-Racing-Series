@@ -8,7 +8,7 @@ This is the index for everything in `docs/` and the rulebook for writing it. It 
 |--------|----------------|-------|
 | `design/` | **What the game is:** pillars, modes, cars, tracks, rules, tuning targets. Written for players and designers. | [RRS_Design_Concept.md](design/RRS_Design_Concept.md) (+ PDF), [tournament_upgrades.md](design/tournament_upgrades.md), RRS_car_lineup.pdf |
 | `architecture/` | **How the code works:** systems, data flow, ownership, networking model. Written for developers. | [directory_tree.md](architecture/directory_tree.md) |
-| `decisions/` | **Why it works that way:** numbered decision records (ADRs). Never deleted. | [0000-template.md](decisions/0000-template.md), [0001-record-architecture-decisions.md](decisions/0001-record-architecture-decisions.md) |
+| `decisions/` | **Why it works that way:** numbered decision records (ADRs). Never deleted. | [0000-template.md](decisions/0000-template.md), [0001-record-architecture-decisions.md](decisions/0001-record-architecture-decisions.md), [0002-online-multiplayer-network-model.md](decisions/0002-online-multiplayer-network-model.md) |
 | `research/` | **What we found out:** investigations, real-world data, engine experiments, comparisons. They can be out of date. | [damage_research.md](research/damage_research.md) |
 | `reviews/` | **Audits of the code at a point in time,** with numbered findings that get ticked off. | [multiplayer_must_fix.md](reviews/multiplayer_must_fix.md), [multiplayer_nice_to_have.md](reviews/multiplayer_nice_to_have.md) |
 
