@@ -28,11 +28,20 @@ extends VehicleInput
 @export var steer_gain: float = 1.3
 ## Most steering input the AI uses.
 @export var max_steer_input: float = 1.0
+## Test knobs (1 = as tuned): grip used by the corner and braking plan,
+## and how much throttle is taken away while steering.
+var tune_corner := 1.0
+var tune_brake := 1.0
+var tune_turn_cut := 0.9
 ## Seconds lost (off the road or facing the wrong way) before it resets.
 @export var reset_after: float = 3.0
 
 var resets: int = 0
 var target_speed: float = 0.0
+## What set target_speed this frame ("plan", "follow", "slide", ...).
+var limiter: String = ""
+var _traffic_reason := ""
+var _since_go := 0.0
 var lane: float = 0.0
 ## Counted for tests and the HUD.
 var dives: int = 0
@@ -84,7 +93,14 @@ func poll(delta: float) -> void:
 	# Drifting outward in a bend uses up the same grip.
 	if _bend > 0.35 and (traffic.x - lane) * _bend_side < 0.0:
 		lane_rate = minf(lane_rate, 1.5)
+	# Off the line: straight ahead and flat out, ease over once rolling.
+	_since_go = 0.0 if _vehicle.controls_locked else _since_go + delta
+	var launching := _since_go < 3.0 and v < 25.0
+	if launching:
+		lane_rate = 0.8
 	lane = move_toward(lane, traffic.x, lane_rate * delta)
+	if _vehicle.controls_locked:
+		lane = here[2]
 	_think_pits(off)
 
 	# --- Steering: pure pursuit to a point ahead on that line.
@@ -102,29 +118,30 @@ func poll(delta: float) -> void:
 
 	# --- Speed: follow the plan, respect traffic, back off when sliding.
 	target_speed = planned * _pace_scale
+	limiter = "plan" if _mistake == Mistake.NONE else "mistake"
 	# Right on the inside the bend is tighter than the speed plan thinks.
 	if _corner_dist < 25.0:
 		var tight := clampf((_corner_curv - 0.022) / 0.016, 0.0, 1.0)
 		var tucked := maxf(lane * _corner_side - lerpf(road_half * 0.75, 0.5, tight), 0.0)
-		target_speed *= sqrt(clampf(1.0 - _corner_curv * tucked, 0.7, 1.0))
-	target_speed = minf(target_speed, traffic.y)
+		_cap(target_speed * sqrt(clampf(1.0 - _corner_curv * tucked, 0.7, 1.0)), "tucked")
+	_cap(traffic.y, _traffic_reason)
 	if _pitting:
-		target_speed = minf(target_speed, _pit_speed(off))
+		_cap(_pit_speed(off), "pit")
 	var slip := absf(atan2(_vehicle.lateral_speed, maxf(absf(v), 0.5)))
 	if v > 8.0 and slip > deg_to_rad(7.0):
-		target_speed = minf(target_speed, v - 2.0)
-	# Full lock at speed and still not turning enough (understeer): scrub off
-	# speed now rather than at the edge of the road.
-	if v > 14.0 and absf(steer) >= max_steer_input * 0.97:
-		target_speed = minf(target_speed, v - 2.5)
+		_cap(v - 2.0, "slide")
+	# Full lock and still not turning enough (understeer), even in a slow
+	# hairpin: scrub off speed now rather than at the edge of the road.
+	if v > 8.0 and absf(steer) >= max_steer_input * 0.97:
+		_cap(v - lerpf(1.0, 2.5, clampf((v - 8.0) / 6.0, 0.0, 1.0)), "understeer")
 
 	var from_centre := _circuit.distance_from_centre(pos)
 	# Running wide toward the edge: ease off before it reaches the grass.
 	if from_centre > _circuit.road_width * 0.45:
-		target_speed = minf(target_speed, maxf(v - 1.5, 14.0))
+		_cap(maxf(v - 1.5, 14.0), "edge")
 	var off_line := from_centre > _circuit.road_width * 0.75 and not _pitting and not _vehicle.in_pit_lane
 	if off_line:
-		target_speed = minf(target_speed, 14.0)
+		_cap(14.0, "off road")
 	var track_dir := _circuit.direction_at(off)
 	var wrong_way := (-_vehicle.global_basis.z).dot(track_dir) < -0.2
 	# (Standing in the pit box being serviced is not stuck.)
@@ -134,8 +151,8 @@ func poll(delta: float) -> void:
 		_lost_time = 0.0  # no recovery in a tournament: the race director retires it
 	if _lost_time > reset_after:
 		if OS.get_cmdline_user_args().has("--log-resets"):
-			print("    reset %s at %.0f m (%s%s%s)" % [_vehicle.name, off, "off line " if off_line else "",
-				"wrong way " if wrong_way else "", "stuck" if stuck else ""])
+			print("    reset %s at %.0f m (%s%s%s) t %.1f s, %.0f km/h, %.1f m from centre, pitting %s" % [_vehicle.name, off, "off line " if off_line else "",
+				"wrong way " if wrong_way else "", "stuck" if stuck else "", _find_race().race_time if _find_race() else 0.0, v * 3.6, from_centre, _pitting])
 		if OS.get_cmdline_user_args().has("--log-resets"):
 			var gear := ""
 			for w in _vehicle.wheels:
@@ -147,13 +164,14 @@ func poll(delta: float) -> void:
 	# --- Pedals in proportion to the speed error; gentle while turning hard.
 	var err := v - target_speed
 	var turning := absf(steer) / maxf(max_steer_input, 0.01)
-	if err > 0.5:
+	if err > 0.4:
+		# A little too fast: just lift. Much too fast: the pedal goes down hard.
 		throttle = 0.0
-		brake = clampf(err / 2.0, 0.2, 1.0) * (1.0 - turning * 0.4)
+		brake = clampf((err - 0.4) / 1.2, 0.0, 1.0) * (1.0 - turning * 0.4)
 	else:
 		brake = 0.0
 		# At full lock a front-drive car needs its front grip for turning.
-		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * 0.9, 0.08, 1.0)
+		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * tune_turn_cut * (0.2 if launching else 1.0), 0.08, 1.0)
 	handbrake = 0.0
 	if _mistake == Mistake.MISSED_GEAR:
 		# It happens when the power goes back on, not while braking.
@@ -166,6 +184,13 @@ func poll(delta: float) -> void:
 	# Nitro on the straights: flat out, wheel straight, and the road ahead fast.
 	nitro = throttle > 0.95 and turning < 0.15 and target_speed > v + 4.0
 	tactical = nitro
+
+
+## Lowers the target speed, remembering why (for tests).
+func _cap(speed: float, reason: String) -> void:
+	if speed < target_speed:
+		target_speed = speed
+		limiter = reason
 
 
 func _setup() -> bool:
@@ -186,11 +211,21 @@ func _build_profile() -> void:
 	var heavy := clampf(1.0 - (_vehicle.config.mass - 1300.0) / 9000.0, 0.85, 1.05)
 	_tyre_condition = _mean_tyre_condition()
 	var grip := _vehicle.config.tire_grip * heavy * 9.81 * _tyre_condition
-	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill) * _corner_scale,
-			grip * lerpf(0.42, 0.58, skill), 95.0)
+	# Braking: every car stops at about 0.88 x its tyre grip in g with the pedal
+	# fully down (tests/brake_probe.gd), heavy or not. A top driver uses nearly
+	# all of it, as late as it can.
+	var stop := _vehicle.config.tire_grip * 0.88 * 9.81 * _tyre_condition
+	# A flat tyre or a wheel gone: the car pulls and slides, so nurse it home.
+	_flat = _has_flat()
+	if _flat:
+		grip *= 0.7
+		stop *= 0.7
+	_profile = _circuit.build_speed_profile(grip * lerpf(0.46, 0.63, skill) * _corner_scale * tune_corner,
+			stop * lerpf(0.40, 0.96, skill) * tune_brake, 95.0)
 
 
 var _tyre_condition := 1.0
+var _flat := false
 var _pitting := false
 
 
@@ -241,6 +276,13 @@ func _pit_speed(off: float) -> float:
 var _tyre_check := 0.0
 
 
+func _has_flat() -> bool:
+	for w in _vehicle.wheels:
+		if w.punctured or w.detached:
+			return true
+	return false
+
+
 ## Average grip of the four tyres (heat and wear), 1 = fresh and warm.
 func _mean_tyre_condition() -> float:
 	if _vehicle == null or _vehicle.wheels.is_empty():
@@ -257,14 +299,15 @@ func _check_tyres(delta: float) -> void:
 	if _tyre_check < 2.0:
 		return
 	_tyre_check = 0.0
-	if absf(_mean_tyre_condition() - _tyre_condition) > 0.015:
+	if absf(_mean_tyre_condition() - _tyre_condition) > 0.015 or _has_flat() != _flat:
 		_build_profile()
 
 
 # --- Racing the others -------------------------------------------------------
 
 ## Where every car is along and across the track, worked out once per physics
-## frame and shared by all AI drivers: instance id -> [car, off, lateral, speed].
+## frame and shared by all AI drivers: instance id -> [car, off, lateral, speed,
+## acceleration].
 static var _field := {}
 static var _field_frame := -1
 static var _field_circuit := 0
@@ -308,14 +351,22 @@ func _refresh_field() -> void:
 		return
 	_field_frame = frame
 	_field_circuit = _circuit.get_instance_id()
+	var before := _field.duplicate()
 	_field.clear()
+	var dt := get_physics_process_delta_time()
 	for node in get_tree().get_nodes_in_group("vehicles"):
 		var car := node as Vehicle
 		if car == null:
 			continue
 		var off := _circuit.progress_at(car.global_position)
 		var lat := (car.global_position - _circuit.point_at(off)).dot(_circuit.right_at(off))
-		_field[car.get_instance_id()] = [car, off, lat, car.linear_velocity.dot(_circuit.direction_at(off))]
+		var speed := car.linear_velocity.dot(_circuit.direction_at(off))
+		var id := car.get_instance_id()
+		# How hard it is speeding up (+) or braking (-): its brake lights.
+		var accel := 0.0
+		if before.has(id):
+			accel = lerpf(float(before[id][4]), (speed - float(before[id][3])) / dt, 0.2)
+		_field[id] = [car, off, lat, speed, accel]
 
 
 ## Signed distance along the track from `from` to `to` (+ = ahead).
@@ -350,7 +401,8 @@ func _measure_bend(off: float, v: float) -> void:
 		if absf(c) > absf(k):
 			k = c
 	_bend_side = -signf(k)
-	_bend = absf(k) * v * v / (_vehicle.config.tire_grip * 9.81 * float(Circuit.SURFACE_GRIP[_circuit.surface_at(off)]))
+	_bend = absf(k) * v * v / Circuit._banked_accel(_vehicle.config.tire_grip * 9.81 * float(Circuit.SURFACE_GRIP[_circuit.surface_at(off)]),
+			_circuit.bank_slope_at(off))
 
 
 func _find_race() -> RaceDirector:
@@ -444,6 +496,7 @@ func _start_mistake(kind: Mistake, off: float) -> void:
 ## it works the same on a straight and round a bend.
 func _race_others(delta: float, off: float, lat: float, v: float, line: float, road_half: float) -> Vector2:
 	var cap := 999.0
+	_traffic_reason = "follow"
 	var edge := road_half + 0.5
 	var front: Array = []
 	var front_gap := 999.0
@@ -466,7 +519,9 @@ func _race_others(delta: float, off: float, lat: float, v: float, line: float, r
 			# Never faster than it can still slow down to the car in front.
 			if absf(dlat) < 2.2:
 				var stop := lerpf(8.0, 6.2, aggression)
-				cap = minf(cap, maxf(ov, 0.0) - 0.5 + sqrt(10.0 * maxf(gap - stop, 0.0)))
+				# Brake lights on: aim for the speed it will be doing a moment from now.
+				var soon := maxf(ov + minf(float(e[4]), 0.0) * 0.45, 0.0)
+				cap = minf(cap, soon - 0.5 + sqrt(10.0 * maxf(gap - stop, 0.0)))
 		elif gap > chaser_gap and gap < -CAR_LENGTH:
 			chaser = e
 			chaser_gap = gap
@@ -504,8 +559,9 @@ func _race_others(delta: float, off: float, lat: float, v: float, line: float, r
 		else:
 			target = maxf(target, float(e[2]) + room)
 		# Squeezed with nowhere to go and not in front: back out of it.
-		if absf(dlat) < 2.0 and gap > 0.5:
-			cap = minf(cap, maxf(float(e[3]) - 1.0, 4.0))
+		if absf(dlat) < 2.0 and gap > 0.5 and maxf(float(e[3]) - 1.0, 4.0) < cap:
+			cap = maxf(float(e[3]) - 1.0, 4.0)
+			_traffic_reason = "squeezed"
 	target = clampf(target, -edge, edge)
 	# Into a fast or tight bend nobody hangs on round the outside edge of the road:
 	# stay off it, and drop in behind whoever is in the way.
@@ -515,8 +571,10 @@ func _race_others(delta: float, off: float, lat: float, v: float, line: float, r
 			target = -_bend_side * outside
 			for id in _field:
 				var e: Array = _field[id]
-				if e[0] != _vehicle and absf(float(e[2]) - target) < 2.4 and _gap(off, e[1]) > -2.0 and _gap(off, e[1]) < 9.0:
-					cap = minf(cap, maxf(float(e[3]) - 1.5, 4.0))
+				if e[0] != _vehicle and absf(float(e[2]) - target) < 2.4 and _gap(off, e[1]) > -2.0 and _gap(off, e[1]) < 9.0 \
+						and maxf(float(e[3]) - 1.5, 4.0) < cap:
+					cap = maxf(float(e[3]) - 1.5, 4.0)
+					_traffic_reason = "outside"
 	return Vector2(target, cap)
 
 
@@ -624,7 +682,7 @@ func _wrecked() -> bool:
 
 
 ## Put the car back on the centre line, pointing the right way.
-func _reset_onto_track(off: float, track_dir: Vector3) -> void:
+func _reset_onto_track(off: float, _track_dir: Vector3) -> void:
 	resets += 1
 	_pitting = false  # decide again from the new spot (never steer into the pit wall)
 	_corner_scale = maxf(_corner_scale * 0.95, 0.8)
@@ -653,9 +711,7 @@ func _reset_onto_track(off: float, track_dir: Vector3) -> void:
 			spot = cand_off
 			lateral = cand_lat
 			break
-	track_dir = _circuit.direction_at(spot)
-	var pos := _circuit.point_at(spot) + _circuit.right_at(spot) * lateral + Vector3.UP * 0.3
-	_vehicle.teleport(Transform3D(Basis.looking_at(track_dir, Vector3.UP), pos))
+	_vehicle.teleport(_circuit.road_transform(spot, lateral))
 	throttle = 0.0
 	brake = 0.0
 	steer = 0.0

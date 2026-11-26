@@ -53,6 +53,11 @@ var runoff := "gravel"
 var surfaces: Array = []
 ## Lap fractions built over water (island causeway), or (-1, -1).
 var bridge := Vector2(-1.0, -1.0)
+## Banked turns (an oval): [lap fraction, degrees] keys, eased between; the
+## outside of the turn is the high side. Empty = flat road everywhere.
+var bank_keys: Array = []
+## Oval track: walls right at the outside edge, no curbs.
+var oval := false
 ## Grip and extra rolling drag of each road surface.
 const SURFACE_GRIP := {"tarmac": 1.0, "gravel": 0.78, "sand": 0.7, "wood": 0.95}
 const SURFACE_DRAG := {"tarmac": 0.0, "gravel": 0.025, "sand": 0.045, "wood": 0.005}
@@ -98,8 +103,11 @@ func _ready() -> void:
 		surfaces = track.get("surfaces", [])
 		if track.has("bridge"):
 			bridge = Vector2(track.bridge[0], track.bridge[1])
+		bank_keys = track.get("bank", [])
+		oval = bool(track.get("oval", false))
 	_build_curve()
 	_sample_curve()
+	_apply_banking()
 	_build_surface_grid()
 	_build_environment()
 	_build_ground()
@@ -131,8 +139,42 @@ func get_grid_transform(slot: int) -> Transform3D:
 	var dir := (ahead - pos).normalized()
 	var right := dir.cross(Vector3.UP).normalized()
 	var lateral := 0.0 if slot < 0 else (-3.0 if slot % 2 == 0 else 3.0)
-	var xf := Transform3D(Basis.looking_at(dir, Vector3.UP), pos + right * lateral + Vector3(0.0, 0.1, 0.0))
+	var spot := pos + right * lateral
+	spot.y = surface_y(spot.x, spot.z, pos.y) + ROAD_Y
+	var xf := Transform3D(_road_basis(off, dir), spot + Vector3(0.0, 0.1, 0.0))
 	return global_transform * xf
+
+
+## A car's resting basis on the road at `off`, facing `dir` (circuit space):
+## tilted with the banking, level everywhere else.
+func _road_basis(off: float, dir: Vector3) -> Basis:
+	var b := Basis.looking_at(dir, Vector3.UP)
+	var tilt := bank_slope_at(off)
+	if absf(tilt) < 0.0001:
+		return b
+	# + slope = the right side is higher: roll left (about the forward axis).
+	return Basis(dir.normalized(), -atan(tilt)) * b
+
+
+## Slope across the road at `off` (height gained per metre to the right).
+func bank_slope_at(off: float) -> float:
+	if bank_keys.is_empty() or _samples.is_empty():
+		return 0.0
+	var n := _samples.size()
+	var f := fposmod(off, length) / length * n
+	var i := int(f)
+	return lerpf(float(_samples[i % n].tilt), float(_samples[(i + 1) % n].tilt), f - i)
+
+
+## Where a car should be put back on the road (world space): `lateral`
+## metres right of the centre line at `off`, on the surface, banked.
+func road_transform(off: float, lateral: float, lift: float = 0.3) -> Transform3D:
+	var c := _at(off)
+	var dir := (_at(off + 1.0) - _at(off - 1.0)).normalized()
+	var spot := c + dir.cross(Vector3.UP).normalized() * lateral
+	spot.y = surface_y(spot.x, spot.z, c.y) + ROAD_Y
+	var b := _road_basis(off, dir)
+	return global_transform * Transform3D(b, spot + b.y * lift)
 
 
 ## Distance (m) along the lap from the start line to the point nearest `world_pos`.
@@ -199,7 +241,7 @@ func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: fl
 		var k := 0.0
 		for j in range(-3, 4):
 			k = maxf(k, absf(_samples[(i + j + n) % n].curv))
-		v[i] = minf(sqrt(lateral_accel * float(_samples[i].grip) / maxf(k, 0.0001)), top_speed)
+		v[i] = minf(sqrt(_banked_accel(lateral_accel * float(_samples[i].grip), float(_samples[i].tilt)) / maxf(k, 0.0001)), top_speed)
 		# Ease off over sharp crests so the car doesn't go light and slide.
 		var crest: float = _samples[i].crest
 		if crest > 0.0:
@@ -214,6 +256,15 @@ func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: fl
 			var decel := maxf(brake_accel * float(_samples[idx].grip) + 9.81 * grade, brake_accel * 0.4)
 			v[idx] = minf(v[idx], sqrt(next * next + 2.0 * decel * step))
 	return v
+
+
+## Sideways acceleration a car can hold on a banked road (slope `tilt`)
+## when the tyres alone give `accel`: the banking holds part of the turn.
+static func _banked_accel(accel: float, tilt: float) -> float:
+	var t := absf(tilt)
+	if t < 0.0001:
+		return accel
+	return (accel + 9.81 * t) / maxf(1.0 - accel / 9.81 * t, 0.25)
 
 
 func profile_speed(profile: PackedFloat32Array, off: float) -> float:
@@ -268,9 +319,35 @@ func _sample_curve() -> void:
 			"surf": surface_at(off),
 			"grip": float(SURFACE_GRIP[surface_at(off)]),
 			"bridge": on_bridge(off),
+			"tilt": 0.0,
 		})
 		outline.append(Vector2(pos.x, pos.z))
 		_bounds = Rect2(pos.x, pos.z, 0, 0) if k == 0 else _bounds.expand(Vector2(pos.x, pos.z))
+
+
+## Banking: each sample's slope across the road from the track's bank keys.
+func _apply_banking() -> void:
+	if bank_keys.is_empty():
+		return
+	# The outside of the turns is the infield's other side.
+	var dir := 1.0 if infield_side() == 0 else -1.0
+	for smp: Dictionary in _samples:
+		smp.tilt = tan(deg_to_rad(bank_degrees(bank_keys, float(smp.off) / length))) * dir
+
+
+## Banking in degrees at lap fraction `f`: eased between the keys.
+static func bank_degrees(keys: Array, f: float) -> float:
+	var n := keys.size()
+	f = fposmod(f, 1.0)
+	for i in n:
+		var a: Array = keys[i]
+		var b: Array = keys[(i + 1) % n]
+		var fa := float(a[0])
+		var fb := float(b[0]) + (1.0 if i == n - 1 else 0.0)
+		var ff := f if f >= fa else f + 1.0
+		if ff >= fa and ff <= fb:
+			return lerpf(float(a[1]), float(b[1]), smoothstep(fa, fb, ff))
+	return float(keys[0][1])
 
 
 func _at(off: float) -> Vector3:
@@ -392,7 +469,13 @@ func surface_y(x: float, z: float, fallback: float = 0.0) -> float:
 				if d < SURFACE_CELL:
 					var w := 1.0 - d / SURFACE_CELL
 					w *= w
-					sum += p.y * w
+					var smp: Dictionary = _samples[k]
+					var h := p.y
+					if smp.tilt != 0.0:
+						# Banked: higher toward the outside of the turn.
+						var right: Vector3 = smp.right
+						h += float(smp.tilt) * ((x - p.x) * right.x + (z - p.z) * right.z)
+					sum += h * w
 					wsum += w
 	return sum / wsum if wsum > 0.0 else fallback
 
@@ -497,6 +580,8 @@ func _surface_texture(kind: String) -> ImageTexture:
 
 
 func _build_curbs() -> void:
+	if oval:
+		return
 	var st := SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
 	var half := road_width * 0.5
@@ -612,9 +697,10 @@ func _build_verge() -> void:
 
 ## Finds the straight through the start line and fits the pit lane on it.
 func _plan_pit_lane() -> void:
-	if _track_id == "" or String(TrackList.get_track(_track_id).get("series", "")) != "F1":
+	if _track_id == "" or not String(TrackList.get_track(_track_id).get("series", "")) in ["F1", "NASCAR"]:
 		return
-	var limit := 1.0 / 100.0
+	# (An oval's turns are wide but banked: only the front stretch counts.)
+	var limit := 1.0 / 400.0 if oval else 1.0 / 100.0
 	var back := 0.0
 	while back < 600.0 and absf(curvature_at(length - back - 10.0)) < limit:
 		back += 5.0

@@ -17,7 +17,7 @@ const TIME_NAMES: PackedStringArray = ["MORNING", "NOON", "SUNSET", "NIGHT"]
 const WEATHER_NAMES: PackedStringArray = ["CLEAR", "HAZY", "FOG"]
 const DIFFICULTY_NAMES: PackedStringArray = ["EASY", "NORMAL", "HARD"]
 ## AI skill range (min, max) for each difficulty.
-const DIFFICULTY_SKILLS: Array[Vector2] = [Vector2(0.3, 0.6), Vector2(0.5, 0.82), Vector2(0.68, 0.95)]
+const DIFFICULTY_SKILLS: Array[Vector2] = [Vector2(0.3, 0.6), Vector2(0.5, 0.82), Vector2(0.75, 1.0)]
 
 static var laps: int = 3
 static var ai_count: int = 5

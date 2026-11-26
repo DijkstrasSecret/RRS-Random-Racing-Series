@@ -7,6 +7,7 @@ extends SceneTree
 const SWAP_GAP := 6.0  ## metres in front before a pass counts
 
 var _totals := {}
+var _brakes := {}
 
 
 func _init() -> void:
@@ -19,6 +20,7 @@ func _run() -> void:
 	var seeds: Array = [1]
 	var laps := 2
 	var cars := 8
+	var player_skill := 0.7
 	for arg in OS.get_cmdline_user_args():
 		var value := arg.get_slice("=", 1)
 		if arg.begins_with("--tracks="):
@@ -29,6 +31,8 @@ func _run() -> void:
 			laps = int(value)
 		elif arg.begins_with("--cars="):
 			cars = int(value)
+		elif arg.begins_with("--player-skill="):
+			player_skill = float(value)
 		elif arg.begins_with("--difficulty="):
 			GameSettings.ai_difficulty = int(value)
 	GameSettings.ai_tiers = 4  # one class: close racing
@@ -36,12 +40,13 @@ func _run() -> void:
 	GameSettings.damage = 2
 	for track_id in tracks:
 		for s in seeds:
-			await _race(String(track_id), int(s), laps)
+			await _race(String(track_id), int(s), laps, player_skill)
 	print("TOTAL %s" % JSON.stringify(_totals))
+	print("HEAVY BRAKING (s, all AI) %s" % JSON.stringify(_brakes))
 	quit()
 
 
-func _race(track_id: String, race_seed: int, laps: int) -> void:
+func _race(track_id: String, race_seed: int, laps: int, player_skill: float) -> void:
 	GameSettings.track = track_id
 	GameSettings.laps = laps
 	seed(race_seed)
@@ -57,7 +62,7 @@ func _race(track_id: String, race_seed: int, laps: int) -> void:
 			player.free()
 			var ai := AIDriver.new()
 			ai.name = "AIDriver"
-			ai.skill = 0.7
+			ai.skill = player_skill
 			node.add_child(ai)
 			player_car = node
 	root.add_child(scene)
@@ -72,11 +77,24 @@ func _race(track_id: String, race_seed: int, laps: int) -> void:
 	var bumps := 0  # contacts: a sudden change of speed with another car touching distance away
 	var last_v := {}
 	var bump_wait := {}
+	var go := -1.0
+	var places := []
+	var brakes := {}
 	while race.race_time < limit:
 		await physics_frame
 		if race.car_count() > 0 and race.finish_order.size() == race.car_count():
 			break
 		ticks += 1
+		if race.state == RaceDirector.State.RACING:
+			if go < 0.0:
+				go = race.race_time
+			if places.size() < 3 and race.race_time - go >= [15.0, 30.0, 60.0][places.size()]:
+				places.append(race.position_of(race.index_of(player_car)))
+			for a in race.car_count():
+				var car_ai := race.vehicle_at(a).get_node_or_null("AIDriver") as AIDriver
+				if car_ai != null and race.vehicle_at(a) != player_car and car_ai.brake > 0.3 and not a in race.finish_order:
+					brakes[car_ai.limiter] = float(brakes.get(car_ai.limiter, 0.0)) + 1.0 / 120.0
+					_brakes[car_ai.limiter] = float(_brakes.get(car_ai.limiter, 0.0)) + 1.0 / 120.0
 		for a in race.car_count():
 			var car := race.vehicle_at(a)
 			var knock := (car.linear_velocity - Vector3(last_v.get(a, car.linear_velocity))).length()
@@ -135,6 +153,7 @@ func _race(track_id: String, race_seed: int, laps: int) -> void:
 	var spread: float = times.max() - times.min() if not times.is_empty() else 0.0
 	print("%-12s seed %d  finished %d/%d  overtakes %3d  close %5.1f s  resets %2d  bumps %2d  damage %5.2f  mean %6.1f s  spread %5.1f s  defends %d dives %d mistakes %d" % [track_id, race_seed,
 			race.finish_order.size(), race.car_count(), overtakes, close_time, resets, bumps, damage, mean, spread, defends, dives, mistakes])
+	print("    back-of-grid car (skill %.2f) place after 15/30/60 s: %s  heavy braking %s" % [player_skill, places, JSON.stringify(brakes)])
 	if OS.get_cmdline_user_args().has("--rows"):
 		for r in rows:
 			print(r)

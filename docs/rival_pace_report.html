@@ -1,0 +1,152 @@
+<title>Rival Pace Report</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: one reading column; each finding is a "before / after" timing strip. */
+:root {
+  --bg: #f3f4f6; --panel: #ffffff; --fg: #1b1f27; --muted: #5d6573; --line: #d9dde4;
+  --accent: #b86a00; --good: #1f7a45; --bad: #b3261e; --bar-old: #a9b0bc; --bar-new: #b86a00;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "Inter", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #14171c; --panel: #1c2027; --fg: #e8eaee; --muted: #9aa3b1; --line: #2e343e;
+  --accent: #f0a23a; --good: #5fcf8c; --bad: #ff8a80; --bar-old: #5a6270; --bar-new: #f0a23a; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #14171c; --panel: #1c2027; --fg: #e8eaee; --muted: #9aa3b1; --line: #2e343e;
+  --accent: #f0a23a; --good: #5fcf8c; --bad: #ff8a80; --bar-old: #5a6270; --bar-new: #f0a23a; color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font: 15px/1.6 var(--body); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 28px; }
+h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; text-wrap: balance; margin: 0; line-height: 1.1; }
+h1 { font-size: 2.6rem; }
+h2 { font-size: 1.6rem; }
+h3 { font-size: 1rem; margin: 0; }
+p { margin: 0; max-width: 65ch; }
+.eyebrow { font: 600 .75rem/1 var(--body); text-transform: uppercase; letter-spacing: .12em; color: var(--accent); }
+.lead { color: var(--muted); font-size: 1.05rem; }
+section { display: grid; gap: 14px; }
+.finding { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 18px; display: grid; gap: 10px; }
+.finding .you { font-style: italic; color: var(--muted); }
+.kv { display: grid; grid-template-columns: 7.5rem 1fr; gap: 4px 14px; }
+.kv dt { color: var(--muted); font-size: .85rem; padding-top: 2px; }
+.kv dd { margin: 0; min-width: 0; }
+.num { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.bars { display: grid; gap: 6px; margin-top: 4px; }
+.bar { display: grid; grid-template-columns: 9rem 1fr 4.5rem; align-items: center; gap: 10px; font-size: .85rem; }
+.bar .track { height: 10px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar .fill { height: 100%; }
+.bar .old { background: var(--bar-old); }
+.bar .new { background: var(--bar-new); }
+.bar span:last-child { text-align: right; }
+.tablebox { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: .9rem; }
+th, td { padding: 9px 12px; border-bottom: 1px solid var(--line); text-align: right; }
+th:first-child, td:first-child { text-align: left; }
+thead th { font: 600 .72rem/1.2 var(--body); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+tbody tr:last-child td { border-bottom: 0; }
+td { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+td:first-child { font-family: var(--body); }
+.better { color: var(--good); }
+.worse { color: var(--bad); }
+.note { font-size: .85rem; color: var(--muted); }
+ul { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; max-width: 65ch; }
+@media (max-width: 520px) {
+  h1 { font-size: 2.1rem; }
+  .kv { grid-template-columns: 1fr; gap: 0; }
+  .kv dd { margin-bottom: 8px; }
+  .bar { grid-template-columns: 6.5rem 1fr 4rem; }
+}
+</style>
+
+<div class="wrap">
+  <header style="display:grid; gap:10px">
+    <div class="eyebrow">RRS · Random Racing Series · AI test report</div>
+    <h1>Rival Pace Report</h1>
+    <p class="lead">You said the rivals were smarter but not competitive: on hard you passed nearly all of them in the first two corners, they did not start at full throttle, and they braked hard where a lift would do. Here is what the tests found and what changed.</p>
+  </header>
+
+  <section>
+    <h2>What you saw, and why</h2>
+
+    <article class="finding">
+      <h3>Slow starts</h3>
+      <p class="you">"They seem to not start full throttle."</p>
+      <dl class="kv">
+        <dt>Cause</dt><dd>During the countdown the rival already steered toward its racing line, so at GO the wheel was half turned and the throttle was cut to about 55%.</dd>
+        <dt>Fix</dt><dd>On the grid it holds its own slot, launches straight and flat out, and eases over once rolling.</dd>
+      </dl>
+      <div class="bars" aria-label="Time to cover the first 50 metres, Monza, Orion">
+        <div class="bar"><span>Before</span><div class="track"><div class="fill old" style="width:100%"></div></div><span class="num">5.32 s</span></div>
+        <div class="bar"><span>Now</span><div class="track"><div class="fill new" style="width:90.6%"></div></div><span class="num">4.82 s</span></div>
+        <div class="bar"><span>Held flat out</span><div class="track"><div class="fill old" style="width:89.5%"></div></div><span class="num">4.76 s</span></div>
+      </div>
+      <p class="note">First 50 m from the grid, Monza, Hyundai Ioniq 6 (your car). "Held flat out" is a car with the throttle pinned and the wheel straight: the best possible start.</p>
+    </article>
+
+    <article class="finding">
+      <h3>Braking too early and too gently</h3>
+      <p class="you">"Sometimes they do heavy brakes when they could pass with near full throttle."</p>
+      <dl class="kv">
+        <dt>Cause</dt><dd>Every car can stop at 0.85 to 1.18 g with the pedal fully down. The rivals' braking plan only used about 60% of that, so in big braking zones they pressed the pedal just 40% and started braking far too early. They also tapped the brakes (20% pedal at least) for any tiny overspeed.</dd>
+        <dt>Fix</dt><dd>The braking plan now uses up to 93% of what each car can do on hard, less on easier levels. Small corrections are done by lifting off, and the pedal only goes down when it is really needed.</dd>
+        <dt>Result</dt><dd>Into Monza's first chicane they now brake 23 m later; into the Parabolica 33 m later and 1.1 s shorter (147 → 65 km/h in 3.0 s instead of 4.1 s).</dd>
+      </dl>
+    </article>
+
+    <article class="finding">
+      <h3>Too easy to pass on hard</h3>
+      <p class="you">"Even in hard mode I could pass nearly all of them in the first 2 corners."</p>
+      <dl class="kv">
+        <dt>Cause</dt><dd>The two problems above, plus a wide spread of skill on hard (0.68 to 0.95): the slowest hard rivals were quite slow.</dd>
+        <dt>Fix</dt><dd>Hard is now 0.75 to 1.0, so the whole field is quick and close together. Easy and normal keep their ranges.</dd>
+      </dl>
+      <div class="bars" aria-label="Monza lap times alone, slowest and fastest hard rival">
+        <div class="bar"><span>Slowest, before</span><div class="track"><div class="fill old" style="width:100%"></div></div><span class="num">2:04.1</span></div>
+        <div class="bar"><span>Slowest, now</span><div class="track"><div class="fill new" style="width:97.98%"></div></div><span class="num">2:01.6</span></div>
+        <div class="bar"><span>Fastest, before</span><div class="track"><div class="fill old" style="width:99.03%"></div></div><span class="num">2:02.9</span></div>
+        <div class="bar"><span>Fastest, now</span><div class="track"><div class="fill new" style="width:97.82%"></div></div><span class="num">2:01.4</span></div>
+      </div>
+      <p class="note">One rival alone, Ioniq 6, flying lap. Bars start at zero, so the gaps look small: 2.5 s a lap is a lot on Monza.</p>
+    </article>
+  </section>
+
+  <section>
+    <h2>Fixed along the way</h2>
+    <ul>
+      <li><strong>Spa's La Source hairpin.</strong> Rivals at full steering lock below 50 km/h kept their speed and slid off. The "slow down when the car won't turn" rule now works at hairpin speeds too. Rivals sent back to the track at Spa on hard: <span class="num">8</span> a race → <span class="num">0.3</span>.</li>
+      <li><strong>Flat tyres.</strong> A rival with a puncture kept racing at full pace and flew off the road again and again (one Coral race: 5 times). Now it slows right down and limps on.</li>
+      <li><strong>Brake lights.</strong> A rival following another now reacts when the car ahead brakes, not only once it has already slowed.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Race series: before and after</h2>
+    <p>Rivals racing each other, the same cars, grids and skills before and after. Averages per race.</p>
+    <div class="tablebox">
+      <table>
+        <thead><tr><th>Per race</th><th>Normal, before</th><th>Normal, now</th><th>Hard, before</th><th>Hard, now</th></tr></thead>
+        <tbody>
+          <tr><td>Sent back to the track</td><td>0.56</td><td class="better">0.17</td><td>1.72</td><td class="better">0.56</td></tr>
+          <tr><td>Overtakes</td><td>20.6</td><td>19.4</td><td>37.4</td><td>33.7</td></tr>
+          <tr><td>Bumps (contact)</td><td>7.2</td><td class="worse">10.9</td><td>13.1</td><td class="worse">19.4</td></tr>
+          <tr><td>Damage (whole field)</td><td>0.03</td><td>0.02</td><td>0.04</td><td class="worse">0.11</td></tr>
+          <tr><td>Cars finishing</td><td>8 / 8</td><td>8 / 8</td><td>10 / 10</td><td>10 / 10</td></tr>
+          <tr><td>Average race time</td><td>216.2 s</td><td>216.2 s</td><td>201.6 s</td><td>201.9 s</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Normal: 18 races, 9 tracks, 8 cars, 2 laps. Hard: 18 races on Monza, Spa, Coral Bay, Montalegre, Hell and Lydden Hill, 10 cars, 2 laps.</p>
+  </section>
+
+  <section>
+    <h2>Still to watch</h2>
+    <ul>
+      <li><strong>More contact.</strong> Rivals that brake later and harder bump each other more, about 50% more on both levels. Damage stays small. If it feels too rough when you drive, the next step is a slightly longer following distance.</li>
+      <li><strong>Race times don't show the gain yet.</strong> Alone each rival is 1.5 to 2.5 s a lap quicker, but when they only race each other, the quicker cars still hold each other up. What matters is how they feel against you, which only your test drive can show.</li>
+      <li><strong>Not tested:</strong> you driving against them, and the game's frame rate with the new code.</li>
+    </ul>
+  </section>
+</div>
