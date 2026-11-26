@@ -84,6 +84,7 @@ Docs in `docs/` explain systems. Comments in code explain the code itself. Both 
   - Every `@export`: meaning, units and range, e.g. `## Spring rate per wheel, N/m. 20 000–80 000.`.
   - Every public `func` (no leading `_`): what it does, what it returns, and side effects such as scene changes, saving or teleporting.
   - Public `var`s that other scripts read: units and range.
+- **`make docs-check` enforces these rules** for scripts, signals, `@export`s and public `func`s; run it before opening a PR. It can't tell which public `var`s other scripts read, so those are on you. It also fails on broken links between docs (lychee, offline) and on repo paths in backticks that don't exist, e.g. after a move.
 - **Optional on private `_helpers`:** add a `#` comment only when the *why* isn't obvious from the code.
 - **Comments describe the code as it is now.** History belongs in git ("used to be X" doesn't go in a comment). Delete a comment that no longer matches.
 - **Ranges and enums are spelled out:** `## -1 (left) … +1 (right)`, `## 0 Arcade, 1 Sport, 2 Sim`.

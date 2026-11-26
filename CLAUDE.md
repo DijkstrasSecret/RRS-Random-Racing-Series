@@ -19,6 +19,7 @@ The `Makefile` wraps the common commands; `make help` lists them. Override the b
 - `make import` once after a fresh clone, then `make play`.
 - `make test` runs the main smoke tests and, unlike calling Godot directly, exits non-zero if any fails. It hides the missing-MP3 errors.
 - `make test-<name> ARGS="..."` runs one test, e.g. `make test-race_test ARGS="--laps=2 --track=rx"`.
+- `make docs-check` checks the `##` doc comment rules below, the links between docs and the repo paths quoted in them. It prints `file:line` per problem. Run it before every PR. It needs [lychee](https://github.com/lycheeverse/lychee/releases) on the `PATH`.
 
 The raw commands:
 
@@ -43,7 +44,7 @@ godot --path . -s res://tests/screenshot_hud.gd -- --track=spa
   - Screenshot scripts write images for a person to look at.
 - Main smoke tests: `race_test`, `lap_test`, `drive_test`, `car_stats_test`, `damage_test`, `tournament_test`, `tournament_cards_test`, `menu_test`.
 - `tests/hitbox_check.gd` (windowed) checks that collision matches the drawn geometry for every track and car. Run it after touching collision, cars or track dressing.
-- There is no linter or CI.
+- There is no code linter or CI; `make docs-check` is the only automated rule check.
 - If Godot isn't installed, say so plainly in the PR and never claim tests passed.
 
 Python tools (run from the repo root):

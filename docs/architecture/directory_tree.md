@@ -39,5 +39,5 @@ RRS-Random-Racing-Series/
 │   └── vehicle/           Car physics (tyres, wheels, drivetrain, assists) plus damage, audio, paint and looks.
 ├── soundtrack/            Godot import files only; the licensed MP3s are kept off the repo.
 ├── tests/                 About 40 scripts that run without a window: smoke tests, probes, checks and screenshot capture.
-└── tools/                 Python scripts that build cars and the track kit in Blender, generate sounds, and export the docs to PDF.
+└── tools/                 Python scripts that build cars and the track kit in Blender, generate sounds, export the docs to PDF, and check the doc rules (`docs_check.py`).
 ```
