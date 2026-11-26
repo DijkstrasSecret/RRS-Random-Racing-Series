@@ -170,6 +170,9 @@ func _plan_runoff() -> void:
 			var is_outside := (curv > 0.0 and side == 1) or (curv < 0.0 and side == 0)
 			outside[i] = k if is_outside else 0.0
 			raw[i] = lerpf(8.0, 24.0, k) if is_outside else lerpf(7.0, 5.0, k)
+			if circuit.oval:
+				# An oval: the wall right at the outside edge, a grass infield inside.
+				raw[i] = 0.9 if side != circuit.infield_side() else 12.0
 		# Widest value nearby, then a moving average.
 		var widened := PackedFloat32Array()
 		widened.resize(n)
@@ -417,6 +420,8 @@ func _speckle_texture(a: Color, b: Color) -> ImageTexture:
 
 func _barrier_type(i: int, side: int) -> String:
 	var off: float = _samples()[i].off
+	if circuit.oval and side != circuit.infield_side():
+		return "concrete_white"  # the outside wall, with its catch fence
 	if _samples()[i].bridge:
 		return "armco"
 	if _in_spectator_zone(off, side):

@@ -125,6 +125,10 @@ func _laps(skill: float, laps: int) -> void:
 				print("    brake at %5.0f m: %3.0f -> %3.0f km/h, %.1f s, peak %.2f, plan here %3.0f, curv ahead %.4f  %s" % [ev.at, ev.v0 * 3.6, ev.vmin * 3.6, ev.t, ev.peak,
 						ev.plan_min * 3.6, ai._corner_curv, JSON.stringify(ev.why)])
 				ev = {}
+		if not flat and OS.get_cmdline_user_args().has("--hits") and (absf(car.g_lat) > 3.0 or -car.g_long > 3.0) and Engine.get_physics_frames() % 6 == 0:
+			var at2: float = ai._circuit.progress_at(car.global_position)
+			print("    HIT t %.1f at %.0f m, %.0f km/h, g_lat %.1f g_long %.1f, lateral %+.1f, %.1f m from centre, pitting %s in_pit %s, damage %.2f" % [t, at2, car.forward_speed * 3.6, car.g_lat, car.g_long,
+					ai._circuit.lateral_of(car.global_position), ai._circuit.distance_from_centre(car.global_position), ai._pitting, car.in_pit_lane, car.damage.total() if car.damage else 0.0])
 		if car.forward_speed > 10.0:
 			max_lat = maxf(max_lat, absf(car.g_lat))
 			max_brake_g = maxf(max_brake_g, -car.g_long)

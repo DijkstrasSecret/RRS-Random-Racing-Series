@@ -293,6 +293,41 @@ CARS = {
         livery=dict(style="rally", stripe="white", accent="blue", number="24", number_s=2.1, number_z=0.6,
                     sponsor="VOLTA OIL", sponsor_bg=(0.95, 0.95, 0.93), sponsor_fg=(0.05, 0.22, 0.75), sponsor_s=3.0,
                     sponsor_z=0.6, sponsor_w=0.5)),
+    # --- NASCAR Cup Series (Next Gen): one shared chassis, three bodies -------------
+    "cup_camaro": dict(  # NASCAR Cup Chevrolet Camaro ZL1
+        L=4.88, W=2.03, H=1.28, wb=2.79, r=0.35, tw=0.31, fo=1.0, rocker=0.12,
+        belt=0.84, nose=0.62, cowl=0.93, deck=0.99, tail=0.98,
+        windshield=1.70, roof_front=2.42, roof_rear=3.28, deck_start=4.12,
+        tumble=0.70, nose_round=0.12, tail_round=0.06, crown=0.03, tail_drop=0.05,
+        paint=(0.98, 0.78, 0.06), grille="wide_slot", headlight="slim_swept",
+        taillight="pair_angular", wheel="spokes_black", calipers=False, bumpers="body", exhaust=0, mirrors="black",
+        spoiler="cup_blade", splitter=True, rub_strip=True,
+        detail=True, pillars=[3.28], door_seams=[2.0, 3.3], handles=[], arch_lips=False,
+        livery=dict(style="cup", stripe="black", accent="black", number="51", number_s=2.35, number_z=0.56,
+                    sponsor="TURBO FIZZ", sponsor_bg=(0.03, 0.03, 0.035), sponsor_fg=(0.98, 0.78, 0.06), sponsor_s=3.55,
+                    sponsor_z=0.62, sponsor_w=0.62)),
+    "cup_mustang": dict(  # NASCAR Cup Ford Mustang Dark Horse
+        L=4.88, W=2.03, H=1.28, wb=2.79, r=0.35, tw=0.31, fo=1.0, rocker=0.12,
+        belt=0.84, nose=0.66, cowl=0.93, deck=0.98, tail=0.97,
+        windshield=1.68, roof_front=2.40, roof_rear=3.55, deck_start=4.35,
+        tumble=0.68, nose_round=0.16, tail_round=0.08, crown=0.03, tail_drop=0.04,
+        paint=(0.05, 0.22, 0.75), grille="single_frame", headlight="angular",
+        taillight="vertical", wheel="spokes_black", calipers=False, bumpers="body", exhaust=0, mirrors="black",
+        spoiler="cup_blade", splitter=True, rub_strip=True,
+        detail=True, pillars=[3.5], door_seams=[2.0, 3.45], handles=[], arch_lips=False,
+        livery=dict(style="cup", stripe="white", accent="red", number="62", number_s=2.35, number_z=0.56,
+                    sponsor="HYPERCOLA", sponsor_bg=(0.82, 0.06, 0.07), sponsor_s=3.6, sponsor_z=0.62, sponsor_w=0.62)),
+    "cup_camry": dict(  # NASCAR Cup Toyota Camry XSE
+        L=4.88, W=2.03, H=1.28, wb=2.79, r=0.35, tw=0.31, fo=1.0, rocker=0.12,
+        belt=0.84, nose=0.64, cowl=0.93, deck=1.0, tail=0.99,
+        windshield=1.70, roof_front=2.40, roof_rear=3.30, deck_start=4.0,
+        tumble=0.70, nose_round=0.14, tail_round=0.06, crown=0.03, tail_drop=0.05,
+        paint=(0.95, 0.95, 0.93), grille="matrix", headlight="swept",
+        taillight="full_bar", wheel="spokes_black", calipers=False, bumpers="body", exhaust=0, mirrors="black",
+        spoiler="cup_blade", splitter=True, rub_strip=True,
+        detail=True, pillars=[3.3], door_seams=[2.0, 3.32], handles=[], arch_lips=False,
+        livery=dict(style="cup", stripe="red", accent="red", number="73", number_s=2.35, number_z=0.56,
+                    sponsor="GRIPMAX", sponsor_bg=(0.03, 0.03, 0.035), sponsor_s=3.55, sponsor_z=0.62, sponsor_w=0.62)),
 }
 
 SHARED = {
@@ -858,7 +893,16 @@ def add_extras(m, c, M, front_y):
     if sp == "ducktail":
         z = body_profile(c, L - 0.1)[3]
         m.box((W * 0.86, 0.14, 0.04), (0, rear_y + 0.1, z + 0.02), paint)
-    elif sp == "wing_split":
+    elif sp == "cup_blade":
+        # NASCAR: a tall flat blade across the back edge of the deck lid.
+        z = body_profile(c, L - 0.08)[3]
+        m.box((W * 0.9, 0.025, 0.2), (0, rear_y + 0.05, z + 0.1), M["black"], rx=-0.25)
+        for side in (-1, 1):
+            m.box((0.025, 0.12, 0.2), (side * W * 0.45, rear_y + 0.08, z + 0.08), M["black"])
+    if c.get("splitter"):
+        # Front splitter: a flat lip under the nose, a little proud of it.
+        m.box((W * 0.94, 0.3, 0.025), (0, front_y - 0.1, c["rocker"] - 0.04), M["black"])
+    if sp == "wing_split":
         z = body_profile(c, L - 0.2)[3]
         m.box((W * 0.78, 0.17, 0.02), (0, rear_y + 0.16, z + 0.05), M["black"])
         for side in (-1, 1):
@@ -1014,7 +1058,7 @@ def plate_material(cid, text):
 
 
 def textured_box(m, size, center, face_dir, tex_mat, side_mat):
-    """Box whose face pointing along face_dir (+Y / -Y) shows tex_mat with UVs."""
+    """Box whose face pointing along face_dir (+Y / -Y, or "up") shows tex_mat with UVs."""
     bm = m.bm
     verts = bmesh.ops.create_cube(bm, size=1.0)["verts"]
     bmesh.ops.transform(bm, matrix=Matrix.Translation(Vector(center)) @ Matrix.Diagonal((*size, 1.0)), verts=verts)
@@ -1022,7 +1066,16 @@ def textured_box(m, size, center, face_dir, tex_mat, side_mat):
     uv = bm.loops.layers.uv.verify()
     for f in faces:
         f.normal_update()
-        if f.normal.y * face_dir > 0.9:
+        if face_dir == "up":
+            if f.normal.z > 0.9:
+                # Lying on the roof, read from behind the car (the chase camera).
+                f.material_index = m.mi(tex_mat)
+                for loop in f.loops:
+                    p = loop.vert.co
+                    loop[uv].uv = ((p.x - (center[0] - size[0] / 2)) / size[0], (p.y - (center[1] - size[1] / 2)) / size[1])
+            else:
+                f.material_index = m.mi(side_mat)
+        elif f.normal.y * face_dir > 0.9:
             f.material_index = m.mi(tex_mat)
             for loop in f.loops:
                 p = loop.vert.co
@@ -1549,6 +1602,14 @@ def build_livery(cid, c, M, front_y, coll):
             for a, b in gaps_between_arches(c, 0.3, L - 0.3):
                 side_panel(m, c, front_y, side, a, b, z0, z0 + 0.08, col[lv["stripe"]])
                 side_panel(m, c, front_y, side, a, b, z0 + 0.1, z0 + 0.14, col[lv["accent"]])
+    elif style == "cup":
+        # Stock car: two-tone bonnet, a band along the sills, the number on the roof.
+        top_stripe(m, c, front_y, -0.62, 0.62, col[lv["stripe"]], zones=("hood",), s_from=0.45)
+        for side in (-1, 1):
+            for a, b in gaps_between_arches(c, 0.3, L - 0.3):
+                side_panel(m, c, front_y, side, a, b, rk + 0.04, rk + 0.16, col[lv["accent"]])
+        z = c["H"] + c["crown"]
+        textured_box(m, (0.62, 0.52, 0.01), (0, front_y - (c["roof_front"] + c["roof_rear"]) / 2, z + 0.005), "up", num, M["black"])
     elif style == "raid":
         top_stripe(m, c, front_y, -0.45, 0.45, col[lv["accent"]], zones=("hood",))
         for side in (-1, 1):
@@ -1566,8 +1627,9 @@ def build_livery(cid, c, M, front_y, coll):
     ss = lv.get("sponsor_s", L - 1.05)
     sz = lv.get("sponsor_z", belt - 0.13)
     sw = lv.get("sponsor_w", 0.76) / 2
+    big = 1.45 if style == "cup" else 1.0
     for side in (-1, 1):
-        side_panel(m, c, front_y, side, door_s - 0.2, door_s + 0.2, zn - 0.17, zn + 0.17, num, tex=True)
+        side_panel(m, c, front_y, side, door_s - 0.2 * big, door_s + 0.2 * big, zn - 0.17 * big, zn + 0.17 * big, num, tex=True)
         side_panel(m, c, front_y, side, ss - sw, ss + sw, sz - 0.075, sz + 0.075, sponsor, tex=True)
     return m.build(coll)
 

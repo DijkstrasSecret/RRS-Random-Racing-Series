@@ -171,7 +171,9 @@ func poll(delta: float) -> void:
 	else:
 		brake = 0.0
 		# At full lock a front-drive car needs its front grip for turning.
-		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * tune_turn_cut * (0.2 if launching else 1.0), 0.08, 1.0)
+		# (On a banked turn the banking does most of the turning: no cut.)
+		var cut := tune_turn_cut * (0.2 if launching else 1.0) * clampf(1.0 - absf(_circuit.bank_slope_at(off)) * 4.0, 0.0, 1.0)
+		throttle = clampf(-err / 3.0, 0.25, 1.0) * clampf(1.0 - turning * cut, 0.08, 1.0)
 	handbrake = 0.0
 	if _mistake == Mistake.MISSED_GEAR:
 		# It happens when the power goes back on, not while braking.

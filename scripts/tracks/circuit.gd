@@ -260,11 +260,11 @@ func build_speed_profile(lateral_accel: float, brake_accel: float, top_speed: fl
 
 ## Sideways acceleration a car can hold on a banked road (slope `tilt`)
 ## when the tyres alone give `accel`: the banking holds part of the turn.
+## Measured, not textbook: on Daytona's 31 degrees (slope 0.6) the cars
+## hold about 20% more than on the flat before they slide up to the wall
+## (the tyres lose grip under the extra load).
 static func _banked_accel(accel: float, tilt: float) -> float:
-	var t := absf(tilt)
-	if t < 0.0001:
-		return accel
-	return (accel + 9.81 * t) / maxf(1.0 - accel / 9.81 * t, 0.25)
+	return accel * (1.0 + 0.33 * absf(tilt))
 
 
 func profile_speed(profile: PackedFloat32Array, off: float) -> float:
@@ -384,7 +384,11 @@ func _build_ground() -> void:
 	shape.size = Vector3(size.x, 2.0, size.y)
 	var cs := CollisionShape3D.new()
 	cs.shape = shape
-	cs.position = centre + Vector3(0.0, -4.0, 0.0)
+	# (Below the low side of any banking too.)
+	var low := 0.0
+	for smp: Dictionary in _samples:
+		low = minf(low, float(smp.pos.y) - absf(float(smp.tilt)) * (road_width * 0.5 + 16.0))
+	cs.position = centre + Vector3(0.0, low - 4.0, 0.0)
 	body.add_child(cs)
 	add_child(body)
 	terrain = TrackTerrain.new()
@@ -697,15 +701,17 @@ func _build_verge() -> void:
 
 ## Finds the straight through the start line and fits the pit lane on it.
 func _plan_pit_lane() -> void:
-	if _track_id == "" or not String(TrackList.get_track(_track_id).get("series", "")) in ["F1", "NASCAR"]:
+	# (No pit lane on an oval yet: at its speeds the AI can't make the turn-in.)
+	if _track_id == "" or String(TrackList.get_track(_track_id).get("series", "")) != "F1":
 		return
 	# (An oval's turns are wide but banked: only the front stretch counts.)
 	var limit := 1.0 / 400.0 if oval else 1.0 / 100.0
 	var back := 0.0
-	while back < 600.0 and absf(curvature_at(length - back - 10.0)) < limit:
+	# (and only on level road: a flat lane can't join a banked edge.)
+	while back < 600.0 and absf(curvature_at(length - back - 10.0)) < limit and absf(bank_slope_at(length - back - 10.0)) < 0.01:
 		back += 5.0
 	var fwd := 0.0
-	while fwd < 400.0 and absf(curvature_at(fwd + 10.0)) < limit:
+	while fwd < 400.0 and absf(curvature_at(fwd + 10.0)) < limit and absf(bank_slope_at(fwd + 10.0)) < 0.01:
 		fwd += 5.0
 	var from := -back + 10.0
 	var to := fwd - 5.0

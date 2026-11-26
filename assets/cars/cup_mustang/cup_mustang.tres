@@ -1,0 +1,48 @@
+[gd_resource type="Resource" script_class="VehicleConfig" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/vehicle/vehicle_config.gd" id="1_cfg"]
+
+[resource]
+script = ExtResource("1_cfg")
+wheel_inertia = 1.6
+display_name = "Ford Mustang Dark Horse (NASCAR Cup)"
+mass = 1800
+center_of_mass = Vector3(0.0, 0.45, 0.1)
+inertia_box_size = Vector3(2.03, 1.2, 4.88)
+wheel_radius = 0.35
+wheel_width = 0.27
+tire_grip = 1.3
+tire_peak_slip_angle_deg = 7.5
+rear_grip_scale = 1.0
+front_spring_rate = 52000
+rear_spring_rate = 56000
+front_damper_bump = 4200
+front_damper_rebound = 5600
+rear_damper_bump = 4400
+rear_damper_rebound = 5900
+front_anti_roll = 18000
+rear_anti_roll = 17000
+idle_rpm = 1000
+redline_rpm = 7500
+launch_rpm = 3500
+max_torque = 570
+torque_curve = PackedVector2Array(1000.0, 0.7, 2500.0, 0.9, 4000.0, 1.0, 6500.0, 0.96, 7600.0, 0.86)
+engine_brake_torque = 80
+gear_ratios = PackedFloat32Array(3.0, 2.1, 1.6, 1.25, 1.0)
+reverse_ratio = 2.9
+final_drive = 3.7
+auto_upshift_rpm = 7200
+auto_downshift_rpm = 3500
+drive_type = 1
+diff_lock = 0.45
+brake_torque = 10500
+brake_bias = 0.66
+handbrake_torque = 4000
+max_steer_deg = 32
+steer_rate = 4.0
+drag_area = 0.66
+downforce_area = 0.35
+aero_balance = 0.42
+engine_sound_pitch = 1.6
+engine_sound_gain_db = 2.5
+shift_time = 0.06
