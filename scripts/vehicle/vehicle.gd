@@ -425,10 +425,16 @@ func _distribute_drive_torque(total: float) -> void:
 func _split_axle(pair: Array[Wheel], torque: float) -> void:
 	if pair.size() < 2:
 		return
-	var lock := config.diff_lock * DIFF_LOCK_MAX
 	var dw := pair[0].omega - pair[1].omega
-	pair[0].drive_torque = torque * 0.5 - lock * dw
-	pair[1].drive_torque = torque * 0.5 + lock * dw
+	# Limited slip that scales with the drive (clutch type): when one wheel
+	# spins faster (the light inside wheel in a corner), up to `bias` of the
+	# axle's torque moves to the wheel that grips, so the power isn't lost.
+	var bias := maxf(config.diff_lock, assists.lsd_min)
+	var shift := clampf(dw * 400.0, -absf(torque) * 0.5 * bias, absf(torque) * 0.5 * bias)
+	# Plus the old viscous coupling (keeps the wheels together off throttle).
+	shift += config.diff_lock * DIFF_LOCK_MAX * dw
+	pair[0].drive_torque = torque * 0.5 - shift
+	pair[1].drive_torque = torque * 0.5 + shift
 
 
 func _driven_mean_omega() -> float:
