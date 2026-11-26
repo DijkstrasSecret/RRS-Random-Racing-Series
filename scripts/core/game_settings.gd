@@ -10,13 +10,14 @@ const RACE := "res://scenes/modes/circuit_race.tscn"
 const VERSUS := "res://scenes/modes/versus_race.tscn"
 const PRACTICE := "res://scenes/modes/circuit_practice.tscn"
 const TEST_TRACK := "res://scenes/modes/free_roam.tscn"
+const OBSTACLE_COURSE := "res://scenes/modes/obstacle_course.tscn"
 
 const LAP_CHOICES: PackedInt32Array = [1, 2, 3, 5, 10]
 const TIME_NAMES: PackedStringArray = ["MORNING", "NOON", "SUNSET", "NIGHT"]
 const WEATHER_NAMES: PackedStringArray = ["CLEAR", "HAZY", "FOG"]
 const DIFFICULTY_NAMES: PackedStringArray = ["EASY", "NORMAL", "HARD"]
 ## AI skill range (min, max) for each difficulty.
-const DIFFICULTY_SKILLS: Array[Vector2] = [Vector2(0.3, 0.6), Vector2(0.5, 0.82), Vector2(0.68, 0.95)]
+const DIFFICULTY_SKILLS: Array[Vector2] = [Vector2(0.3, 0.6), Vector2(0.5, 0.82), Vector2(0.75, 1.0)]
 
 static var laps: int = 3
 static var ai_count: int = 5

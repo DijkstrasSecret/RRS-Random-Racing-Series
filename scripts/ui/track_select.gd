@@ -15,10 +15,11 @@ const CLIP_DIR := "res://assets/ui/track_clips/%s.ogv"
 const COUNTRY := {
 	"monza": "ITALY", "spa": "BELGIUM", "silverstone": "GREAT BRITAIN", "istanbul": "TURKEY",
 	"holjes": "SWEDEN", "lydden": "GREAT BRITAIN", "montalegre": "PORTUGAL", "hell": "NORWAY",
-	"coral": "TROPICAL ISLAND",
+	"coral": "TROPICAL ISLAND", "daytona": "UNITED STATES",
 }
-const SERIES_NAME := {"F1": "F1 CIRCUIT", "RX": "RALLYCROSS", "ISLAND": "ISLAND"}
-const SERIES_COLOR := {"F1": Color(0.85, 0.1, 0.1), "RX": Color(0.9, 0.52, 0.1), "ISLAND": Color(0.1, 0.62, 0.66)}
+const SERIES_NAME := {"F1": "F1 CIRCUIT", "RX": "RALLYCROSS", "ISLAND": "ISLAND", "NASCAR": "NASCAR OVAL"}
+const SERIES_COLOR := {"F1": Color(0.85, 0.1, 0.1), "RX": Color(0.9, 0.52, 0.1), "ISLAND": Color(0.1, 0.62, 0.66),
+	"NASCAR": Color(0.15, 0.35, 0.85)}
 const SURFACE_COLOR := {"tarmac": Color(0.45, 0.46, 0.5), "gravel": Color(0.66, 0.55, 0.4),
 	"sand": Color(0.9, 0.82, 0.6), "wood": Color(0.55, 0.38, 0.24)}
 

@@ -4,7 +4,9 @@ extends RefCounted
 ## `use_selected_track` builds the one in GameSettings.track.
 ## Each layout ends with a straight run into the start/finish line (the grid,
 ## grandstands and pits sit there).
-## "series": F1 / RX (rallycross) / ISLAND, shown on the track card.
+## "series": F1 / RX (rallycross) / ISLAND / NASCAR, shown on the track card.
+## "bank" = [lap fraction, degrees] keys of banked turns (high side outside);
+## "oval" = walls right at the outside edge, no curbs.
 ## "surfaces" = [from, to, "gravel" | "sand" | "wood"] lap fractions (rest is tarmac).
 ## "bridge" = [from, to] lap fractions built over water (island causeway).
 ## "stands" = lap fractions of the famous corners with grandstands;
@@ -187,6 +189,57 @@ const TRACKS: Array[Dictionary] = [
 			Vector2(182, 174), Vector2(161, 180), Vector2(140, 186), Vector2(118, 191), Vector2(97, 197), Vector2(76, 203),
 			Vector2(54, 207), Vector2(32, 202), Vector2(14, 189), Vector2(3, 170), Vector2(0, 148), Vector2(0, 126),
 			Vector2(0, 104), Vector2(0, 82), Vector2(0, 60), Vector2(0, 38), Vector2(0, 16),
+		],
+	},
+	{
+		"id": "daytona", "name": "DAYTONA", "seed": 73, "theme": "hills", "series": "NASCAR", "hills": 1.0,
+		"oval": true, "runoff": "asphalt",
+		# Turns 1-2 and 3-4, the backstretch, the tri-oval.
+		"stands": [0.23, 0.73, 0.97],
+		"sectors": [0.37, 0.59],  # leaving turn 2 / entering turn 3
+		"tagline": "The Great American Race. A 31-degree banked tri-oval, flat out in the draft.",
+		# Daytona International Speedway's tri-oval, scaled down to about 60%.
+		# Banking like the real one: 31 degrees in the turns, near flat on the
+		# backstretch; the start / finish and pit area is kept level here.
+		"bank": [[0.0, 0.0], [0.1, 0.0], [0.155, 31.0], [0.345, 31.0], [0.4, 3.0], [0.56, 3.0],
+			[0.615, 31.0], [0.825, 31.0], [0.88, 0.0]],
+		"points": [
+			Vector2(0.00, 0.00), Vector2(-0.79, -10.10), Vector2(-1.74, -20.19), Vector2(-2.87, -30.26), Vector2(-4.17, -40.31), Vector2(-5.64, -50.34),
+			Vector2(-7.27, -60.34), Vector2(-9.08, -70.31), Vector2(-11.05, -80.25), Vector2(-13.13, -90.09), Vector2(-15.21, -99.87), Vector2(-17.29, -109.65),
+			Vector2(-19.37, -119.43), Vector2(-21.45, -129.22), Vector2(-23.53, -139.00), Vector2(-25.61, -148.78), Vector2(-27.69, -158.56), Vector2(-29.77, -168.34),
+			Vector2(-31.84, -178.12), Vector2(-33.92, -187.90), Vector2(-36.00, -197.69), Vector2(-38.08, -207.47), Vector2(-40.16, -217.25), Vector2(-42.24, -227.03),
+			Vector2(-44.35, -236.94), Vector2(-46.58, -246.93), Vector2(-49.02, -256.86), Vector2(-51.81, -266.70), Vector2(-55.05, -276.35), Vector2(-58.75, -285.66),
+			Vector2(-62.97, -294.74), Vector2(-67.69, -303.58), Vector2(-72.89, -312.14), Vector2(-78.55, -320.39), Vector2(-84.67, -328.32), Vector2(-91.22, -335.90),
+			Vector2(-98.18, -343.10), Vector2(-105.53, -349.90), Vector2(-113.25, -356.28), Vector2(-121.31, -362.23), Vector2(-129.69, -367.71), Vector2(-138.36, -372.73),
+			Vector2(-147.30, -377.25), Vector2(-156.47, -381.27), Vector2(-165.85, -384.77), Vector2(-175.42, -387.74), Vector2(-185.13, -390.18), Vector2(-194.97, -392.07),
+			Vector2(-204.89, -393.41), Vector2(-214.87, -394.20), Vector2(-224.89, -394.44), Vector2(-234.90, -394.11), Vector2(-244.87, -393.23), Vector2(-254.78, -391.80),
+			Vector2(-264.60, -389.82), Vector2(-274.29, -387.29), Vector2(-283.83, -384.23), Vector2(-293.18, -380.64), Vector2(-302.32, -376.54), Vector2(-311.21, -371.94),
+			Vector2(-319.84, -366.85), Vector2(-328.16, -361.29), Vector2(-336.17, -355.27), Vector2(-343.83, -348.82), Vector2(-351.12, -341.95), Vector2(-358.01, -334.68),
+			Vector2(-364.49, -327.05), Vector2(-370.54, -319.06), Vector2(-376.13, -310.75), Vector2(-381.25, -302.15), Vector2(-385.89, -293.27), Vector2(-390.02, -284.15),
+			Vector2(-393.64, -274.81), Vector2(-396.74, -265.28), Vector2(-399.30, -255.60), Vector2(-401.32, -245.79), Vector2(-402.79, -235.89), Vector2(-403.74, -225.70),
+			Vector2(-404.27, -215.49), Vector2(-404.48, -205.27), Vector2(-404.53, -195.04), Vector2(-404.53, -184.91), Vector2(-404.53, -174.85), Vector2(-404.53, -164.78),
+			Vector2(-404.53, -154.72), Vector2(-404.53, -144.66), Vector2(-404.53, -134.59), Vector2(-404.53, -124.53), Vector2(-404.53, -114.47), Vector2(-404.53, -104.41),
+			Vector2(-404.53, -94.34), Vector2(-404.53, -84.28), Vector2(-404.53, -74.22), Vector2(-404.53, -64.15), Vector2(-404.53, -54.09), Vector2(-404.53, -44.03),
+			Vector2(-404.53, -33.96), Vector2(-404.53, -23.90), Vector2(-404.53, -13.84), Vector2(-404.53, -3.77), Vector2(-404.53, 6.29), Vector2(-404.53, 16.35),
+			Vector2(-404.53, 26.42), Vector2(-404.53, 36.48), Vector2(-404.53, 46.54), Vector2(-404.53, 56.60), Vector2(-404.53, 66.67), Vector2(-404.53, 76.73),
+			Vector2(-404.53, 86.79), Vector2(-404.53, 96.86), Vector2(-404.53, 106.92), Vector2(-404.53, 116.98), Vector2(-404.53, 127.05), Vector2(-404.53, 137.11),
+			Vector2(-404.53, 147.17), Vector2(-404.53, 157.24), Vector2(-404.53, 167.30), Vector2(-404.53, 177.36), Vector2(-404.53, 187.43), Vector2(-404.53, 197.49),
+			Vector2(-404.53, 207.55), Vector2(-404.53, 217.61), Vector2(-404.53, 227.68), Vector2(-404.53, 237.74), Vector2(-404.53, 247.80), Vector2(-404.53, 257.87),
+			Vector2(-404.53, 267.93), Vector2(-404.53, 278.09), Vector2(-404.46, 288.32), Vector2(-404.19, 298.54), Vector2(-403.59, 308.75), Vector2(-402.54, 318.88),
+			Vector2(-400.96, 328.77), Vector2(-398.83, 338.56), Vector2(-396.16, 348.21), Vector2(-392.96, 357.70), Vector2(-389.24, 367.00), Vector2(-385.00, 376.07),
+			Vector2(-380.27, 384.90), Vector2(-375.05, 393.45), Vector2(-369.37, 401.69), Vector2(-363.23, 409.61), Vector2(-356.67, 417.17), Vector2(-349.69, 424.36),
+			Vector2(-342.33, 431.15), Vector2(-334.60, 437.51), Vector2(-326.52, 443.44), Vector2(-318.13, 448.91), Vector2(-309.45, 453.91), Vector2(-300.51, 458.41),
+			Vector2(-291.33, 462.41), Vector2(-281.94, 465.89), Vector2(-272.37, 468.85), Vector2(-262.65, 471.26), Vector2(-252.81, 473.14), Vector2(-242.88, 474.46),
+			Vector2(-232.90, 475.23), Vector2(-222.88, 475.44), Vector2(-212.87, 475.10), Vector2(-202.90, 474.20), Vector2(-192.99, 472.74), Vector2(-183.18, 470.74),
+			Vector2(-173.49, 468.20), Vector2(-163.96, 465.11), Vector2(-154.62, 461.51), Vector2(-145.49, 457.39), Vector2(-136.60, 452.77), Vector2(-127.99, 447.66),
+			Vector2(-119.67, 442.08), Vector2(-111.68, 436.05), Vector2(-104.03, 429.58), Vector2(-96.76, 422.70), Vector2(-89.88, 415.42), Vector2(-83.41, 407.77),
+			Vector2(-77.38, 399.77), Vector2(-71.81, 391.45), Vector2(-66.70, 382.84), Vector2(-62.09, 373.95), Vector2(-57.97, 364.82), Vector2(-54.37, 355.47),
+			Vector2(-51.22, 345.75), Vector2(-48.51, 335.88), Vector2(-46.12, 325.94), Vector2(-43.92, 315.95), Vector2(-41.82, 306.08), Vector2(-39.75, 296.30),
+			Vector2(-37.67, 286.52), Vector2(-35.59, 276.74), Vector2(-33.51, 266.96), Vector2(-31.43, 257.17), Vector2(-29.35, 247.39), Vector2(-27.27, 237.61),
+			Vector2(-25.19, 227.83), Vector2(-23.11, 218.05), Vector2(-21.03, 208.27), Vector2(-18.95, 198.49), Vector2(-16.87, 188.70), Vector2(-14.80, 178.92),
+			Vector2(-12.72, 169.14), Vector2(-10.64, 159.28), Vector2(-8.70, 149.33), Vector2(-6.93, 139.35), Vector2(-5.33, 129.34), Vector2(-3.90, 119.31),
+			Vector2(-2.63, 109.26), Vector2(-1.54, 99.18), Vector2(-0.62, 89.09), Vector2(0.14, 78.98), Vector2(0.72, 68.87), Vector2(1.13, 58.74),
+			Vector2(1.37, 48.61), Vector2(1.43, 38.48), Vector2(1.29, 28.34), Vector2(0.99, 18.21), Vector2(0.51, 8.09),
 		],
 	},
 	{

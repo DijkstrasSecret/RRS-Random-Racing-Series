@@ -4,14 +4,14 @@ extends Camera3D
 ## The camera floats behind the car on springs: it trails a little when the
 ## car speeds up, drifts closer under braking, swings round slowly in slides
 ## and bobs gently, but never falls far behind at a steady speed.
-## C cycles chase / far / hood view.
+## C cycles chase / far / close view (all from behind the car).
 ## View angle: behind, or looking 45 degrees left / right. Z / X (player 2:
 ## numpad 4 / 6) or the right stick left / right; the camera swings round
 ## gently to the opposite rear corner, so you look the way you pushed. Right stick forward or B (player 2: numpad 8) cuts to a
 ## separate look-back camera ahead of the car, looking back over it, while
 ## held; the normal camera stays where it is.
 
-enum Mode { CHASE, FAR, HOOD }
+enum Mode { CHASE, FAR, CLOSE }
 
 ## The Vehicle to follow.
 @export var target_path: NodePath
@@ -140,12 +140,6 @@ func _process(delta: float) -> void:
 	_update_view_angle(delta)
 	_update_look_back(xf)
 
-	if mode == Mode.HOOD:
-		global_transform = Transform3D(xf.basis, xf * Vector3(0.0, 1.2, -0.3))
-		fov = lerpf(fov, _speed_fov(_target.linear_velocity, delta), 1.0 - exp(-2.5 * delta))
-		_apply_rumble(delta, _target.linear_velocity.length())
-		return
-
 	# Swing lazily toward "behind the car", leaning toward the travel direction.
 	var fwd := _flat_forward(xf)
 	var desired := fwd
@@ -226,10 +220,11 @@ func _apply_rumble(delta: float, v: float) -> void:
 
 func _anchor(xf: Transform3D) -> Vector3:
 	var far_view := mode == Mode.FAR
+	var close_view := mode == Mode.CLOSE
 	# At speed the camera drops a little and falls back: the road rushes by.
 	var fast := smoothstep(15.0, 65.0, _target.linear_velocity.length()) if GameSettings.speed_fx else 0.0
-	var dist := distance * (1.45 if far_view else 1.0) * (1.0 + 0.1 * fast)
-	var lift := height * (1.4 if far_view else 1.0) * (1.0 - 0.12 * fast)
+	var dist := distance * (1.45 if far_view else (0.75 if close_view else 1.0)) * (1.0 + 0.1 * fast)
+	var lift := height * (1.4 if far_view else (0.68 if close_view else 1.0)) * (1.0 - 0.12 * fast)
 	var bob := sin(_time * 2.4) * hover_amplitude
 	var away := (-_yaw_dir).rotated(Vector3.UP, _angle_now)
 	return xf.origin + away * dist + Vector3.UP * (lift + bob)

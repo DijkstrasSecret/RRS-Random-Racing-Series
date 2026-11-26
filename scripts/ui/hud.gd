@@ -25,7 +25,6 @@ var _map_centre := Vector2.ZERO
 var _map_scale := 1.0
 var _best_flash_until := 0.0
 var _race: RaceDirector
-var _camera: ChaseCamera
 
 const PANEL := Color(0.0, 0.0, 0.0, 0.5)
 const TEXT := Color(1.0, 1.0, 1.0)
@@ -74,7 +73,6 @@ func _draw() -> void:
 		_draw_minimap(Rect2(28.0 * k, s.y - m - 28.0 * k, m, m))
 	if show_telemetry:
 		_draw_telemetry(Vector2(s.x - 500.0, 150.0))
-	_draw_view_name(k)
 	_draw_nitro(Vector2(s.x - r * 2.0 - 36.0 * k, s.y - r * 2.0 - 84.0 * k), k)
 	if _vehicle.draft > 0.15:
 		var dx := s.x - r * 2.0 - 36.0 * k
@@ -164,9 +162,36 @@ func _draw_tower(o: Vector2, k: float, me: int) -> void:
 		var gap := _race.interval(i)
 		if i in _race.finish_order and n == 0:
 			gap = "FINISH"
+		if _race.state == RaceDirector.State.COUNTDOWN:
+			gap = DriverStyle.label(_race.name_at(i))  # who you are up against
 		draw_string(_font, Vector2(o.x + w - 10.0 * k - 110.0 * k, y + row * 0.72), gap, HORIZONTAL_ALIGNMENT_RIGHT,
 				110.0 * k, int(16 * k), Color(0.2, 0.2, 0.25) if mine else Color(0.82, 0.83, 0.86))
 		y += row
+	_draw_rival_news(Vector2(o.x, y + 10.0 * k), k, me)
+
+
+const NEWS_FRAMES := 300  ## 2.5 s at 120 Hz
+const NEWS_RANGE := 130.0
+
+
+## What a rival near you just did ("RUIZ  RUNS WIDE"), under the tower.
+func _draw_rival_news(o: Vector2, k: float, me: int) -> void:
+	if _race.state != RaceDirector.State.RACING:
+		return
+	var y := o.y
+	for i in _race.car_count():
+		if i == me:
+			continue
+		var car := _race.vehicle_at(i)
+		var ai := car.input as AIDriver
+		if ai == null or Engine.get_physics_frames() - ai.event_frame > NEWS_FRAMES:
+			continue
+		if car.global_position.distance_to(_vehicle.global_position) > NEWS_RANGE:
+			continue
+		draw_rect(Rect2(o.x, y, 262.0 * k, 30.0 * k), F1_DARK)
+		draw_rect(Rect2(o.x, y, 5.0 * k, 30.0 * k), _race.color_at(i))
+		_bold_text(Vector2(o.x + 14.0 * k, y + 21.0 * k), "%s %s" % [_race.name_at(i), ai.event], int(16 * k), F1_YELLOW)
+		y += 34.0 * k
 
 
 ## Lap timer: current lap time, three sector boxes coloured F1 style, last and best lap.
@@ -475,22 +500,6 @@ func _draw_tournament(k: float) -> void:
 			var warn := _race.wreck_warning(i)
 			if warn != "":
 				_label(Vector2(size.x * 0.5, size.y * 0.32), warn, int(32 * k), HOT, true)
-
-
-## Shows the camera view name for a moment after it changes.
-func _draw_view_name(k: float) -> void:
-	if _camera == null or not is_instance_valid(_camera):
-		_camera = null
-		for node in get_tree().get_nodes_in_group("chase_cameras"):
-			var cam := node as ChaseCamera
-			if cam and cam.target() == _vehicle:
-				_camera = cam
-		if _camera == null:
-			return
-	if _camera.view_changed_ago < 1.6:
-		var a := clampf((1.6 - _camera.view_changed_ago) / 0.4, 0.0, 1.0)
-		_label(Vector2(size.x * 0.5, size.y - 60.0 * k), "VIEW:  " + _camera.view_name(), int(26 * k),
-				Color(MenuStyle.ACCENT, a), true)
 
 
 ## Outlined text; `centre` centres it on `pos.x`.

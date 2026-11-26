@@ -47,6 +47,9 @@ func _ready() -> void:
 	_build_barriers()
 	_build_spectators()
 	_build_buildings()
+	if circuit.oval:
+		_build_oval_stands()
+		_build_infield()
 	_build_billboards()
 	_build_marshal_posts()
 	if circuit.theme != "island":
@@ -170,6 +173,9 @@ func _plan_runoff() -> void:
 			var is_outside := (curv > 0.0 and side == 1) or (curv < 0.0 and side == 0)
 			outside[i] = k if is_outside else 0.0
 			raw[i] = lerpf(8.0, 24.0, k) if is_outside else lerpf(7.0, 5.0, k)
+			if circuit.oval:
+				# An oval: the wall right at the outside edge, a grass infield inside.
+				raw[i] = 0.9 if side != circuit.infield_side() else 12.0
 		# Widest value nearby, then a moving average.
 		var widened := PackedFloat32Array()
 		widened.resize(n)
@@ -417,6 +423,8 @@ func _speckle_texture(a: Color, b: Color) -> ImageTexture:
 
 func _barrier_type(i: int, side: int) -> String:
 	var off: float = _samples()[i].off
+	if circuit.oval and side != circuit.infield_side():
+		return "concrete_white"  # the outside wall, with its catch fence
 	if _samples()[i].bridge:
 		return "armco"
 	if _in_spectator_zone(off, side):
@@ -569,7 +577,8 @@ func _frame(off: float, side: int, extra: float) -> Transform3D:
 
 
 ## Places a kit building beside the track facing the road.
-func _place_building(kind: String, off: float, side: int, extra: float) -> void:
+## `alone` = false lets it stand right next to the previous one (a row of stands).
+func _place_building(kind: String, off: float, side: int, extra: float, alone: bool = true) -> void:
 	var xf := _frame(off, side, extra)
 	if xf.basis.x == Vector3.ZERO:
 		return
@@ -584,7 +593,7 @@ func _place_building(kind: String, off: float, side: int, extra: float) -> void:
 		xf.origin -= xf.basis.z * (short + 1.0)
 	if not ok:
 		return
-	for r in _keep_clear:
+	for r in _keep_clear.slice(0, _keep_clear.size() if alone else _row_start):
 		if r.has_point(Vector2(xf.origin.x, xf.origin.z)):
 			return  # already something here
 	_add(kind, xf)
@@ -689,6 +698,138 @@ func _build_buildings() -> void:
 		_place_building("grandstand", mid, int(z.z), 9.0)
 		if zi < 3:
 			_place_building("grandstand", mid + 46.0, int(z.z), 9.0)
+
+
+# --- oval: stands all round the outside, a busy infield --------------------------
+
+## Grandstands shoulder to shoulder along the outside of the front stretch
+## and both turns (a few on the backstretch), up on the embankment.
+func _build_oval_stands() -> void:
+	var outside := 1 - circuit.infield_side()
+	_row_start = _keep_clear.size()  # (only the other buildings keep the row away)
+	var off := 0.0
+	while off < circuit.length:
+		var f := off / circuit.length
+		var back_straight := f > 0.42 and f < 0.55
+		if not back_straight or int(off / 44.0) % 3 == 0:
+			_place_building("grandstand", off, outside, 13.0, false)
+		off += 44.0
+
+
+## The infield like a NASCAR weekend: garages behind the pit building, team
+## haulers, then rows of fans' motorhomes and RVs with their cars, tents and
+## flags, spread over the grass.
+func _build_infield() -> void:
+	var inside := circuit.infield_side()
+	var garage_col := Color(0.9, 0.9, 0.88)
+	_meshes["garage"] = _box_mesh([
+		[Vector3(44.0, 5.0, 12.0), Vector3(0, 2.5, -6.0), garage_col],
+		[Vector3(45.0, 0.5, 13.0), Vector3(0, 5.2, -6.0), Color(0.3, 0.32, 0.36)],
+		[Vector3(44.2, 0.8, 0.3), Vector3(0, 4.2, 0.1), Color(0.85, 0.12, 0.1)],
+	] + _garage_doors())
+	for k in 4:
+		_place_building("garage", circuit.length - 70.0 - k * 50.0, inside, 62.0)
+	# Fans' camp: points on a grid over the infield, in clusters.
+	var poly := circuit.outline
+	var noise := FastNoiseLite.new()
+	noise.seed = circuit.random_seed + 5
+	noise.frequency = 0.012
+	var rv := _rv_mesh()
+	var car := _box_mesh([
+		[Vector3(1.75, 0.7, 4.3), Vector3(0, 0.6, 0), Color(1, 1, 1)],
+		[Vector3(1.55, 0.55, 2.2), Vector3(0, 1.22, -0.2), Color(0.55, 0.6, 0.66)],
+		[Vector3(1.8, 0.3, 4.32), Vector3(0, 0.25, 0), Color(0.08, 0.08, 0.09)]])
+	var flag := _box_mesh([
+		[Vector3(0.08, 6.0, 0.08), Vector3(0, 3.0, 0), Color(0.75, 0.75, 0.78)],
+		[Vector3(0.04, 1.1, 1.8), Vector3(0, 5.3, 0.9), Color(1, 1, 1)]])
+	var tent := _tent_mesh()
+	var rv_colors := [Color(0.95, 0.95, 0.93), Color(0.92, 0.88, 0.78), Color(0.85, 0.9, 0.95), Color(0.95, 0.93, 0.85),
+		Color(0.55, 0.7, 0.9), Color(0.9, 0.75, 0.55), Color(0.75, 0.85, 0.7), Color(0.95, 0.65, 0.6)]
+	var car_colors := [Color(0.85, 0.85, 0.85), Color(0.15, 0.15, 0.17), Color(0.7, 0.12, 0.1), Color(0.15, 0.3, 0.7),
+		Color(0.55, 0.57, 0.6), Color(0.2, 0.45, 0.25), Color(0.8, 0.6, 0.15)]
+	var flag_colors := [Color(0.85, 0.12, 0.1), Color(0.12, 0.25, 0.75), Color(0.95, 0.8, 0.1), Color(0.95, 0.95, 0.95), Color(0.1, 0.1, 0.1)]
+	var tent_colors := [Color(0.9, 0.3, 0.15), Color(0.2, 0.5, 0.85), Color(0.95, 0.8, 0.2), Color(0.3, 0.7, 0.35), Color(0.9, 0.9, 0.9)]
+	var rvs: Array[Transform3D] = []
+	var rv_t: Array[Color] = []
+	var cars: Array[Transform3D] = []
+	var car_t: Array[Color] = []
+	var flags: Array[Transform3D] = []
+	var flag_t: Array[Color] = []
+	var tents: Array[Transform3D] = []
+	var tent_t: Array[Color] = []
+	# Rows along the oval's long side (the backstretch direction).
+	var along := circuit.direction_at(circuit.length * 0.48)
+	along.y = 0.0
+	along = along.normalized()
+	var across := along.cross(Vector3.UP)
+	var yaw := atan2(along.x, along.z)
+	var area := circuit._bounds
+	var gx := area.position.x
+	while gx < area.end.x:
+		var gz := area.position.y
+		while gz < area.end.y:
+			var p := circuit.to_global(Vector3(gx, 0.0, gz))
+			var local := Vector2(gx, gz)
+			gz += 13.0
+			if not Geometry2D.is_point_in_polygon(local, poly):
+				continue
+			if circuit.distance_from_centre(p) < circuit.road_width * 0.5 + 26.0 or not _free_spot(p, 20.0):
+				continue
+			var crowd := noise.get_noise_2d(p.x, p.z)
+			if crowd < 0.12 or _rng.randf() < 0.25:
+				continue  # open grass between the camps
+			p.y = circuit.ground_height(p.x, p.z)
+			var jitter := Basis(Vector3.UP, yaw + _rng.randf_range(-0.12, 0.12) + (PI if _rng.randf() < 0.5 else 0.0))
+			rvs.append(Transform3D(jitter, p))
+			rv_t.append(rv_colors[_rng.randi() % rv_colors.size()])
+			if _rng.randf() < 0.75:
+				var cp := p + across * 3.4 + along * _rng.randf_range(-2.0, 2.0)
+				cp.y = circuit.ground_height(cp.x, cp.z)
+				cars.append(Transform3D(jitter, cp))
+				car_t.append(car_colors[_rng.randi() % car_colors.size()])
+			if _rng.randf() < 0.45:
+				var tp := p - across * 3.6 + along * _rng.randf_range(-3.0, 3.0)
+				tp.y = circuit.ground_height(tp.x, tp.z)
+				tents.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU), tp))
+				tent_t.append(tent_colors[_rng.randi() % tent_colors.size()])
+			if _rng.randf() < 0.3:
+				var fp := p + along * 5.5
+				fp.y = circuit.ground_height(fp.x, fp.z)
+				flags.append(Transform3D(Basis(Vector3.UP, _rng.randf() * TAU), fp))
+				flag_t.append(flag_colors[_rng.randi() % flag_colors.size()])
+		gx += 11.0
+	_scatter("InfieldRVs", rv, rvs, rv_t)
+	_scatter("InfieldCars", car, cars, car_t)
+	_scatter("InfieldTents", tent, tents, tent_t)
+	_scatter("InfieldFlags", flag, flags, flag_t)
+	# Keep the forest out of the infield.
+	_infield_poly = poly
+
+
+var _infield_poly := PackedVector2Array()
+var _row_start := 0
+
+
+func _garage_doors() -> Array:
+	var out := []
+	var x := -19.5
+	while x <= 19.6:
+		out.append([Vector3(3.2, 3.4, 0.2), Vector3(x, 1.75, 0.05), Color(0.55, 0.58, 0.62)])
+		x += 4.3
+	return out
+
+
+## A motorhome: white box with a coloured band, dark windows, a cab and an
+## awning on the door side (the instance tint washes over the white).
+func _rv_mesh() -> ArrayMesh:
+	return _box_mesh([
+		[Vector3(2.5, 2.9, 10.5), Vector3(0, 1.85, 0), Color(1, 1, 1)],
+		[Vector3(2.52, 0.35, 10.52), Vector3(0, 1.45, 0), Color(0.75, 0.2, 0.15)],
+		[Vector3(2.54, 0.55, 6.0), Vector3(0, 2.45, -0.8), Color(0.12, 0.14, 0.18)],
+		[Vector3(2.4, 0.6, 1.2), Vector3(0, 3.0, 4.6), Color(1, 1, 1)],
+		[Vector3(2.4, 0.35, 10.6), Vector3(0, 0.3, 0), Color(0.1, 0.1, 0.11)],
+		[Vector3(2.2, 0.08, 4.0), Vector3(2.3, 2.9, -1.0), Color(0.9, 0.55, 0.2)],
+	])
 
 
 # --- paddock, car park, camping, hamlets ---------------------------------------------
@@ -1020,6 +1161,8 @@ func _build_forest() -> void:
 		var d := circuit.distance_from_centre(p)
 		if d < circuit.road_width * 0.5 + 30.0:
 			continue
+		if not _infield_poly.is_empty() and Geometry2D.is_point_in_polygon(Vector2(circuit.to_local(p).x, circuit.to_local(p).z), _infield_poly):
+			continue  # the oval's infield is the fans' camp
 		var blocked := false
 		for r in _keep_clear:
 			if r.has_point(Vector2(p.x, p.z)):

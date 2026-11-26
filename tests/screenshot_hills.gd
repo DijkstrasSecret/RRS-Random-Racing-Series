@@ -51,8 +51,7 @@ func _run() -> void:
 	for f in spots:
 		var off := f * circuit.length
 		var car_off := off + 22.0
-		car.teleport(Transform3D(Basis.looking_at(circuit.direction_at(car_off), Vector3.UP),
-				circuit.point_at(car_off) + Vector3.UP * 0.5))
+		car.teleport(circuit.road_transform(car_off, 0.0, 0.5))
 		car.controls_locked = true
 		if chase:
 			var ai := AIDriver.new()

@@ -30,6 +30,9 @@ const CARS: Array[Dictionary] = [
 	{"id": "ashford", "tier": 3, "livery": true, "name": "ASTON MARTIN DB11 V12", "short": "DB11", "tagline": "V12 grand tourer. Rear-drive, handle with care."},
 	{"id": "bellmont", "tier": 3, "livery": true, "name": "BENTLEY FLYING SPUR V8", "short": "FLYING SPUR", "tagline": "Luxury express. All-wheel drive, V8, huge brakes."},
 	{"id": "hanlong", "tier": 3, "livery": true, "name": "BYD HAN EV", "short": "HAN EV", "tagline": "Electric, all-wheel drive. Brutal launch, silent speed."},
+	{"id": "cup_camaro", "tier": 3, "livery": true, "name": "CHEVROLET CAMARO ZL1 CUP", "short": "CAMARO CUP", "tagline": "NASCAR Cup stock car. V8, 5-speed, built to run flat out in a pack."},
+	{"id": "cup_mustang", "tier": 3, "livery": true, "name": "FORD MUSTANG DARK HORSE CUP", "short": "MUSTANG CUP", "tagline": "NASCAR Cup stock car. A touch more torque, a touch more drag."},
+	{"id": "cup_camry", "tier": 3, "livery": true, "name": "TOYOTA CAMRY XSE CUP", "short": "CAMRY CUP", "tagline": "NASCAR Cup stock car. The slipperiest of the three, revs freely."},
 ]
 
 const DRIVE_NAMES: PackedStringArray = ["FRONT", "REAR", "ALL-WHEEL"]

@@ -96,6 +96,9 @@ func _draw_standings(r: Rect2) -> void:
 		var last := ""
 		if not res.is_empty():
 			last = "last: " + ("DNF" if int(res.back()) == 0 else RaceDirector.ordinal(int(res.back())))
+		var style := DriverStyle.label(rc.name)
+		if style != "":
+			last = style + ("   ·   " + last if last != "" else "")
 		_text(row.position + Vector2(64, 80), last, 14, dim)
 		var big := "%d" % (int(rc.score) if scored else int(rc.points))
 		draw_string(_bold, row.position + Vector2(0, 48), big, HORIZONTAL_ALIGNMENT_RIGHT, row.size.x - 16, 34, ink)

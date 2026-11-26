@@ -269,6 +269,45 @@ CARS = {
         final_drive=4.1, auto_upshift_rpm=4400, auto_downshift_rpm=1700, drive_type=AWD, diff_lock=0.3,
         awd_front_split=0.55, brake_torque=8200, brake_bias=0.67, handbrake_torque=3000, max_steer_deg=33,
         steer_rate=3.8, drag_area=0.64, downforce_area=0.08, engine_sound_pitch=0.9, engine_sound_gain_db=0.0),
+    # NASCAR Cup Series Next Gen cars: V8, 5-speed sequential, rear drive, 18" slicks.
+    # Race weight with driver and fuel; the engine is the lower-power spec (~550 hp)
+    # with a flatter curve: more power only lit up the rears and lost time (tested).
+    "cup_camaro": dict(  # Chevrolet Camaro ZL1
+        wheel_inertia=1.6,
+        display_name="Chevrolet Camaro ZL1 (NASCAR Cup)", mass=1800, center_of_mass=(0, 0.45, 0.1), inertia_box_size=(2.03, 1.2, 4.88),
+        wheel_radius=0.35, wheel_width=0.27, tire_grip=1.3, tire_peak_slip_angle_deg=7.5, rear_grip_scale=1.0,
+        front_spring_rate=52000, rear_spring_rate=56000, front_damper_bump=4200, front_damper_rebound=5600,
+        rear_damper_bump=4400, rear_damper_rebound=5900, front_anti_roll=18000, rear_anti_roll=17000,
+        idle_rpm=1000, redline_rpm=7500, launch_rpm=3500, max_torque=560,
+        torque_curve=[(1000, .7), (2500, .9), (4000, 1.0), (6500, .96), (7600, .86)],
+        engine_brake_torque=80, gear_ratios=[3.0, 2.1, 1.6, 1.25, 1.0], reverse_ratio=2.9,
+        final_drive=3.7, auto_upshift_rpm=7200, auto_downshift_rpm=3500, drive_type=RWD, diff_lock=0.45,
+        brake_torque=10500, brake_bias=0.66, handbrake_torque=4000, max_steer_deg=32, steer_rate=4.0,
+        drag_area=0.64, downforce_area=0.35, aero_balance=0.42, engine_sound_pitch=1.7, engine_sound_gain_db=2.5),
+    "cup_mustang": dict(  # Ford Mustang Dark Horse
+        wheel_inertia=1.6,
+        display_name="Ford Mustang Dark Horse (NASCAR Cup)", mass=1800, center_of_mass=(0, 0.45, 0.1), inertia_box_size=(2.03, 1.2, 4.88),
+        wheel_radius=0.35, wheel_width=0.27, tire_grip=1.3, tire_peak_slip_angle_deg=7.5, rear_grip_scale=1.0,
+        front_spring_rate=52000, rear_spring_rate=56000, front_damper_bump=4200, front_damper_rebound=5600,
+        rear_damper_bump=4400, rear_damper_rebound=5900, front_anti_roll=18000, rear_anti_roll=17000,
+        idle_rpm=1000, redline_rpm=7500, launch_rpm=3500, max_torque=570,
+        torque_curve=[(1000, .7), (2500, .9), (4000, 1.0), (6500, .96), (7600, .86)],
+        engine_brake_torque=80, gear_ratios=[3.0, 2.1, 1.6, 1.25, 1.0], reverse_ratio=2.9,
+        final_drive=3.7, auto_upshift_rpm=7200, auto_downshift_rpm=3500, drive_type=RWD, diff_lock=0.45,
+        brake_torque=10500, brake_bias=0.66, handbrake_torque=4000, max_steer_deg=32, steer_rate=4.0,
+        drag_area=0.66, downforce_area=0.35, aero_balance=0.42, engine_sound_pitch=1.6, engine_sound_gain_db=2.5),
+    "cup_camry": dict(  # Toyota Camry XSE
+        wheel_inertia=1.6,
+        display_name="Toyota Camry XSE (NASCAR Cup)", mass=1800, center_of_mass=(0, 0.45, 0.1), inertia_box_size=(2.03, 1.2, 4.88),
+        wheel_radius=0.35, wheel_width=0.27, tire_grip=1.3, tire_peak_slip_angle_deg=7.5, rear_grip_scale=1.0,
+        front_spring_rate=52000, rear_spring_rate=56000, front_damper_bump=4200, front_damper_rebound=5600,
+        rear_damper_bump=4400, rear_damper_rebound=5900, front_anti_roll=18000, rear_anti_roll=17000,
+        idle_rpm=1000, redline_rpm=7500, launch_rpm=3500, max_torque=550,
+        torque_curve=[(1000, .7), (2500, .9), (4000, 1.0), (6500, .96), (7600, .86)],
+        engine_brake_torque=80, gear_ratios=[3.0, 2.1, 1.6, 1.25, 1.0], reverse_ratio=2.9,
+        final_drive=3.7, auto_upshift_rpm=7200, auto_downshift_rpm=3500, drive_type=RWD, diff_lock=0.45,
+        brake_torque=10500, brake_bias=0.66, handbrake_torque=4000, max_steer_deg=32, steer_rate=4.0,
+        drag_area=0.62, downforce_area=0.35, aero_balance=0.42, engine_sound_pitch=1.8, engine_sound_gain_db=2.5),
 }
 
 
@@ -305,6 +344,7 @@ DRIVETRAIN = {
     "passat": dict(shift_time=0.1, turbo=0.45, turbo_lag=0.7, turbo_spool_rpm=1500),
     "ashford": dict(shift_time=0.12, turbo=0.35, turbo_lag=0.45, turbo_spool_rpm=2000),
     "bellmont": dict(shift_time=0.1, turbo=0.35, turbo_lag=0.45, turbo_spool_rpm=1900),
+    "cup_camaro": dict(shift_time=0.06), "cup_mustang": dict(shift_time=0.06), "cup_camry": dict(shift_time=0.06),
 }
 for cid in CARS:
     if cid in DRIVETRAIN:

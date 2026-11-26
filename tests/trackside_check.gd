@@ -140,7 +140,7 @@ func _ground(space: PhysicsDirectSpaceState3D, p: Vector3, exclude: Array) -> fl
 
 
 func _ray(space: PhysicsDirectSpaceState3D, p: Vector3, exclude: Array) -> float:
-	var ray := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 4.0, p - Vector3.UP * 12.0)
+	var ray := PhysicsRayQueryParameters3D.create(p + Vector3.UP * 20.0, p - Vector3.UP * 12.0)  # (high enough for a raised banking)
 	var rids: Array[RID] = []
 	for r in exclude:
 		rids.append(r)
