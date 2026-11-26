@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TOP_DIRS = ("addons", "assets", "docs", "scenes", "scripts", "soundtrack", "tests", "tools")
+TOP_DIRS = ("addons", "assets", "docs", "scenes", "scripts", "server", "soundtrack", "tests", "tools")
 # Plans name files that don't exist yet, so their paths aren't checked.
 MD_FILES = ["CLAUDE.md", *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").rglob("*.md")
                                  if "plans" not in p.relative_to(ROOT / "docs").parts)]

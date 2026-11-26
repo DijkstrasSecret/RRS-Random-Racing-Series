@@ -21,6 +21,7 @@ The `Makefile` wraps the common commands; `make help` lists them. Override the b
 - `make test` runs the main smoke tests and, unlike calling Godot directly, exits non-zero if any fails. It hides the missing-MP3 errors.
 - `make test-<name> ARGS="..."` runs one test, e.g. `make test-race_test ARGS="--laps=2 --track=rx"`. It finds tests in `tests/` and `tests/net/`.
 - `make webrtc` once downloads and imports the desktop WebRTC add-on; then `make test-net` runs the network tests, which `make test` leaves out.
+- `make server-venv` once creates `server/.venv` for the Python signalling server; `make signalling` runs it on `ws://127.0.0.1:9081` and `make test-signalling` runs its unit tests.
 - `make export-windows`, `make export-web` and `make export-linux` build into `build/`; `make serve-web` serves the Web build at `http://localhost:8060`.
 - `make docs-check` checks the `##` doc comment rules below, the links between docs, the repo paths quoted in them and the multiplayer code boundary. It prints `file:line` per problem. Run it before every PR. It needs [lychee](https://github.com/lycheeverse/lychee/releases) on the `PATH`.
 

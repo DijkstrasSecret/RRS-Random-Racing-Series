@@ -11,6 +11,7 @@ Start here for anything about online play. This page lists every multiplayer doc
 | [ADR 0002](../decisions/0002-online-multiplayer-network-model.md) | **The network model:** the host simulates every car, over WebRTC, with room codes. Read it before writing any networking code. |
 | [Must-fix review](../reviews/multiplayer_must_fix.md) | MF-1 … MF-11: what in the current code blocks online play, and the fix for each. |
 | [Nice-to-have review](../reviews/multiplayer_nice_to_have.md) | NH- findings: improvements that can wait. |
+| [Signalling protocol](protocol.md) | The room-code server's messages and rules, and how to run it locally. |
 | [WebRTC prototype plan](plans/2026-11-26-webrtc-prototype.md) | Step-by-step plan for issue #11 (MF-1): room codes, a WebRTC connection between desktop and browser, TURN on the VPS. |
 
 Decision records stay in `decisions/` and reviews stay in `reviews/`, so their numbering stays in one place. This folder holds the rest: how the network code works, the server protocol, deploy steps and plans.
@@ -21,6 +22,7 @@ Decision records stay in `decisions/` and reviews stay in `reviews/`, so their n
 |------|---------------|
 | `scripts/net/`, `scenes/net/` | All network code and scenes. |
 | `tests/net/` | Network tests. `make test-net` runs them; `make test` doesn't, so it stays offline. |
+| `server/` | The Python signalling server (`server/signalling/`); not part of the game, and Godot skips it. `make server-venv` once, then `make signalling`. |
 | `addons/webrtc_native/` | The desktop WebRTC add-on. Downloaded by `make webrtc`, not in git. |
 | `export_presets.cfg` | Windows, Web (no-threads) and Linux exports: `make export-windows`, `make export-web`, `make export-linux`. |
 

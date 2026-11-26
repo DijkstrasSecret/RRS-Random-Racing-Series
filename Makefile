@@ -10,6 +10,9 @@ GODOT   ?= godot
 PY      ?= python3
 TIMEOUT ?= timeout 900
 LYCHEE  ?= lychee
+# Python for the signalling server: its own venv, made by `make server-venv`.
+# On Windows: SERVER_PY=server/.venv/Scripts/python.exe
+SERVER_PY ?= server/.venv/bin/python
 # Extra arguments for a single test, e.g. make test-race_test ARGS="--laps=2 --track=rx"
 ARGS    ?=
 
@@ -32,7 +35,7 @@ test_target = $(if $(wildcard $(call test_dir,$(1))/$(1).tscn),res://$(call test
 HIDE_MUSIC_ERRORS := awk '/ERROR:.*(mp3|soundtrack)/ {skip=1; next} skip && /^[[:space:]]/ {next} {skip=0; print}'
 
 .DEFAULT_GOAL := help
-.PHONY: help play editor import webrtc test test-net hitbox docs-check car-configs sounds pdf export-web export-windows export-linux serve-web
+.PHONY: help play editor import webrtc server-venv signalling test-signalling test test-net hitbox docs-check car-configs sounds pdf export-web export-windows export-linux serve-web
 
 help: ## List the commands
 	@grep -hE '^[a-zA-Z_%-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -49,6 +52,19 @@ import: ## Import assets (needed once after a fresh clone, before tests)
 webrtc: ## Download the desktop WebRTC add-on and import it (needed once, before net tests)
 	$(PY) tools/fetch_webrtc.py
 	$(GODOT) --headless --path . --import
+
+server-venv: ## Create server/.venv with the signalling server's dependencies (uses uv if installed)
+	@if command -v uv >/dev/null 2>&1; then \
+		uv venv -q server/.venv && uv pip install -q --python $(SERVER_PY) -r server/signalling/requirements.txt; \
+	else \
+		$(PY) -m venv server/.venv && $(SERVER_PY) -m pip install -q -r server/signalling/requirements.txt; \
+	fi
+
+signalling: ## Run the signalling server locally on ws://127.0.0.1:9081
+	$(SERVER_PY) server/signalling/signalling.py --host 127.0.0.1 --port 9081
+
+test-signalling: ## Run the signalling server's unit tests
+	$(SERVER_PY) -m unittest discover -s server/signalling -v
 
 test: $(addprefix test-,$(SMOKE_TESTS)) ## Run all main smoke tests
 	@echo "All smoke tests passed: $(SMOKE_TESTS)"

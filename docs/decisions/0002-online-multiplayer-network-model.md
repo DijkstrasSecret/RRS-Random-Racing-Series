@@ -31,7 +31,7 @@ We will run races **host-authoritative over WebRTC, with room codes**:
 | Own car | Pure host authority for now: a client's own car is shown from snapshots like every other car. |
 | Transport | WebRTC data channels. Godot RPCs (reliable) for events: lobby, ready, countdown, finishes, damage, shop. Our own packed messages (unreliable) for car snapshots and inputs. |
 | Rates | Physics stays at 120 Hz. The host sends 60 snapshots/s, adjustable; clients send inputs at 60/s, each repeating the last few. A Web host may drop to 30/s. |
-| Servers | Signalling (room codes) and TURN (coturn) run on the owner's VPS. Signalling sits behind the existing Caddy as `wss://` on a subdomain; coturn has its own UDP ports. Early tests run signalling on a local PC with no TURN. |
+| Servers | Signalling (room codes) and TURN (coturn) run on the owner's VPS. Signalling sits behind the existing Caddy as `wss://` on a subdomain; coturn has its own UDP ports. Early tests run signalling on a local PC with no TURN. Signalling is a small Python program using `websockets`, so the VPS needs only Python, not Godot. |
 | Hosting | Windows hosts allow 8 cars. A Web host gets a lower car limit, set by measurement (MF-10); car physics isn't changed to fit the browser. |
 | Racers | A peer can own several racers. A split-screen pair takes 2 of the 8 places, can host on Windows, and can only join from Web. The host fills empty places with AI. |
 | Settings | The host sets the race: track, laps, weather, time of day, damage, AI count and difficulty, tournament options. Each player picks their own car, livery and assist profile, shown in the lobby. |

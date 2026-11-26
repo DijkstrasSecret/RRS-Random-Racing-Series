@@ -38,6 +38,7 @@ RRS-Random-Racing-Series/
 │   ├── tracks/            Procedural circuit and terrain generation, trackside dressing, atmosphere and the track list.
 │   ├── ui/                Every menu, panel and the in-race HUD, plus shared menu styling.
 │   └── vehicle/           Car physics (tyres, wheels, drivetrain, assists) plus damage, audio, paint and looks.
+├── server/                Python signalling server (room codes) and, later, VPS deploy files; Godot skips it (`.gdignore`).
 ├── soundtrack/            Godot import files only; the licensed MP3s are kept off the repo.
 ├── tests/                 About 40 scripts that run without a window: smoke tests, probes, checks and screenshot capture.
 │   └── net/               Network tests, run by `make test-net`.
