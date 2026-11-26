@@ -10,13 +10,18 @@ extends Node
 ## Each car also logs the clock at TIMING_POINTS spots per lap, so gaps
 ## between cars can be read off like real timing loops.
 
+## Emitted when the car crosses the line to end a lap: its time in seconds, and whether it's this car's best.
 signal lap_completed(lap_time: float, is_best: bool)
+## Emitted at each sector split: sector index (0-based), time in seconds, and colour.
+## The colour is a SectorColor: PURPLE = best by anyone, GREEN = this car's best, YELLOW = slower.
 signal sector_completed(sector: int, time: float, color: int)
 
 enum SectorColor { NONE, YELLOW, GREEN, PURPLE }
 const TIMING_POINTS := 40
 
+## The Circuit to time on. Not needed when the timer is set up with setup().
 @export var circuit_path: NodePath
+## The car to time. Not needed when the timer is set up with setup().
 @export var vehicle_path: NodePath
 
 var lap: int = 0
@@ -61,6 +66,7 @@ func setup(circuit: Circuit, vehicle: Vehicle) -> void:
 		_vehicle.reset_to_start_done.connect(reset)
 
 
+## Back to before the first lap: lap 0, current lap and sector times cleared, not running. Best times are kept.
 func reset() -> void:
 	running = false
 	lap = 0
@@ -147,6 +153,7 @@ func _log_points(lap_fraction: float) -> void:
 	last_point = idx
 
 
+## Formats seconds as "m:ss.mmm", e.g. 83.4 → "1:23.400"; "--:--.---" for a negative time.
 static func format_time(t: float) -> String:
 	if t < 0.0:
 		return "--:--.---"

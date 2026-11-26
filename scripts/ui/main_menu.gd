@@ -3,6 +3,7 @@ extends Node3D
 ## follows a different car every few seconds (attract mode).
 ## Mouse, keyboard (arrows / Enter / Esc) and gamepad (stick or D-pad / A / B).
 
+## Seconds the background camera follows one AI car before moving to the next.
 @export var showcase_switch_time: float = 9.0
 
 var _camera: ChaseCamera

@@ -34,6 +34,7 @@ var esc_start_deg: float = 5.0
 var _tc_factor: float = 1.0
 
 
+## Sets every assist for profile p: 0 Arcade, 1 Sport, 2 Sim.
 func set_profile(p: int) -> void:
 	profile = p
 	match p:
@@ -57,6 +58,7 @@ func set_profile(p: int) -> void:
 			esc_start_deg = 4.5
 
 
+## Name of the current profile: "Arcade", "Sport" or "Sim".
 func profile_name() -> String:
 	return PROFILE_NAMES[profile]
 

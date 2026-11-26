@@ -11,7 +11,9 @@ extends Node3D
 ## Measured hits (Bavaro, tests/damage_probe.gd): barrier at 60 km/h ~16 kNs,
 ## car into car at 40 km/h ~4 kNs.
 
+## Emitted after a hit adds damage: the Zone hit and the damage added to it (0–1).
 signal damaged(zone: int, amount: float)
+## Emitted after all damage is repaired and the car's power, drag and steering are back to normal.
 signal repaired
 
 enum Zone { FRONT, REAR, LEFT, RIGHT, ROOF }
@@ -36,6 +38,7 @@ var _debris: CPUParticles3D
 var _smoke: CPUParticles3D
 
 
+## Attaches damage to `car`. damage_level: 0 OFF, 1 VISUAL (looks only), 2 FULL (affects driving).
 func setup(car: Vehicle, damage_level: int) -> void:
 	_car = car
 	level = damage_level

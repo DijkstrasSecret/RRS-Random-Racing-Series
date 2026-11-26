@@ -4,12 +4,14 @@ extends Button
 ## Left/right (keys, D-pad, stick) or clicking cycles through the choices.
 ## The title is the button text; the value is drawn right-aligned.
 
+## Emitted with the new choice index after the player changes it.
 signal value_changed(index: int)
 
 var choices: PackedStringArray = []
 var index: int = 0
 
 
+## A row titled row_title that cycles through row_choices, starting at start_index.
 static func create(row_title: String, row_choices: PackedStringArray, start_index: int) -> OptionRow:
 	var row := OptionRow.new()
 	row.text = row_title
@@ -37,6 +39,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+## Moves to the next (direction +1) or previous (-1) choice, wrapping round, and emits value_changed.
 func step(direction: int) -> void:
 	index = wrapi(index + direction, 0, choices.size())
 	queue_redraw()

@@ -8,16 +8,23 @@ extends Control
 
 enum State { WAITING, COUNTDOWN, RACING, FINISHED }
 
+## Race length in laps. Replaced by the player's setting when use_game_settings is on.
 @export var laps: int = 3
+## Length of the start countdown, in seconds.
 @export var countdown_time: float = 3.0
+## The Circuit the race runs on.
 @export var circuit_path: NodePath
 ## Start the countdown by itself (off when a RaceSetup adds the racers).
 @export var auto_start: bool = true
 ## Take the number of laps from the player's settings.
 @export var use_game_settings: bool = true
+## Human cars placed in the scene, added as racers in _ready. Pairs with lap_timer_paths by index.
 @export var vehicle_paths: Array[NodePath] = []
+## The LapTimer of each car in vehicle_paths, same order.
 @export var lap_timer_paths: Array[NodePath] = []
+## Names for the cars in vehicle_paths; missing entries become "PLAYER n".
 @export var player_names: PackedStringArray = ["PLAYER 1", "PLAYER 2"]
+## Colours for the cars in vehicle_paths; missing entries are white.
 @export var player_colors: PackedColorArray = [Color(0.35, 0.8, 1.0), Color(1.0, 0.4, 0.35)]
 
 var state: int = State.WAITING
@@ -61,6 +68,7 @@ func _ready() -> void:
 		begin.call_deferred()
 
 
+## Adds a racer and locks its controls until the countdown ends. The racer's index (0, 1, …) is its order of adding.
 func add_racer(vehicle: Vehicle, timer: LapTimer, racer_name: String, color: Color, human: bool) -> void:
 	_racers.append({"vehicle": vehicle, "timer": timer, "name": racer_name, "color": color, "human": human})
 	vehicle.controls_locked = true
@@ -127,6 +135,7 @@ func _process(_delta: float) -> void:
 	queue_redraw()
 
 
+## True if racer i is out of the race (tournament wreck rule).
 func is_retired(i: int) -> bool:
 	return i in retired
 
@@ -152,6 +161,7 @@ func _watch_wrecks(delta: float) -> void:
 			retire(i)
 
 
+## Takes racer i out of the race and locks its controls. Does nothing if it already finished or retired.
 func retire(i: int) -> void:
 	if i in retired or i in finish_order:
 		return
@@ -171,26 +181,32 @@ func wreck_warning(i: int) -> String:
 	return ""
 
 
+## Number of racers.
 func car_count() -> int:
 	return _racers.size()
 
 
+## The car of racer i.
 func vehicle_at(i: int) -> Vehicle:
 	return _racers[i].vehicle
 
 
+## The HUD colour of racer i.
 func color_at(i: int) -> Color:
 	return _racers[i].color
 
 
+## The display name of racer i.
 func name_at(i: int) -> String:
 	return _racers[i].name
 
 
+## The LapTimer of racer i.
 func timer_at(i: int) -> LapTimer:
 	return _racers[i].timer
 
 
+## True if racer i is driven by a player, not the AI.
 func is_human(i: int) -> bool:
 	return bool(_racers[i].human)
 
@@ -216,6 +232,7 @@ func interval(i: int) -> String:
 	return "+%.3f" % maxf(float(mine.points[p]) - float(theirs.points[p]), 0.0)
 
 
+## Laps racer i has finished; 0 before it first crosses the line.
 func completed_laps(i: int) -> int:
 	var t: LapTimer = _racers[i].timer
 	return maxi(t.lap - 1, 0) if t.running else 0
@@ -226,6 +243,7 @@ func current_lap(i: int) -> int:
 	return clampi(completed_laps(i) + 1, 1, laps)
 
 
+## The racer index of a car, or -1 if it isn't in the race.
 func index_of(vehicle: Vehicle) -> int:
 	for i in _racers.size():
 		if _racers[i].vehicle == vehicle:
@@ -290,6 +308,7 @@ func _measure_distance(i: int) -> float:
 	return completed_laps(i) * _circuit.length + offset
 
 
+## Position as shown on screen: 1 → "1ST", 2 → "2ND", 11 → "11TH".
 static func ordinal(n: int) -> String:
 	match n:
 		1: return "1ST"

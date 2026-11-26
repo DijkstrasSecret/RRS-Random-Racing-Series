@@ -13,11 +13,15 @@ extends Camera3D
 
 enum Mode { CHASE, FAR, HOOD }
 
+## The Vehicle to follow.
 @export var target_path: NodePath
 ## Input action that switches view (split screen gives each player their own).
 @export var cycle_action: StringName = &"cycle_camera"
+## Chase view distance behind the car, in metres. The far view uses 1.45×.
 @export var distance: float = 7.8
+## Chase view height above the car, in metres. The far view uses 1.4×.
 @export var height: float = 3.6
+## Height above the car's origin the camera aims at, in metres.
 @export var look_height: float = 1.0
 ## How far ahead of the car the camera aims, in metres.
 @export var look_ahead_distance: float = 4.0
@@ -31,9 +35,13 @@ enum Mode { CHASE, FAR, HOOD }
 @export var yaw_follow: float = 2.6
 ## 0 = stay behind where the car points, 1 = behind where it travels.
 @export var velocity_bias: float = 0.35
+## Gentle up-and-down bob of the camera, in metres.
 @export var hover_amplitude: float = 0.05
+## Field of view at start, in degrees. Once driving, the player's FOV setting takes over.
 @export var base_fov: float = 66.0
+## Not read by any code; the speed FOV comes from the player's settings.
 @export var max_fov: float = 80.0
+## Not read by any code; the speed FOV comes from the player's settings.
 @export var fov_full_speed: float = 60.0
 
 ## How quickly the camera swings to a new view angle (lower = gentler).

@@ -84,15 +84,18 @@ const UNLOCKS := {
 }
 
 
+## True if `id` is a stat card (rarity scales its value), false for an item.
 static func is_stat(id: String) -> bool:
 	return STATS.has(id)
 
 
+## Display name of a card.
 static func card_name(card: Dictionary) -> String:
 	var id: String = card.id
 	return String(STATS[id].name) if is_stat(id) else String(UNLOCKS[id].name)
 
 
+## Kind of card `id`: Kind.STAT for stat cards, otherwise the item's kind.
 static func kind_of(id: String) -> int:
 	return Kind.STAT if is_stat(id) else int(UNLOCKS[id].kind)
 
@@ -102,6 +105,7 @@ static func stat_value(id: String, tier: int) -> float:
 	return float(STATS[id].value) * TIER_MULT[tier]
 
 
+## Price of a card in shop points; stat cards scale with their rarity (TIER_MULT).
 static func cost(card: Dictionary) -> int:
 	var id: String = card.id
 	if is_stat(id):
@@ -109,6 +113,7 @@ static func cost(card: Dictionary) -> int:
 	return int(UNLOCKS[id].cost)
 
 
+## One-line description of a card for the shop, with its value filled in.
 static func describe_card(card: Dictionary) -> String:
 	var id: String = card.id
 	if is_stat(id):
@@ -127,6 +132,7 @@ static func odds(round_i: int, rounds: int) -> PackedFloat32Array:
 	return out
 
 
+## Picks a rarity (0 Common … 3 Legendary) with the odds for shop round round_i of rounds.
 static func roll_tier(rng: RandomNumberGenerator, round_i: int, rounds: int) -> int:
 	var o := odds(round_i, rounds)
 	var x := rng.randf()
@@ -147,6 +153,7 @@ static func level_of(r: Dictionary, id: String) -> int:
 	return int((r.get("unlocks", {}) as Dictionary).get(id, 0))
 
 
+## Number of different passive items racer r owns.
 static func passive_count(r: Dictionary) -> int:
 	var n := 0
 	var owned: Dictionary = r.get("unlocks", {})

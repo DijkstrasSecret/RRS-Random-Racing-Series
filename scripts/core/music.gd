@@ -22,16 +22,19 @@ var _switching: bool = false
 static var instance: MusicPlayer
 
 
+## Plays the menu music, if the Music autoload exists.
 static func start_menu() -> void:
 	if instance:
 		instance.play_menu()
 
 
+## Plays the next race track, if the Music autoload exists.
 static func start_race() -> void:
 	if instance:
 		instance.play_race()
 
 
+## Lowers the music (true), e.g. while paused, or brings it back (false).
 static func duck(ducked: bool) -> void:
 	if instance:
 		instance.set_ducked(ducked)

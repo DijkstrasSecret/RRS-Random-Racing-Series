@@ -9,7 +9,9 @@ extends RayCast3D
 const LOW_SPEED := 3.0
 const MAX_OMEGA := 400.0
 
+## True for a front wheel (steered, front config values).
 @export var is_front: bool = true
+## True for a wheel on the car's left side.
 @export var is_left: bool = true
 
 # --- Set from VehicleConfig in setup() ---
@@ -93,6 +95,7 @@ var custom_visual: Node3D
 var _dirt: WheelDirt
 
 
+## Copies the radius, suspension and tyre values for this corner from `cfg`.
 func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
 	radius = cfg.wheel_radius
 	width = cfg.wheel_width
@@ -121,6 +124,7 @@ func setup(vehicle: RigidBody3D, cfg: VehicleConfig) -> void:
 	reset()
 
 
+## Stops the wheel, puts the spring back at rest length and clears load and slip.
 func reset() -> void:
 	omega = 0.0
 	spring_length = rest_length
@@ -324,6 +328,7 @@ func detach(car_velocity: Vector3) -> void:
 	loose.get_tree().create_timer(10.0).timeout.connect(loose.queue_free)
 
 
+## Moves the wheel mesh: spin, steering angle, suspension height; hides it when detached. dt in seconds.
 func update_visual(dt: float) -> void:
 	spin_angle = wrapf(spin_angle + omega * dt, 0.0, TAU)
 	if _dirt:

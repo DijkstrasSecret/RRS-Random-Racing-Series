@@ -3,6 +3,7 @@ extends Button
 ## "AI CAR CLASSES      [D] [C] [B] [A]": left / right picks a class, Enter /
 ## A (or a click) switches it on or off. At least one class stays on.
 
+## Emitted with the new class mask (bit 0 = D … bit 3 = A) after a class is switched.
 signal mask_changed(mask: int)
 
 const CHIP := Vector2(58, 36)
@@ -12,6 +13,7 @@ var mask: int = 15
 var cursor: int = 0
 
 
+## A row of class chips D–A; start_mask uses bit 0 = D … bit 3 = A (0 means all on).
 static func create(row_title: String, start_mask: int) -> TierToggleRow:
 	var row := TierToggleRow.new()
 	row.text = row_title
@@ -46,6 +48,7 @@ func _gui_input(event: InputEvent) -> void:
 				queue_redraw()
 
 
+## Switches class i (0 = D … 3 = A) on or off; refuses to switch off the last one.
 func toggle(i: int) -> void:
 	var m := mask ^ (1 << i)
 	if m & 15 == 0:

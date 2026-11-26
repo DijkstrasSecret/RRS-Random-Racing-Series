@@ -13,6 +13,7 @@ const LEVEL_NAMES: PackedStringArray = ["Modern", "PS2", "PS1"]
 static var level: int = Level.PS1
 static var _initialised := false
 
+## Not read by any code; the look comes from GameSettings.look.
 @export var start_level: Level = Level.PS1
 
 var _rect: ColorRect
@@ -21,6 +22,7 @@ var _env: Environment
 var _env_defaults: Dictionary = {}
 
 
+## Name of the current look, for menus.
 static func level_name() -> String:
 	return LEVEL_NAMES[level]
 
@@ -86,6 +88,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		GameSettings.save()
 
 
+## Switches to look new_level (a Level) and applies it straight away.
 func set_level(new_level: int) -> void:
 	level = new_level
 	_apply()

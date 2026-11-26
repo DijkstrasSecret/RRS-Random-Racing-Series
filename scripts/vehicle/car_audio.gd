@@ -51,6 +51,7 @@ func _ready() -> void:
 		_whine = _player("ev_whine", 12.0)
 
 
+## Sets the volume offset for all this car's sounds, in dB (replaces the car's own engine_sound_gain_db).
 func set_gain(db: float) -> void:
 	gain_db = db
 

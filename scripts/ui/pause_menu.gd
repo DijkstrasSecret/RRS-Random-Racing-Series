@@ -71,6 +71,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		resume()
 
 
+## Pauses the game, lowers the music, stops gamepad vibration and shows the menu.
 func open() -> void:
 	get_tree().paused = true
 	MusicPlayer.duck(true)
@@ -80,6 +81,7 @@ func open() -> void:
 	_show_main()
 
 
+## Hides the menu, unpauses the game and brings the music back up.
 func resume() -> void:
 	visible = false
 	get_tree().paused = false

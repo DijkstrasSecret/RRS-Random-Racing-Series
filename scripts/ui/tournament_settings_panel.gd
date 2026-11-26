@@ -4,7 +4,9 @@ extends VBoxContainer
 ## difficulty and car classes, time of day, weather and damage.
 ## START TOURNAMENT is selected first.
 
+## Emitted when the player presses START TOURNAMENT.
 signal start
+## Emitted when the player leaves without starting (BACK or Esc / B).
 signal back
 
 const TRACK_SETS: PackedStringArray = ["ALL TRACKS", "F1 CIRCUITS", "RALLYCROSS + ISLAND"]
@@ -58,6 +60,7 @@ func _slider(row_title: String, from: float, to: float, step_by: float, start: f
 	add_child(row)
 
 
+## Shows the panel for 1 or 2 players with START TOURNAMENT focused.
 func open(players: int) -> void:
 	_players = players
 	_start_button.grab_focus.call_deferred()

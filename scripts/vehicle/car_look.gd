@@ -38,6 +38,7 @@ static func grade_paint(c: Color) -> Color:
 ## Body surfaces get the baked shading (strength SHADE_AMOUNT).
 const SHADE_AMOUNT := 1.0
 
+## Puts the baked shading texture on a body mesh's material; other meshes are left alone.
 static func apply_shade(mat: ShaderMaterial, mi: MeshInstance3D, shade: Texture2D) -> void:
 	if shade and String(mi.name).begins_with("body"):
 		mat.set_shader_parameter("shade_tex", shade)
