@@ -9,6 +9,7 @@
 GODOT   ?= godot
 PY      ?= python3
 TIMEOUT ?= timeout 900
+LYCHEE  ?= lychee
 # Extra arguments for a single test, e.g. make test-race_test ARGS="--laps=2 --track=rx"
 ARGS    ?=
 
@@ -26,7 +27,7 @@ test_target = $(if $(wildcard tests/$(1).tscn),res://tests/$(1).tscn,-s res://te
 HIDE_MUSIC_ERRORS := awk '/ERROR:.*(mp3|soundtrack)/ {skip=1; next} skip && /^[[:space:]]/ {next} {skip=0; print}'
 
 .DEFAULT_GOAL := help
-.PHONY: help play editor import test hitbox car-configs sounds pdf
+.PHONY: help play editor import test hitbox docs-check car-configs sounds pdf
 
 help: ## List the commands
 	@grep -hE '^[a-zA-Z_%-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -55,6 +56,16 @@ test-%: ## Run one test, e.g. make test-damage_test [ARGS="..."]
 
 hitbox: ## Check collision matches drawn geometry (opens a window)
 	$(GODOT) --path . -s res://tests/hitbox_check.gd
+
+docs-check: ## Check doc comments in scripts/, and links and quoted paths in the docs
+	@status=0; \
+	$(PY) tools/docs_check.py || status=1; \
+	if command -v $(LYCHEE) >/dev/null 2>&1; then \
+		$(LYCHEE) --offline --no-progress --include-fragments CLAUDE.md 'docs/**/*.md' || status=1; \
+	else \
+		echo "lychee not found: install it from https://github.com/lycheeverse/lychee/releases"; status=1; \
+	fi; \
+	exit $$status
 
 car-configs: ## Regenerate assets/cars/<id>/<id>.tres from tools/make_car_configs.py
 	$(PY) tools/make_car_configs.py
