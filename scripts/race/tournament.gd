@@ -83,18 +83,22 @@ static func is_final() -> bool:
 	return race_index >= RACES - 1
 
 
+## Track id of the race being played (the last one once the series is over).
 static func current_track() -> String:
 	return tracks[mini(race_index, tracks.size() - 1)]
 
 
+## Laps per tournament race (always RACE_LAPS).
 static func current_laps() -> int:
 	return RACE_LAPS
 
 
+## Heading for the race, e.g. "RACE 4 / 6  ·  SCORED".
 static func race_title() -> String:
 	return "RACE %d / %d%s" % [race_index + 1, RACES, "  ·  SCORED" if is_scored() else ""]
 
 
+## Index in racers of the racer with this name, or -1.
 static func find(racer_name: String) -> int:
 	for i in racers.size():
 		if racers[i].name == racer_name:
@@ -102,6 +106,7 @@ static func find(racer_name: String) -> int:
 	return -1
 
 
+## The racer dictionary of player 1 or 2, or {} if that player isn't in the tournament.
 static func human(player: int) -> Dictionary:
 	for r in racers:
 		if int(r.player) == player:
@@ -211,6 +216,7 @@ static func restore_car(r: Dictionary, car: Vehicle) -> void:
 		car.damage.restore(PackedFloat32Array(dmg))
 
 
+## Sum of a racer's damage over all zones (each zone 0–1); 0 for an undamaged car.
 static func damage_total(r: Dictionary) -> float:
 	var dmg: Array = r.get("damage", [])
 	if dmg.is_empty():
@@ -221,6 +227,7 @@ static func damage_total(r: Dictionary) -> float:
 	return s / dmg.size()
 
 
+## Average tyre wear of a racer over its four tyres, 0 (new) – 1 (worn out).
 static func tyre_wear_avg(r: Dictionary) -> float:
 	var s := 0.0
 	for w in r.tyre_wear:
@@ -228,6 +235,7 @@ static func tyre_wear_avg(r: Dictionary) -> float:
 	return s / 4.0
 
 
+## Shop points to repair all damage: REPAIR_COST_PER_10 per started 10%; 0 if undamaged.
 static func repair_cost(r: Dictionary) -> int:
 	var d := damage_total(r)
 	return 0 if d <= 0.001 else maxi(1, ceili(d * 10.0) * REPAIR_COST_PER_10)
@@ -268,6 +276,8 @@ static func _ai_shop(r: Dictionary) -> void:
 			buy(r, card)
 
 
+## Buys a shop card for racer r: pays for it, applies it and removes it from the offers.
+## Returns false, and changes nothing, if r can't afford it or can't take another of that item.
 static func buy(r: Dictionary, card: Dictionary) -> bool:
 	var c := Upgrades.cost(card)
 	if c > int(r.wallet):
@@ -280,6 +290,7 @@ static func buy(r: Dictionary, card: Dictionary) -> bool:
 	return true
 
 
+## Buys four new tyres for racer r. Returns false if r can't afford them or the tyres are unworn.
 static func buy_tyres(r: Dictionary) -> bool:
 	if TYRES_COST > int(r.wallet) or tyre_wear_avg(r) <= 0.001:
 		return false
@@ -288,6 +299,7 @@ static func buy_tyres(r: Dictionary) -> bool:
 	return true
 
 
+## Repairs all of racer r's damage. Returns false if there's nothing to repair or r can't afford it.
 static func repair(r: Dictionary) -> bool:
 	var c := repair_cost(r)
 	if c == 0 or c > int(r.wallet):
@@ -308,6 +320,7 @@ static func next_rival(r: Dictionary) -> void:
 	r.rival = k
 
 
+## Pays reroll_cost() and replaces racer r's shop offers with new ones. Returns false if r can't afford it.
 static func reroll(r: Dictionary) -> bool:
 	var c := reroll_cost(r)
 	if c > int(r.wallet):
@@ -333,5 +346,6 @@ static func race_scene() -> String:
 	return GameSettings.VERSUS if players == 2 else GameSettings.RACE
 
 
+## Ends the tournament session. The racers and standings stay readable.
 static func finish() -> void:
 	active = false

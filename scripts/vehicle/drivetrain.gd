@@ -18,11 +18,13 @@ var boost: float = 1.0
 var limiter_active: bool = false
 
 
+## Takes the car's config and resets to first gear at idle.
 func setup(cfg: VehicleConfig) -> void:
 	config = cfg
 	reset()
 
 
+## First gear, idle rpm, no shift in progress, turbo boost back to its starting level.
 func reset() -> void:
 	gear = 1
 	rpm = config.idle_rpm
@@ -32,6 +34,7 @@ func reset() -> void:
 	limiter_active = false
 
 
+## Number of forward gears.
 func gear_count() -> int:
 	return config.gear_ratios.size()
 
@@ -45,6 +48,7 @@ func gear_ratio() -> float:
 	return 0.0
 
 
+## Gear as shown on the HUD: "R", "N", "D" for an electric car, or the gear number.
 func gear_label() -> String:
 	if gear < 0:
 		return "R"
@@ -55,6 +59,7 @@ func gear_label() -> String:
 	return str(gear)
 
 
+## Changes to new_gear (-1 reverse, 0 neutral, 1…gear_count()) and starts a shift of config.shift_time seconds with no drive.
 func set_gear(new_gear: int) -> void:
 	new_gear = clampi(new_gear, -1, gear_count())
 	if new_gear == gear:
@@ -63,14 +68,17 @@ func set_gear(new_gear: int) -> void:
 	shift_timer = config.shift_time
 
 
+## One gear up (see set_gear).
 func shift_up() -> void:
 	set_gear(gear + 1)
 
 
+## One gear down (see set_gear).
 func shift_down() -> void:
 	set_gear(gear - 1)
 
 
+## Full-throttle engine torque at at_rpm, N·m, from config.torque_curve (before turbo and gearing).
 func engine_torque_at(at_rpm: float) -> float:
 	var pts := config.torque_curve
 	if pts.is_empty():

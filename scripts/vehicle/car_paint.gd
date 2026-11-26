@@ -8,6 +8,7 @@ extends RefCounted
 static var _cache: Dictionary = {}
 
 
+## Texture `base` repainted in `color`; `reference` is the same texture in another colour, used to find the paint pixels.
 static func make(base: Texture2D, reference: Texture2D, color: Color) -> Texture2D:
 	var key := "%s|%s|%s" % [base.resource_path, reference.resource_path, color.to_html()]
 	if _cache.has(key):

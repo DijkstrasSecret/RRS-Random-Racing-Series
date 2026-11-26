@@ -3,8 +3,11 @@ extends Node3D
 ## first gamepad), player 2 below (arrow keys / second gamepad).
 ## F3 or F2 goes back to single player, Esc / Start opens the pause menu.
 
+## The Circuit the race runs on.
 @export var circuit_path: NodePath
+## The two players' cars, player 1 first.
 @export var car_paths: Array[NodePath] = []
+## Scene F2 / F3 goes back to.
 @export_file("*.tscn") var single_player_scene: String = "res://scenes/modes/circuit_race.tscn"
 
 

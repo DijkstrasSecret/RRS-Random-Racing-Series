@@ -44,6 +44,7 @@ static func has_livery(id: String) -> bool:
 	return bool(entry(id).get("livery", false))
 
 
+## Class of car `id`: 0 = D (slowest) … 3 = A.
 static func tier(id: String) -> int:
 	return int(entry(id).get("tier", 1))
 
@@ -57,6 +58,7 @@ static func ids_in_tiers(mask: int) -> PackedStringArray:
 	return out
 
 
+## Every car id, in roster order.
 static func ids() -> PackedStringArray:
 	var out := PackedStringArray()
 	for c in CARS:
@@ -70,6 +72,7 @@ static func short_name(id: String) -> String:
 	return String(e.get("short", String(e.name).split(" ")[0]))
 
 
+## Every car's display name, in roster order.
 static func names() -> PackedStringArray:
 	var out := PackedStringArray()
 	for c in CARS:
@@ -77,6 +80,7 @@ static func names() -> PackedStringArray:
 	return out
 
 
+## The roster entry (id, tier, name, tagline …) of car `id`; the first car if the id is unknown.
 static func entry(id: String) -> Dictionary:
 	for c in CARS:
 		if c.id == id:
@@ -84,6 +88,7 @@ static func entry(id: String) -> Dictionary:
 	return CARS[0]
 
 
+## Position of car `id` in CARS; 0 if the id is unknown.
 static func index_of(id: String) -> int:
 	for i in CARS.size():
 		if CARS[i].id == id:
@@ -91,14 +96,17 @@ static func index_of(id: String) -> int:
 	return 0
 
 
+## Path of the car's .glb model: assets/cars/<id>/<id>.glb unless the entry names another.
 static func model_path(id: String) -> String:
 	return entry(id).get("model", "res://assets/cars/%s/%s.glb" % [id, id])
 
 
+## Path of the car's VehicleConfig: assets/cars/<id>/<id>.tres unless the entry names another.
 static func config_path(id: String) -> String:
 	return entry(id).get("config", "res://assets/cars/%s/%s.tres" % [id, id])
 
 
+## Loads the VehicleConfig of car `id`. The resource is shared, so duplicate it before changing values.
 static func config(id: String) -> VehicleConfig:
 	return load(config_path(id)) as VehicleConfig
 

@@ -4,7 +4,9 @@ extends VBoxContainer
 ## short description, its specs and 0-10 bars for the main stats.
 ## `car_shown(id)` tells the menu which car to display in the 3D preview.
 
+## Emitted when the player leaves the garage (BACK or Esc / B).
 signal closed
+## Emitted when the selected car changes: its id and whether its livery is on.
 signal car_shown(id: String, livery: bool)
 
 var _p1: OptionRow
@@ -65,6 +67,7 @@ func _ready() -> void:
 	add_child(back)
 
 
+## Focuses player 1's car row and refreshes the preview.
 func focus_first() -> void:
 	_p1.grab_focus.call_deferred()
 	_refresh.call_deferred()

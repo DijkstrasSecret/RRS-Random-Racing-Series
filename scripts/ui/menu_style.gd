@@ -12,6 +12,7 @@ const SOFT := Color(1, 1, 1, 0.78)
 const DIM := Color(0.8, 0.82, 0.86, 0.85)
 
 
+## Builds the shared menu Theme: fonts, colours, and button and panel styles.
 static func make_theme() -> Theme:
 	var t := Theme.new()
 	t.default_font_size = 24
@@ -86,6 +87,7 @@ static func section(text: String) -> Label:
 	return l
 
 
+## A menu button that calls on_press when pressed. Mouse hover focuses it, so hover and gamepad selection look the same.
 static func button(text: String, on_press: Callable) -> Button:
 	var b := Button.new()
 	b.text = text
@@ -110,6 +112,7 @@ static func logo(width: float) -> TextureRect:
 	rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return rect
 
+## A Label in the menu font, `font_size` in pixels.
 static func label(text: String, font_size: int = 22, color: Color = TEXT) -> Label:
 	var l := Label.new()
 	l.text = text

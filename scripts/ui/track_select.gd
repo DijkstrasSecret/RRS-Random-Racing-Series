@@ -6,7 +6,9 @@ extends Control
 ## Left / right to browse, Enter / Space / A to pick, Esc / B to go back.
 ## In split screen either player can choose.
 
+## Emitted after a track is picked; GameSettings.track is already set and saved.
 signal done
+## Emitted when the player backs out without picking.
 signal back
 
 const CLIP_DIR := "res://assets/ui/track_clips/%s.ogv"
@@ -139,11 +141,13 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+## Shows the screen with the track from GameSettings selected.
 func open() -> void:
 	GameSettings.ensure_loaded()
 	_select(TrackList.index_of(GameSettings.track))
 
 
+## Id of the track that is currently selected.
 func selected_id() -> String:
 	return TrackList.TRACKS[_index].id
 
@@ -229,7 +233,9 @@ func _draw_map(box: Rect2, o: Dictionary, color: Color, width: float) -> void:
 
 ## A small map card for the bottom row: outline, name, series colour strip.
 class TrackCard extends Control:
+	## Emitted when the mouse enters the card.
 	signal hovered
+	## Emitted when the card is clicked.
 	signal clicked
 
 	var track_id: String

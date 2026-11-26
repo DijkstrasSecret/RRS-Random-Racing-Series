@@ -214,6 +214,7 @@ const TRACKS: Array[Dictionary] = [
 ]
 
 
+## Every track id, in list order.
 static func ids() -> PackedStringArray:
 	var out := PackedStringArray()
 	for t in TRACKS:
@@ -221,6 +222,7 @@ static func ids() -> PackedStringArray:
 	return out
 
 
+## Position of track `id` in TRACKS; 0 if the id is unknown.
 static func index_of(id: String) -> int:
 	for i in TRACKS.size():
 		if TRACKS[i].id == id:
@@ -228,6 +230,7 @@ static func index_of(id: String) -> int:
 	return 0
 
 
+## The track dictionary (points, seed, sectors …) of `id`; the first track if the id is unknown.
 static func get_track(id: String) -> Dictionary:
 	return TRACKS[index_of(id)]
 
@@ -243,6 +246,7 @@ static func display_name(id: String) -> String:
 	return " ".join(words)
 
 
+## Control points (x, z), in metres, of track `id`.
 static func points_of(id: String) -> PackedVector2Array:
 	return PackedVector2Array(get_track(id).points)
 

@@ -4,6 +4,7 @@ extends Button
 ## Left / right (keys, D-pad, stick; hold to keep going) or the mouse on the
 ## bar change it in steps. The title is the button text.
 
+## Emitted with the new value after the player changes it.
 signal value_changed(value: float)
 
 var min_value := 0.0
@@ -16,6 +17,7 @@ var format := "%d"
 const BAR_W := 240.0
 
 
+## A slider row from `from` to `to` in steps of step_by, starting at `start`. `fmt` formats the value, e.g. "%d%%".
 static func create(row_title: String, from: float, to: float, step_by: float, start: float, fmt: String) -> SliderRow:
 	var row := SliderRow.new()
 	row.text = row_title
@@ -53,6 +55,7 @@ func _gui_input(event: InputEvent) -> void:
 		accept_event()
 
 
+## Sets the value, snapped to the step and clamped to the range; emits value_changed if it changed.
 func set_value(v: float) -> void:
 	v = clampf(snappedf(v - min_value, step_size) + min_value, min_value, max_value)
 	if is_equal_approx(v, value):

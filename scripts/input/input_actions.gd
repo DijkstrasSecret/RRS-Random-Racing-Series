@@ -9,6 +9,7 @@ const STICK_DEADZONE := 0.12
 const TRIGGER_DEADZONE := 0.04
 
 
+## Registers every input action and its default keys and gamepad buttons. Safe to call more than once.
 static func ensure() -> void:
 	_add("throttle", [_key(KEY_W), _key(KEY_UP), _axis(JOY_AXIS_TRIGGER_RIGHT, 1.0)], TRIGGER_DEADZONE)
 	_add("brake", [_key(KEY_S), _key(KEY_DOWN), _axis(JOY_AXIS_TRIGGER_LEFT, 1.0)], TRIGGER_DEADZONE)
