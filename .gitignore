@@ -3,11 +3,13 @@
 /android/
 *.translation
 
-# Godot export output and credentials
-export_presets.cfg
+# Godot export output and credentials (export_presets.cfg is committed; it holds no secrets)
 export_credentials.cfg
 /build/
 /exports/
+
+# Downloaded by tools/fetch_webrtc.py (make webrtc), not committed
+addons/webrtc_native/
 
 # Mono / C# (in case it's ever used)
 .mono/

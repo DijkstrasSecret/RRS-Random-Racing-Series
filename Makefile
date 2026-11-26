@@ -27,7 +27,7 @@ test_target = $(if $(wildcard tests/$(1).tscn),res://tests/$(1).tscn,-s res://te
 HIDE_MUSIC_ERRORS := awk '/ERROR:.*(mp3|soundtrack)/ {skip=1; next} skip && /^[[:space:]]/ {next} {skip=0; print}'
 
 .DEFAULT_GOAL := help
-.PHONY: help play editor import test hitbox docs-check car-configs sounds pdf
+.PHONY: help play editor import webrtc test hitbox docs-check car-configs sounds pdf export-web export-windows export-linux serve-web
 
 help: ## List the commands
 	@grep -hE '^[a-zA-Z_%-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -39,6 +39,10 @@ editor: ## Open the project in the Godot editor
 	$(GODOT) --editor --path .
 
 import: ## Import assets (needed once after a fresh clone, before tests)
+	$(GODOT) --headless --path . --import
+
+webrtc: ## Download the desktop WebRTC add-on and import it (needed once, before net tests)
+	$(PY) tools/fetch_webrtc.py
 	$(GODOT) --headless --path . --import
 
 test: $(addprefix test-,$(SMOKE_TESTS)) ## Run all main smoke tests
@@ -66,6 +70,21 @@ docs-check: ## Check doc comments in scripts/, and links and quoted paths in the
 		echo "lychee not found: install it from https://github.com/lycheeverse/lychee/releases"; status=1; \
 	fi; \
 	exit $$status
+
+export-windows: ## Export the Windows build to build/windows/
+	mkdir -p build/windows
+	$(GODOT) --headless --path . --export-release "Windows Desktop" build/windows/RRS.exe
+
+export-linux: ## Export the Linux build to build/linux/
+	mkdir -p build/linux
+	$(GODOT) --headless --path . --export-release "Linux" build/linux/RRS.x86_64
+
+export-web: ## Export the Web (no-threads) build to build/web/
+	mkdir -p build/web
+	$(GODOT) --headless --path . --export-release "Web" build/web/index.html
+
+serve-web: ## Serve build/web/ at http://localhost:8060
+	$(PY) -m http.server 8060 -d build/web
 
 car-configs: ## Regenerate assets/cars/<id>/<id>.tres from tools/make_car_configs.py
 	$(PY) tools/make_car_configs.py

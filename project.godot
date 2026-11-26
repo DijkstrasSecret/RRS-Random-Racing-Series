@@ -12,6 +12,7 @@ config_version=5
 
 config/name="RRS - Random Racing Series"
 config/description="Physics-based semi-realistic / semi-arcade racing game."
+config/version="0.1.0"
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/bg_color=Color(0.03, 0.03, 0.06, 1)
