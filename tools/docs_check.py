@@ -11,7 +11,8 @@ script needs a `##` line in its header, before the first declaration.
 
 paths: every repo path quoted in backticks in a Markdown doc, such as
 `scripts/race/upgrades.gd` or `res://tests/race_test.tscn`, must exist.
-Paths with placeholders (`<id>`, `*`) are skipped. Relative links between
+Paths with placeholders (`<id>`, `*`) are skipped, and so are docs in
+docs/plans/, which name files that a plan has yet to create. Relative links between
 docs are checked by lychee (`make docs-check`), not here.
 
 Prints one `file:line: problem` per finding and exits 1 if there are any.
@@ -23,7 +24,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOP_DIRS = ("addons", "assets", "docs", "scenes", "scripts", "soundtrack", "tests", "tools")
-MD_FILES = ["CLAUDE.md", *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").rglob("*.md"))]
+# Plans in docs/plans/ name files that don't exist yet, so their paths aren't checked.
+MD_FILES = ["CLAUDE.md", *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").rglob("*.md")
+                                 if "plans" not in p.relative_to(ROOT / "docs").parts[:1])]
 
 DECL = re.compile(r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(signal|var|const|enum|func|static\s+func|class)\b")
 SIGNAL = re.compile(r"^\s*signal\s+(\w+)")

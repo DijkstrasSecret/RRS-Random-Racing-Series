@@ -19,7 +19,7 @@ RRS-Random-Racing-Series/
 │   ├── ui/                Logo, cover and splash images.
 │   │   └── track_clips/   Short .ogv preview videos for each track on the track select screen.
 │   └── vfx/shaders/       The PS1-style lit and decal shaders, cloud shaders and the preview-screen shader.
-├── docs/                  Project docs by purpose: design/, architecture/, decisions/ (ADRs), research/, reviews/; index in docs/README.md.
+├── docs/                  Project docs by purpose: design/, architecture/, decisions/ (ADRs), research/, reviews/, plans/; index in docs/README.md.
 ├── scenes/
 │   ├── modes/             Playable mode scenes: free roam, practice, circuit race and versus race.
 │   ├── tracks/            The procedural circuit scene and a test track.
