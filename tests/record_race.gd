@@ -101,7 +101,7 @@ func _run() -> void:
 		if _race.finish_order.size() > 0 and finished_at < 0.0:
 			finished_at = _race.race_time
 		# A few seconds after the winner, while the rest come home, then stop.
-		if finished_at > 0.0 and _race.race_time > finished_at + 9.0:
+		if finished_at > 0.0 and _race.race_time > finished_at + 13.0:
 			break
 	quit()
 
@@ -209,9 +209,10 @@ func _finish_line(leader: Vehicle) -> void:
 	if _shot != "finish":
 		_shot = "finish"
 		_shot_start = _race.race_time
-		var side := -1.0 if _circuit.infield_side() == 0 else 1.0  # infield side, by the pit wall
-		_fixed_pos = _circuit.point_at(8.0) + _circuit.right_at(8.0) * side * 10.0
-		_fixed_pos.y = _circuit.surface_height(_fixed_pos.x, _fixed_pos.z) + 1.6
+		# Up on the grandstand side just past the line, clear of the gantry legs.
+		var side := 1.0 if _circuit.infield_side() == 0 else -1.0
+		_fixed_pos = _circuit.point_at(30.0) + _circuit.right_at(30.0) * side * (_circuit.road_width * 0.5 + 5.0)
+		_fixed_pos.y = _circuit.surface_height(_fixed_pos.x, _fixed_pos.z) + 5.5
 	_cam.global_position = _fixed_pos
 	var watch := leader
 	if not _race.finish_order.is_empty():
@@ -244,7 +245,6 @@ func _build_overlay(scene: Node) -> void:
 	_caption.anchor_bottom = 1.0
 	_caption.offset_top = -130
 	_results = _make_label(layer, Vector2(0, 0), 30, font)
-	_results.set_anchors_preset(Control.PRESET_CENTER)
 	_results.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_results.visible = false
 
@@ -292,7 +292,8 @@ func _update_overlay(track: String) -> void:
 			res.append("%2d  %-7s %-12s %s" % [p + 1, _race.name_at(i).trim_prefix("AI_"), CarRoster.short_name(String(_race.vehicle_at(i).get_meta(&"car_id", "?"))), t])
 		_results.text = "\n".join(res)
 		_results.visible = true
-		_results.position = Vector2(-330, -200)
+		_results.reset_size()
+		_results.position = (_results.get_viewport_rect().size - _results.size) * 0.5
 
 
 func _shot_title() -> String:
