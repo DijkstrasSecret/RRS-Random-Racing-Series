@@ -110,8 +110,6 @@ func _build_ui() -> void:
 	_main.add_child(MenuStyle.button("TOURNAMENT", _show_tournament_choice))
 	_main.add_child(MenuStyle.button("GARAGE", _show_garage))
 	_main.add_child(MenuStyle.button("PRACTICE", func() -> void: _go(GameSettings.PRACTICE)))
-	_main.add_child(MenuStyle.button("OBSTACLE COURSE", func() -> void: _go(GameSettings.OBSTACLE_COURSE)))
-	_main.add_child(MenuStyle.button("TEST TRACK", func() -> void: _go(GameSettings.TEST_TRACK)))
 	_main.add_child(MenuStyle.button("SETTINGS", _show_settings))
 	_main.add_child(MenuStyle.button("CONTROLS", _show_controls))
 	_main.add_child(MenuStyle.button("QUIT", func() -> void: get_tree().quit()))
