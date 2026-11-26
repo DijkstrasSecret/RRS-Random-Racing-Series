@@ -171,7 +171,36 @@ func _heightfield(circuit: Circuit) -> void:
 			# A few cm under the road next to it (like the old flat ground).
 			var sink := 0.06 * (1.0 - smoothstep(40.0, 70.0, d))
 			_heights[i] = _base[i] + maxf(h, 0.0) - sink
+	if circuit.oval:
+		_embankment(circuit)
 	_clear_road(circuit)
+
+
+## An oval's banked turns stand on an embankment: outside them the land
+## rises to the top of the banking and slopes back down over ~45 m.
+func _embankment(circuit: Circuit) -> void:
+	var half := circuit.road_width * 0.5
+	var out_dir := 1.0 if circuit.infield_side() == 0 else -1.0
+	for k in range(0, circuit._samples.size(), 2):
+		var smp: Dictionary = circuit._samples[k]
+		var top := absf(float(smp.tilt)) * circuit.road_width
+		if top < 0.3:
+			continue
+		var c: Vector3 = circuit.to_global(smp.pos)
+		var right: Vector3 = smp.right
+		# From under the inside edge (the land under the banking) outwards.
+		var lat := -half
+		while lat < half + 60.0:
+			var q := c + right * out_dir * lat
+			var gx := int(round((q.x - _origin.x) / CELL))
+			var gz := int(round((q.z - _origin.y) / CELL))
+			if gx >= 0 and gz >= 0 and gx < _w and gz < _h:
+				var want := c.y + top * (1.0 - 0.5 * (1.0 - Circuit.BANK_PIVOT)) * (1.0 - smoothstep(half + 4.0, half + 52.0, lat))
+				if lat < half:
+					want = c.y + top * ((lat + half) / circuit.road_width - 0.5 * (1.0 - Circuit.BANK_PIVOT)) - 0.25  # just under the road
+				var i := gz * _w + gx
+				_heights[i] = maxf(_heights[i], want)
+			lat += CELL * 0.25
 
 
 ## The 16 m grid can bulge above the road in a dip: wherever the ground

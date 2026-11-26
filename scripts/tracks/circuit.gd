@@ -56,6 +56,9 @@ var bridge := Vector2(-1.0, -1.0)
 ## Banked turns (an oval): [lap fraction, degrees] keys, eased between; the
 ## outside of the turn is the high side. Empty = flat road everywhere.
 var bank_keys: Array = []
+## Where a banked road pivots: 1 = round its inside edge (the infield stays
+## level with it), 0 = round the centre line.
+const BANK_PIVOT := 1.0
 ## Oval track: walls right at the outside edge, no curbs.
 var oval := false
 ## Grip and extra rolling drag of each road surface.
@@ -476,9 +479,14 @@ func surface_y(x: float, z: float, fallback: float = 0.0) -> float:
 					var smp: Dictionary = _samples[k]
 					var h := p.y
 					if smp.tilt != 0.0:
-						# Banked: higher toward the outside of the turn.
+						# Banked: higher toward the outside of the turn. The inside
+						# edge stays at the centre line's height (the infield is
+						# level with it) and the outside is raised; past the
+						# edges the surface carries on level, not down a slope.
 						var right: Vector3 = smp.right
-						h += float(smp.tilt) * ((x - p.x) * right.x + (z - p.z) * right.z)
+						var half := road_width * 0.5
+						var lat := clampf((x - p.x) * right.x + (z - p.z) * right.z, -half, half)
+						h += float(smp.tilt) * lat + absf(float(smp.tilt)) * half * BANK_PIVOT
 					sum += h * w
 					wsum += w
 	return sum / wsum if wsum > 0.0 else fallback

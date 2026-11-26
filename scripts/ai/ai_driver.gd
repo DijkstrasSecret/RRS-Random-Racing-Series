@@ -37,6 +37,9 @@ var tune_turn_cut := 0.9
 @export var reset_after: float = 3.0
 
 var resets: int = 0
+## Out of the race (a wreck that kept leaving the road).
+var retired := false
+var _reset_times: Array[float] = []
 var target_speed: float = 0.0
 ## What set target_speed this frame ("plan", "follow", "slide", ...).
 var limiter: String = ""
@@ -63,6 +66,11 @@ var _corner_scale: float = 1.0
 
 func poll(delta: float) -> void:
 	if _circuit == null and not _setup():
+		return
+	if retired:
+		throttle = 0.0
+		brake = 1.0
+		steer = 0.0
 		return
 	_check_tyres(delta)
 	var v := _vehicle.forward_speed
@@ -686,6 +694,20 @@ func _wrecked() -> bool:
 ## Put the car back on the centre line, pointing the right way.
 func _reset_onto_track(off: float, _track_dir: Vector3) -> void:
 	resets += 1
+	# A wreck (bent steering, a wheel hanging off) goes straight back off the
+	# road every time: four resets inside a minute and it retires, parked
+	# beside the track instead of looping round being put back.
+	var race := _find_race()
+	var now := race.race_time if race else 0.0
+	_reset_times.append(now)
+	while not _reset_times.is_empty() and now - _reset_times[0] > 60.0:
+		_reset_times.remove_at(0)
+	if race and _reset_times.size() >= 4 and race.index_of(_vehicle) >= 0:
+		var side := -1.0 if _circuit.infield_side() == 0 else 1.0
+		_vehicle.teleport(_circuit.road_transform(off, side * (_circuit.road_width * 0.5 + 6.0)))
+		race.retire(race.index_of(_vehicle))
+		retired = true
+		return
 	_pitting = false  # decide again from the new spot (never steer into the pit wall)
 	_corner_scale = maxf(_corner_scale * 0.95, 0.8)
 	_build_profile()

@@ -82,7 +82,7 @@ func _race(track_id: String, race_seed: int, laps: int, player_skill: float) -> 
 	var brakes := {}
 	while race.race_time < limit:
 		await physics_frame
-		if race.car_count() > 0 and race.finish_order.size() == race.car_count():
+		if race.car_count() > 0 and race.finish_order.size() + race.retired.size() == race.car_count():
 			break
 		ticks += 1
 		if race.state == RaceDirector.State.RACING:
