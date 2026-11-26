@@ -31,55 +31,55 @@ const MAX_LEVEL := 3
 ## Stat cards: base value (fraction), whether it's a reduction (multiplicative),
 ## base price.
 const STATS := {
-	"power": {"name": "POWER", "value": 0.03, "reduce": false, "cost": 6, "fmt": "+%s%% engine power"},
-	"top_speed": {"name": "TOP SPEED", "value": 0.02, "reduce": false, "cost": 5, "fmt": "+%s%% top speed"},
-	"grip": {"name": "GRIP", "value": 0.03, "reduce": false, "cost": 6, "fmt": "+%s%% cornering grip"},
-	"braking": {"name": "BRAKING", "value": 0.04, "reduce": false, "cost": 4, "fmt": "+%s%% brake force"},
-	"weight": {"name": "WEIGHT", "value": 0.02, "reduce": true, "cost": 5, "fmt": "-%s%% weight"},
-	"tire_pres": {"name": "TIRE PRESERVATION", "value": 0.15, "reduce": true, "cost": 4, "fmt": "-%s%% tyre wear"},
-	"durability": {"name": "DURABILITY", "value": 0.03, "reduce": true, "cost": 4, "fmt": "-%s%% damage taken"},
+	"power": {"name": "POWER", "value": 0.03, "reduce": false, "cost": 4, "fmt": "+%s%% engine power"},
+	"top_speed": {"name": "TOP SPEED", "value": 0.02, "reduce": false, "cost": 4, "fmt": "+%s%% top speed"},
+	"grip": {"name": "GRIP", "value": 0.03, "reduce": false, "cost": 4, "fmt": "+%s%% cornering grip"},
+	"braking": {"name": "BRAKING", "value": 0.04, "reduce": false, "cost": 3, "fmt": "+%s%% brake force"},
+	"weight": {"name": "WEIGHT", "value": 0.02, "reduce": true, "cost": 4, "fmt": "-%s%% weight"},
+	"tire_pres": {"name": "TIRE PRESERVATION", "value": 0.15, "reduce": true, "cost": 3, "fmt": "-%s%% tyre wear"},
+	"durability": {"name": "DURABILITY", "value": 0.03, "reduce": true, "cost": 3, "fmt": "-%s%% damage taken"},
 }
 
 ## Unlock cards. "max" 1 = can't level up; "consumable" = bought fresh each time.
 const UNLOCKS := {
 	# Skill passives (max 4 owned).
-	"perfect_shift": {"name": "PERFECT SHIFT", "kind": Kind.PASSIVE, "cost": 10,
+	"perfect_shift": {"name": "PERFECT SHIFT", "kind": Kind.PASSIVE, "cost": 7,
 		"desc": "Upshift (RB / E) right at the redline: a short power boost. Levels widen the window."},
-	"heel_toe": {"name": "HEEL-TOE", "kind": Kind.PASSIVE, "cost": 9,
+	"heel_toe": {"name": "HEEL-TOE", "kind": Kind.PASSIVE, "cost": 6,
 		"desc": "Downshift (LB / Q) while braking: steadies the rear and fills a meter. Full meter: extra grip out of the next corner."},
-	"drift_harvest": {"name": "DRIFT HARVEST", "kind": Kind.PASSIVE, "cost": 9,
+	"drift_harvest": {"name": "DRIFT HARVEST", "kind": Kind.PASSIVE, "cost": 6,
 		"desc": "Long handbrake slides (A / Space) charge your X item."},
-	"late_braker": {"name": "LATE BRAKER", "kind": Kind.PASSIVE, "cost": 9,
+	"late_braker": {"name": "LATE BRAKER", "kind": Kind.PASSIVE, "cost": 6,
 		"desc": "Brake late for a corner: extra grip on the way out."},
-	"clean_sector": {"name": "CLEAN SECTOR", "kind": Kind.PASSIVE, "cost": 10,
+	"clean_sector": {"name": "CLEAN SECTOR", "kind": Kind.PASSIVE, "cost": 7,
 		"desc": "No wall contact for 8 s: your X item slowly recharges."},
 	# Power actives (X).
-	"nitro_burst": {"name": "NITRO: BURST", "kind": Kind.POWER, "cost": 10,
+	"nitro_burst": {"name": "NITRO: BURST", "kind": Kind.POWER, "cost": 7,
 		"desc": "X: one big 2.5 s nitro burst (+55% power)."},
-	"nitro_charges": {"name": "NITRO: CHARGES", "kind": Kind.POWER, "cost": 10,
+	"nitro_charges": {"name": "NITRO: CHARGES", "kind": Kind.POWER, "cost": 7,
 		"desc": "X: three short 1 s boosts (+45% power)."},
-	"nitro_regen": {"name": "NITRO: REGEN", "kind": Kind.POWER, "cost": 9,
+	"nitro_regen": {"name": "NITRO: REGEN", "kind": Kind.POWER, "cost": 6,
 		"desc": "Hold X: a small nitro bottle (+35%) that refills by itself."},
-	"kers": {"name": "KERS", "kind": Kind.POWER, "cost": 11,
+	"kers": {"name": "KERS", "kind": Kind.POWER, "cost": 8,
 		"desc": "Braking stores energy; hold X to deploy it (+40% power)."},
-	"push_to_pass": {"name": "PUSH-TO-PASS", "kind": Kind.POWER, "cost": 8,
+	"push_to_pass": {"name": "PUSH-TO-PASS", "kind": Kind.POWER, "cost": 6,
 		"desc": "X: 3 uses per race, 3 s of +25% power each."},
 	# Tactical actives (Y).
-	"engine_map": {"name": "ENGINE MAP", "kind": Kind.TACTICAL, "cost": 9,
+	"engine_map": {"name": "ENGINE MAP", "kind": Kind.TACTICAL, "cost": 6,
 		"desc": "Y: switch POWER map (+6% power) / STABILITY map (traction control, steadier rear)."},
-	"drs": {"name": "DRS", "kind": Kind.TACTICAL, "cost": 11,
+	"drs": {"name": "DRS", "kind": Kind.TACTICAL, "cost": 8,
 		"desc": "Hold Y within 1 s of the car ahead: -22% drag (more top speed). Closes when you brake."},
 	# Risk / curse.
-	"overbored": {"name": "OVERBORED ENGINE", "kind": Kind.RISK, "cost": 8, "max": 1,
+	"overbored": {"name": "OVERBORED ENGINE", "kind": Kind.RISK, "cost": 6, "max": 1,
 		"desc": "+12% power, but sitting on the redline overheats the engine and damages it."},
-	"stripped": {"name": "STRIPPED INTERIOR", "kind": Kind.RISK, "cost": 8, "max": 1,
+	"stripped": {"name": "STRIPPED INTERIOR", "kind": Kind.RISK, "cost": 6, "max": 1,
 		"desc": "-12% weight, but wall hits cost you more speed."},
 	"bet": {"name": "BET ON YOURSELF", "kind": Kind.RISK, "cost": 6, "max": 1, "consumable": true,
 		"desc": "Stake 6 points: a podium next race pays 12, anything else loses the stake."},
 	# Economy.
-	"interest": {"name": "INTEREST", "kind": Kind.ECONOMY, "cost": 8, "max": 1,
+	"interest": {"name": "INTEREST", "kind": Kind.ECONOMY, "cost": 6, "max": 1,
 		"desc": "Unspent points grow 10% every round (up to +10)."},
-	"rival_bounty": {"name": "RIVAL BOUNTY", "kind": Kind.ECONOMY, "cost": 6, "max": 1,
+	"rival_bounty": {"name": "RIVAL BOUNTY", "kind": Kind.ECONOMY, "cost": 4, "max": 1,
 		"desc": "Pick a rival in the shop. Beat them in a race: +6 points."},
 }
 
@@ -156,6 +156,20 @@ static func passive_count(r: Dictionary) -> int:
 	return n
 
 
+## False for a card that would do nothing in this tournament: damage cards
+## with damage off, tyre cards with tyre wear off, X-item chargers for a
+## racer without an X item.
+static func useful(r: Dictionary, id: String) -> bool:
+	match id:
+		"durability", "overbored":
+			return GameSettings.damage > 0
+		"tire_pres":
+			return GameSettings.tyre_wear > 0.0
+		"drift_harvest", "clean_sector":
+			return String(r.get("power_slot", "")) != ""
+	return true
+
+
 ## True if this racer can take the unlock (not maxed, passive slots left,
 ## a bet not already running).
 static func can_take(r: Dictionary, id: String) -> bool:
@@ -174,7 +188,7 @@ static func can_take(r: Dictionary, id: String) -> bool:
 ## {id, tier} (tier -1 for unlocks).
 static func offers(rng: RandomNumberGenerator, r: Dictionary, round_i: int, rounds: int, human: bool = true) -> Array:
 	var out: Array = []
-	var stats := STATS.keys()
+	var stats := STATS.keys().filter(func(id: String) -> bool: return useful(r, id))
 	for k in 2:
 		var id: String = stats[rng.randi() % stats.size()]
 		stats.erase(id)
@@ -185,7 +199,7 @@ static func offers(rng: RandomNumberGenerator, r: Dictionary, round_i: int, roun
 		# The AI only uses the X / Y items.
 		if not human and kind != Kind.POWER and kind != Kind.TACTICAL:
 			continue
-		if can_take(r, id):
+		if can_take(r, id) and useful(r, id):
 			pool.append(id)
 	for k in 2:
 		if pool.is_empty():

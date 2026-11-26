@@ -39,7 +39,12 @@ func _process(delta: float) -> void:
 
 ## The buttons after the 4 cards, for this racer.
 func _buttons(rc: Dictionary) -> PackedStringArray:
-	var out := PackedStringArray(["tyres", "repair", "reroll"])
+	var out := PackedStringArray()
+	if GameSettings.tyre_wear > 0.0:
+		out.append("tyres")
+	if GameSettings.damage > 0:
+		out.append("repair")
+	out.append("reroll")
 	if int((rc.unlocks as Dictionary).get("rival_bounty", 0)) > 0:
 		out.append("rival")
 	out.append("ready")
