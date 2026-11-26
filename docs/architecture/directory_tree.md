@@ -1,10 +1,11 @@
 # RRS — Directory Tree
 
-*Current · updated 2026-11-23*
+*Current · updated 2026-11-26*
 
 ```
 RRS-Random-Racing-Series/
 ├── CLAUDE.md              Rules and architecture notes for AI coding agents working on the repo.
+├── Makefile               Short commands to play, import, run the smoke tests and run the Python tools; `make help`.
 ├── project.godot          Godot 4.7 project config: Jolt physics at 120 Hz, the main menu as the start scene, and the Music autoload.
 ├── .mcp.json              MCP server config the author uses to drive Godot and Blender from Claude.
 ├── addons/                Empty; reserved for Godot plugins.

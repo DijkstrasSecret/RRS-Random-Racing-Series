@@ -15,6 +15,13 @@ RRS – Random Racing Series: a semi-sim / semi-arcade racer in **Godot 4.7 (GDS
 
 No build step. Open `project.godot` in Godot 4.7.x, or run from the repo root. The original author works on Windows (`Godot_console.exe`); on Linux/macOS the binary is usually `godot`.
 
+The `Makefile` wraps the common commands; `make help` lists them. Override the binaries with `make <target> GODOT=Godot_console.exe PY=python`.
+- `make import` once after a fresh clone, then `make play`.
+- `make test` runs the main smoke tests and, unlike calling Godot directly, exits non-zero if any fails. It hides the missing-MP3 errors.
+- `make test-<name> ARGS="..."` runs one test, e.g. `make test-race_test ARGS="--laps=2 --track=rx"`.
+
+The raw commands:
+
 ```sh
 # Play
 godot --path .
