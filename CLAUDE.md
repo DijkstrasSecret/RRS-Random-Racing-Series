@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 RRS – Random Racing Series: a semi-sim / semi-arcade racer in **Godot 4.7 (GDScript)** with Jolt physics. The design source of truth is `docs/design/RRS_Design_Concept.md`; code comments cite its sections as `§N`.
 
-**Current direction: online multiplayer.** Target: 8 players online, 2-player split-screen that can join online races, Windows + Web cross-play, either platform can host, dedicated server later, tournaments online. Before touching race, vehicle, input, settings or tournament code, read `docs/reviews/multiplayer_must_fix.md`. New code must not make any must-fix item (MF-1 … MF-11) worse. In particular:
+**Current direction: online multiplayer.** Target: 8 players online, 2-player split-screen that can join online races, Windows + Web cross-play, either platform can host, dedicated server later, tournaments online. Before touching race, vehicle, input, settings or tournament code, read `docs/reviews/multiplayer_must_fix.md`. The network model (host-authoritative over WebRTC, room codes) is in `docs/decisions/0002-online-multiplayer-network-model.md`; read it before writing any networking code. New code must not make any must-fix item (MF-1 … MF-11) worse. In particular:
 - No new gameplay reads of `GameSettings` (MF-3).
 - No unseeded `randf()` / `shuffle()` in gameplay (MF-9).
 - No new hard-coded P1/P2 or racer-by-name logic (MF-5).
