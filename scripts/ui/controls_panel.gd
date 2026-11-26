@@ -2,6 +2,7 @@ class_name ControlsPanel
 extends VBoxContainer
 ## "How to drive" page: keyboard and gamepad layouts side by side.
 
+## Emitted when the player leaves the page (BACK or Esc / B).
 signal closed
 
 ## Plain (untyped) nested array: a typed Array[PackedStringArray] constant
@@ -40,6 +41,7 @@ func _ready() -> void:
 	add_child(back)
 
 
+## Gives keyboard and gamepad focus to the first button.
 func focus_first() -> void:
 	MenuStyle.focus_first(self)
 

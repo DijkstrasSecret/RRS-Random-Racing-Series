@@ -22,7 +22,9 @@ extends VehicleInput
 @export_group("Driving")
 ## Personal preference for one side of the road (metres, + = right).
 @export var lane_bias: float = 0.0
+## Steering look-ahead distance when stopped, in metres.
 @export var lookahead_base: float = 8.0
+## Extra look-ahead per m/s of speed, in metres (seconds of travel).
 @export var lookahead_per_mps: float = 0.42
 ## Extra wheel angle on top of pure geometry, to cover tyre slip.
 @export var steer_gain: float = 1.3
@@ -64,6 +66,7 @@ var _lost_time: float = 0.0
 var _corner_scale: float = 1.0
 
 
+## Works out steer, throttle and brake for this tick from the racing line, traffic and tyres. Called by the Vehicle once per physics tick.
 func poll(delta: float) -> void:
 	if _circuit == null and not _setup():
 		return

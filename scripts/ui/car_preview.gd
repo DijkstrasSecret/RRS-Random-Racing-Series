@@ -152,6 +152,7 @@ func _build_stage() -> void:
 	_viewport.add_child(_pivot)
 
 
+## Shows car `id` on the turntable, with or without its livery. Only the livery changes if the car is already shown.
 func show_car(id: String, livery: bool = true) -> void:
 	if id == _current:
 		if livery != _livery:

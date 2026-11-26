@@ -7,7 +7,9 @@ extends Control
 ## gamepad, player 2 on the arrows + Enter or the second gamepad.
 ## A player who already chose can press back (Q / Backspace / B) to change.
 
+## Emitted a moment after every player has locked in a car.
 signal done
+## Emitted when a player backs out with nothing locked in, to leave the screen.
 signal back
 
 const P_COLORS: Array[Color] = [Color(0.35, 0.8, 1.0), Color(1.0, 0.38, 0.32)]
@@ -90,10 +92,12 @@ func unlock_all() -> void:
 	_refresh()
 
 
+## Index in CarRoster.CARS of the tile player `player` (0 or 1) is on.
 func cursor_of(player: int) -> int:
 	return _cursor[player]
 
 
+## True once player `player` (0 or 1) has confirmed a car.
 func is_locked(player: int) -> bool:
 	return _locked[player]
 
@@ -108,6 +112,7 @@ func _refresh() -> void:
 		_hint.text = "P1: WASD + Space, R livery, or pad 1      P2: arrows + Enter, L livery, or pad 2      Q / Backspace / B: change      Esc: back"
 
 
+## True if player `p` (0 or 1) has the livery switched on.
 func livery_of(p: int) -> bool:
 	return GameSettings.p1_livery if p == 0 else GameSettings.p2_livery
 
@@ -248,6 +253,7 @@ class CarGrid extends Control:
 		_t += delta
 		queue_redraw()
 
+	## Screen rectangle of car tile i, in this control's local pixels. Short last rows are centred.
 	func tile_rect(i: int) -> Rect2:
 		var n := CarRoster.CARS.size()
 		var row := i / COLUMNS
@@ -355,6 +361,7 @@ class PlayerCard extends Control:
 	var _t := 0.0
 	var _overlay: Control
 
+	## Builds the side panel for player `p`; `wide` uses the one-player layout.
 	static func create(p: int, title: String, wide: bool) -> PlayerCard:
 		var card := PlayerCard.new()
 		card.player = p
@@ -423,6 +430,7 @@ class PlayerCard extends Control:
 		_overlay.draw.connect(_draw_overlay)
 		add_child(_overlay)
 
+	## Shows car `id` in the preview with its name, tier and stat bars.
 	func show_car(id: String, livery: bool = true) -> void:
 		var e := CarRoster.entry(id)
 		var s := CarRoster.stats(id)
@@ -445,6 +453,7 @@ class PlayerCard extends Control:
 			s.hp, s.kg, s.top_kmh, s.drive, "   ·   ELECTRIC" if s.electric else ""]
 		_bars.stats = s
 
+	## Marks the panel as confirmed ("READY") or not.
 	func set_locked(locked: bool) -> void:
 		_locked = locked
 		_header.text = "%s  -  READY" % _title if locked else _title

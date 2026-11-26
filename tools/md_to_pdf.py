@@ -1,6 +1,6 @@
 """Convert a Markdown design doc to a styled PDF via headless Edge/Chrome.
 
-Usage: python tools/md_to_pdf.py docs/RRS_Design_Concept.md
+Usage: python tools/md_to_pdf.py docs/design/RRS_Design_Concept.md
 """
 import os
 import subprocess

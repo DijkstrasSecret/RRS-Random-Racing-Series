@@ -3,6 +3,7 @@ extends VBoxContainer
 ## Settings page used by the opening menu and the pause menu.
 ## Every change is applied straight away (where possible) and saved.
 
+## Emitted when the player leaves the settings (BACK or Esc / B).
 signal closed
 
 var _rows: Array[Control] = []
@@ -87,6 +88,7 @@ func _add_slider(row_title: String, from: float, to: float, step_by: float, star
 	_rows.append(row)
 
 
+## Gives keyboard and gamepad focus to the first setting.
 func focus_first() -> void:
 	if _rows.size() > 0:
 		_rows[0].grab_focus.call_deferred()

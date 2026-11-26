@@ -14,6 +14,7 @@ const ROAD_Y := 0.03
 ## Radius (m) of the road-surface blend (and its lookup grid cell).
 const SURFACE_CELL := 9.0
 
+## Name shown in the HUD. Replaced by the TrackList name when use_selected_track is on.
 @export var track_name: String = "Circuit"
 ## Control points (x, z) in metres. The road runs through them in order and
 ## loops back to the first. The first point is the start/finish line.
@@ -27,13 +28,19 @@ const SURFACE_CELL := 9.0
 ])
 ## Height (m) of each control point; empty = flat.
 @export var heights: PackedFloat32Array = PackedFloat32Array()
+## Width of the tarmac, edge to edge, in metres; the curbs sit outside it.
 @export var road_width: float = 12.0
+## Width of each curb strip, in metres.
 @export var curb_width: float = 1.4
 ## Corners tighter than this radius (m) get curbs.
 @export var curb_radius: float = 220.0
+## Spacing of the road samples along the centre line, in metres. Smaller = smoother road, more vertices.
 @export var sample_step: float = 2.0
+## Not read by any code.
 @export var tree_count: int = 240
+## Not read by any code.
 @export var tree_clearance: float = 32.0
+## Seed for the scenery and terrain. Replaced by the track's seed when use_selected_track is on.
 @export var random_seed: int = 11
 ## Scenery around the track: "hills" (farms, villages) or "mountains" (peaks, pines, chalets).
 @export var theme: String = "hills"
@@ -270,6 +277,7 @@ static func _banked_accel(accel: float, tilt: float) -> float:
 	return accel * (1.0 + 0.33 * absf(tilt))
 
 
+## Speed (m/s) from a build_speed_profile() result at lap offset `off` (m), interpolated between samples.
 func profile_speed(profile: PackedFloat32Array, off: float) -> float:
 	var n := profile.size()
 	var f := fposmod(off, length) / length * n

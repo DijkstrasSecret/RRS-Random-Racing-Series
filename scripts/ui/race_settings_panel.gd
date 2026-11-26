@@ -4,7 +4,9 @@ extends VBoxContainer
 ## and which car classes they may drive. START RACE is selected first, so
 ## Enter / A straight away races with the saved settings.
 
+## Emitted when the player presses START RACE.
 signal start
+## Emitted when the player leaves without starting (BACK or Esc / B).
 signal back
 
 var _summary: Label
@@ -97,6 +99,7 @@ func _add_slider(row_title: String, from: float, to: float, step_by: float, star
 	_rows.append(row)
 
 
+## Shows the panel for 1 or 2 players with START RACE focused.
 func open(players: int) -> void:
 	_players = players
 	_update_summary()

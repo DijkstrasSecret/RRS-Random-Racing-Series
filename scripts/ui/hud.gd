@@ -2,12 +2,15 @@ extends Control
 ## Driving HUD (design concept §12) and telemetry overlay (§6.5).
 ## Everything is drawn in _draw(), so there is no scene layout to maintain.
 
+## The car this HUD shows.
 @export var vehicle_path: NodePath
 ## Leave empty to use the first LapTimer in the scene.
 @export var lap_timer_path: NodePath
-## Split screen: smaller layout, no telemetry.
+## Name tag shown instead of the lap number, e.g. "PLAYER 1" in split screen. Empty = no tag.
 @export var player_name: String = ""
+## Colour of the player's name tag and position marker (used when player_name is set).
 @export var player_color: Color = Color(1.0, 0.78, 0.2)
+## Split screen: smaller layout, no telemetry.
 @export var split_screen: bool = false
 
 var show_telemetry: bool = false

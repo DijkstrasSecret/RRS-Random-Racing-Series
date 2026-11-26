@@ -4,6 +4,7 @@ extends RigidBody3D
 ## Owns four Wheel children and one VehicleInput child (player, AI or replay).
 ## Everything runs in _physics_process at the project's 120 Hz tick.
 
+## Emitted after set_handling_profile(); profile is 0 Arcade, 1 Sport, 2 Sim.
 signal profile_changed(profile: int)
 ## Emitted after the car is put back on the start (Backspace).
 signal reset_to_start_done
@@ -14,7 +15,9 @@ const DIFF_LOCK_MAX := 150.0
 const AIR_DENSITY := 1.225
 const FALL_RESET_Y := -30.0
 
+## Every tuning number for this car (SI units). CarRoster.apply() sets it.
 @export var config: VehicleConfig
+## Assist level: 0 Arcade, 1 Sport, 2 Sim. Change it at runtime with set_handling_profile().
 @export_enum("Arcade", "Sport", "Sim") var handling_profile: int = 1
 ## Optional imported car model (.glb) with nodes body and wheel_FL/FR/RL/RR
 ## (design concept §15). When set, the greybox meshes are hidden.
@@ -205,6 +208,7 @@ func _apply_config() -> void:
 	angular_damp = 0.0
 
 
+## Switches the assists and tyre shape to profile p (0 Arcade, 1 Sport, 2 Sim) and emits profile_changed.
 func set_handling_profile(p: int) -> void:
 	assists.set_profile(p)
 	handling_profile = assists.profile
@@ -219,10 +223,12 @@ func current_steer_limit() -> float:
 	return assists.steer_limit(forward_speed, deg_to_rad(config.max_steer_deg), _wheelbase, config.tire_grip)
 
 
+## Distance between the front and rear axles, in metres.
 func wheelbase() -> float:
 	return _wheelbase
 
 
+## World velocity (m/s) of a world-space point on the body, including rotation.
 func velocity_at_point(world_point: Vector3) -> Vector3:
 	var com := global_transform * center_of_mass
 	return linear_velocity + angular_velocity.cross(world_point - com)
@@ -626,6 +632,8 @@ func recover() -> void:
 			global_position + Vector3.UP * 1.0))
 
 
+## Puts the car back on its grid spot, stopped, and emits reset_to_start_done.
+## Falls back to the circuit's start line if the saved spot is underground.
 func reset_to_start() -> void:
 	# Safety net: a reset point underground (car never placed on the grid)
 	# would make it fall forever; use the circuit's start line instead.
@@ -638,6 +646,7 @@ func reset_to_start() -> void:
 	reset_to_start_done.emit()
 
 
+## Moves the car to `xform` and stops it: velocities, steering, wheels and gearbox are reset, and a lost wheel is refitted.
 func teleport(xform: Transform3D) -> void:
 	global_transform = xform
 	linear_velocity = Vector3.ZERO

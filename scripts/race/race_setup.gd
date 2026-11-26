@@ -4,18 +4,27 @@ extends Node
 ## all up on the grid (AI in front, players at the back) and hands everyone
 ## to the RaceDirector, then starts the countdown.
 
+## The Circuit to race on.
 @export var circuit_path: NodePath
+## The RaceDirector that receives the racers.
 @export var race_director_path: NodePath
+## Scene spawned for each AI car; CarRoster.apply() then turns it into the car picked for it.
 @export var car_scene: PackedScene
+## Number of AI opponents, 0–9. Replaced by the player's setting when use_game_settings is on, and by the field size in a tournament.
 @export_range(0, 9) var ai_count: int = 5
 ## Players already in the scene, with their lap timers, names and colours.
 @export var player_paths: Array[NodePath] = []
+## The LapTimer of each car in player_paths, same order.
 @export var player_timer_paths: Array[NodePath] = []
+## Names for the cars in player_paths, same order.
 @export var player_names: PackedStringArray = ["YOU"]
+## HUD colours for the cars in player_paths, same order.
 @export var player_colors: PackedColorArray = [Color(0.35, 0.8, 1.0)]
 ## Opponent skills: 0 = cautious, 1 = on the limit. Spread across the field.
 @export var ai_skill_min: float = 0.5
+## Skill of the strongest opponent, 0–1 (see ai_skill_min).
 @export var ai_skill_max: float = 0.82
+## Seed for picking AI cars, names and skills. 0 = a different field every race.
 @export var random_seed: int = 0
 ## Take the AI count, difficulty and allowed car classes from the player's settings.
 @export var use_game_settings: bool = true

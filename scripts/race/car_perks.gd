@@ -83,6 +83,7 @@ func _ready() -> void:
 		_car.max_contacts_reported = maxi(_car.max_contacts_reported, 6)
 
 
+## Level of item `id` for this car's racer (0 = not owned).
 func level(id: String) -> int:
 	return Upgrades.level_of(racer, id)
 

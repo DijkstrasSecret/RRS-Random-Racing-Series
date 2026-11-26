@@ -24,6 +24,7 @@ var _inside := PackedByteArray()
 var _rng := RandomNumberGenerator.new()
 
 
+## Builds the ground mesh and collision round `circuit`, from the circuit's seed and theme.
 func build(circuit: Circuit) -> void:
 	_rng.seed = circuit.random_seed * 31 + 5
 	extent = 1300.0 if theme == "mountains" else 1100.0

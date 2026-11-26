@@ -120,6 +120,7 @@ static func use_defaults() -> void:
 	_loaded = true
 
 
+## Writes every setting to user://settings.cfg.
 static func save() -> void:
 	var cfg := ConfigFile.new()
 	cfg.set_value("race", "laps", laps)
@@ -150,6 +151,7 @@ static func save() -> void:
 	cfg.save(PATH)
 
 
+## AI skill range (min, max), 0–1, for the chosen AI difficulty.
 static func ai_skill_range() -> Vector2:
 	return DIFFICULTY_SKILLS[clampi(ai_difficulty, 0, DIFFICULTY_SKILLS.size() - 1)]
 
@@ -164,12 +166,14 @@ static func ensure_buses() -> void:
 			AudioServer.set_bus_send(i, &"Master")
 
 
+## Sets the SFX and Music bus volumes from sound_volume and music_volume (0–10).
 static func apply_volume() -> void:
 	ensure_buses()
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("SFX"), linear_to_db(maxf(sound_volume / 10.0, 0.0001)))
 	AudioServer.set_bus_volume_db(AudioServer.get_bus_index("Music"), linear_to_db(maxf(music_volume / 10.0, 0.0001)))
 
 
+## Applies the fullscreen setting (fullscreen or maximised window). Does nothing headless.
 static func apply_window() -> void:
 	if DisplayServer.get_name() == "headless":
 		return

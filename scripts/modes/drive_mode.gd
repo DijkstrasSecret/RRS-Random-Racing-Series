@@ -4,9 +4,13 @@ extends Node3D
 ## F2 switches to `other_scene`, F3 starts two-player split screen,
 ## Esc / Start opens the pause menu.
 
+## Scene F2 switches to; the modes cycle free roam → race → practice. Empty = F2 does nothing.
 @export_file("*.tscn") var other_scene: String
+## The track node in this scene.
 @export var track_path: NodePath
+## The player's car in this scene.
 @export var vehicle_path: NodePath
+## Scene F3 switches to: two-player split screen.
 @export_file("*.tscn") var versus_scene: String = "res://scenes/modes/versus_race.tscn"
 
 

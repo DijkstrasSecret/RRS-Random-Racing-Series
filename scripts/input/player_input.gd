@@ -9,8 +9,11 @@ extends VehicleInput
 ## Whichever device was used last is the one being read.
 
 @export_group("Keyboard")
+## Keyboard: how fast steering moves towards full lock, in full-lock units per second.
 @export var steer_speed: float = 4.5
+## Keyboard: how fast steering returns to centre or reverses, in full-lock units per second.
 @export var steer_return_speed: float = 6.0
+## Keyboard: how fast throttle and brake reach their target, per second (0–1 range).
 @export var pedal_speed: float = 7.0
 
 @export_group("Gamepad")
@@ -18,7 +21,9 @@ extends VehicleInput
 @export_range(1.0, 3.0) var steer_curve: float = 1.6
 ## How quickly the wheels follow the stick (per second). High = direct.
 @export var pad_steer_speed: float = 14.0
+## Gamepad: how fast throttle and brake follow the triggers, per second (0–1 range). High = direct.
 @export var pad_pedal_speed: float = 18.0
+## Allow gamepad vibration for this player (the Vibration setting must also be on).
 @export var rumble_enabled: bool = true
 @export_group("")
 
@@ -54,6 +59,7 @@ func _input(event: InputEvent) -> void:
 		Input.stop_joy_vibration(_pad_device)
 
 
+## Reads this player's keys or gamepad and updates steer, throttle and brake. Called by the Vehicle once per physics tick.
 func poll(delta: float) -> void:
 	var raw_steer := Input.get_axis(_a("steer_left"), _a("steer_right"))
 	var raw_throttle := Input.get_action_strength(_a("throttle"))
