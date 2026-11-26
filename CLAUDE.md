@@ -6,10 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 RRS – Random Racing Series: a semi-sim / semi-arcade racer in **Godot 4.7 (GDScript)** with Jolt physics. The design source of truth is `docs/design/RRS_Design_Concept.md`; code comments cite its sections as `§N`.
 
-**Current direction: online multiplayer.** Target: 8 players online, 2-player split-screen that can join online races, Windows + Web cross-play, either platform can host, dedicated server later, tournaments online. Before touching race, vehicle, input, settings or tournament code, read `docs/reviews/multiplayer_must_fix.md`. The network model (host-authoritative over WebRTC, room codes) is in `docs/decisions/0002-online-multiplayer-network-model.md`; read it before writing any networking code. New code must not make any must-fix item (MF-1 … MF-11) worse. In particular:
+**Current direction: online multiplayer.** Target: 8 players online, 2-player split-screen that can join online races, Windows + Web cross-play, either platform can host, dedicated server later, tournaments online. Start at the multiplayer hub, `docs/multiplayer/README.md`, which lists every multiplayer doc. Before touching race, vehicle, input, settings or tournament code, read `docs/reviews/multiplayer_must_fix.md`. The network model (host-authoritative over WebRTC, room codes) is in `docs/decisions/0002-online-multiplayer-network-model.md`; read it before writing any networking code. New code must not make any must-fix item (MF-1 … MF-11) worse. In particular:
 - No new gameplay reads of `GameSettings` (MF-3).
 - No unseeded `randf()` / `shuffle()` in gameplay (MF-9).
 - No new hard-coded P1/P2 or racer-by-name logic (MF-5).
+- Network code lives only in `scripts/net/`, `scenes/net/` and `tests/net/`. Game code never names it, except through the entry points listed in `NET_ENTRY_POINTS` in `tools/docs_check.py`; `make docs-check` enforces this.
 
 ## Running and testing
 
@@ -18,8 +19,10 @@ No build step. Open `project.godot` in Godot 4.7.x, or run from the repo root. T
 The `Makefile` wraps the common commands; `make help` lists them. Override the binaries with `make <target> GODOT=Godot_console.exe PY=python`.
 - `make import` once after a fresh clone, then `make play`.
 - `make test` runs the main smoke tests and, unlike calling Godot directly, exits non-zero if any fails. It hides the missing-MP3 errors.
-- `make test-<name> ARGS="..."` runs one test, e.g. `make test-race_test ARGS="--laps=2 --track=rx"`.
-- `make docs-check` checks the `##` doc comment rules below, the links between docs and the repo paths quoted in them. It prints `file:line` per problem. Run it before every PR. It needs [lychee](https://github.com/lycheeverse/lychee/releases) on the `PATH`.
+- `make test-<name> ARGS="..."` runs one test, e.g. `make test-race_test ARGS="--laps=2 --track=rx"`. It finds tests in `tests/` and `tests/net/`.
+- `make webrtc` once downloads and imports the desktop WebRTC add-on; then `make test-net` runs the network tests, which `make test` leaves out.
+- `make export-windows`, `make export-web` and `make export-linux` build into `build/`; `make serve-web` serves the Web build at `http://localhost:8060`.
+- `make docs-check` checks the `##` doc comment rules below, the links between docs, the repo paths quoted in them and the multiplayer code boundary. It prints `file:line` per problem. Run it before every PR. It needs [lychee](https://github.com/lycheeverse/lychee/releases) on the `PATH`.
 
 The raw commands:
 

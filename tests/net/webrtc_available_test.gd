@@ -2,7 +2,7 @@ extends SceneTree
 ## WebRTC add-on: the webrtc-native GDExtension is loaded on desktop, and two
 ## WebRTCPeerConnections in one process open an unreliable data channel and
 ## pass a message (no signalling server, no network). Run `make webrtc` first.
-##   godot --headless --fixed-fps 120 --path . -s res://tests/webrtc_available_test.gd
+##   godot --headless --fixed-fps 120 --path . -s res://tests/net/webrtc_available_test.gd
 ##   make test-webrtc_available_test
 
 const EXTENSION := "res://addons/webrtc_native/webrtc_native.gdextension"

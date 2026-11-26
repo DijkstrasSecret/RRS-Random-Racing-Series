@@ -6,9 +6,10 @@
 RRS-Random-Racing-Series/
 ├── CLAUDE.md              Rules and architecture notes for AI coding agents working on the repo.
 ├── Makefile               Short commands to play, import, run the smoke tests and run the Python tools; `make help`.
+├── export_presets.cfg     Export presets for Windows, Web (no-threads) and Linux; `make export-*` writes into the git-ignored build/.
 ├── project.godot          Godot 4.7 project config: Jolt physics at 120 Hz, the main menu as the start scene, and the Music autoload.
 ├── .mcp.json              MCP server config the author uses to drive Godot and Blender from Claude.
-├── addons/                Empty; reserved for Godot plugins.
+├── addons/                Godot add-ons; webrtc_native/ (desktop WebRTC) is downloaded by `make webrtc` and not in git.
 ├── assets/
 │   ├── audio/car/         Engine, EV whine, tyre and dirt-rumble sound loops (.wav).
 │   ├── cars/              22 car models; each folder holds a .glb mesh, a .tres config and light/livery textures.
@@ -19,7 +20,7 @@ RRS-Random-Racing-Series/
 │   ├── ui/                Logo, cover and splash images.
 │   │   └── track_clips/   Short .ogv preview videos for each track on the track select screen.
 │   └── vfx/shaders/       The PS1-style lit and decal shaders, cloud shaders and the preview-screen shader.
-├── docs/                  Project docs by purpose: design/, architecture/, decisions/ (ADRs), research/, reviews/, plans/; index in docs/README.md.
+├── docs/                  Project docs by purpose: design/, architecture/, decisions/ (ADRs), research/, reviews/, and multiplayer/ (hub, network docs, plans); index in docs/README.md.
 ├── scenes/
 │   ├── modes/             Playable mode scenes: free roam, practice, circuit race and versus race.
 │   ├── tracks/            The procedural circuit scene and a test track.
@@ -39,5 +40,6 @@ RRS-Random-Racing-Series/
 │   └── vehicle/           Car physics (tyres, wheels, drivetrain, assists) plus damage, audio, paint and looks.
 ├── soundtrack/            Godot import files only; the licensed MP3s are kept off the repo.
 ├── tests/                 About 40 scripts that run without a window: smoke tests, probes, checks and screenshot capture.
-└── tools/                 Python scripts that build cars and the track kit in Blender, generate sounds, export the docs to PDF, and check the doc rules (`docs_check.py`).
+│   └── net/               Network tests, run by `make test-net`.
+└── tools/                 Python scripts that build cars and the track kit in Blender, generate sounds, export the docs to PDF, and check the doc rules (`docs_check.py`), and fetch the WebRTC add-on (`fetch_webrtc.py`).
 ```

@@ -1,8 +1,9 @@
 """Checks the documentation rules in CLAUDE.md and docs/README.md.
 
-    python tools/docs_check.py            # both checks
+    python tools/docs_check.py            # all checks
     python tools/docs_check.py comments   # only the GDScript doc comments
     python tools/docs_check.py paths      # only the repo paths quoted in docs
+    python tools/docs_check.py net        # only the multiplayer code boundary
 
 comments: every `class_name` script, signal, @export and public function in
 scripts/ needs a `##` doc comment, either on the lines directly above (other
@@ -11,9 +12,14 @@ script needs a `##` line in its header, before the first declaration.
 
 paths: every repo path quoted in backticks in a Markdown doc, such as
 `scripts/race/upgrades.gd` or `res://tests/race_test.tscn`, must exist.
-Paths with placeholders (`<id>`, `*`) are skipped, and so are docs in
-docs/plans/, which name files that a plan has yet to create. Relative links between
-docs are checked by lychee (`make docs-check`), not here.
+Paths with placeholders (`<id>`, `*`) are skipped, and so are docs in a
+plans/ folder, which name files that a plan has yet to create. Relative links
+between docs are checked by lychee (`make docs-check`), not here.
+
+net: game code doesn't depend on network code. A script or scene in scripts/
+or scenes/ outside the net/ folders must not name a class_name declared in
+scripts/net/, or a res://scripts/net/ or res://scenes/net/ path, unless it's
+listed in NET_ENTRY_POINTS with the reason. Tests may use anything.
 
 Prints one `file:line: problem` per finding and exits 1 if there are any.
 Needs only the standard library.
@@ -24,9 +30,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 TOP_DIRS = ("addons", "assets", "docs", "scenes", "scripts", "soundtrack", "tests", "tools")
-# Plans in docs/plans/ name files that don't exist yet, so their paths aren't checked.
+# Plans name files that don't exist yet, so their paths aren't checked.
 MD_FILES = ["CLAUDE.md", *sorted(str(p.relative_to(ROOT)) for p in (ROOT / "docs").rglob("*.md")
-                                 if "plans" not in p.relative_to(ROOT / "docs").parts[:1])]
+                                 if "plans" not in p.relative_to(ROOT / "docs").parts)]
+NET_DIRS = ("scripts/net", "scenes/net")
+# Game files allowed to reach into the network code, each with its reason
+# ("path": "reason"). Keep this short: see docs/multiplayer/README.md.
+NET_ENTRY_POINTS: dict[str, str] = {}
 
 DECL = re.compile(r"^\s*(?:@\w+(?:\([^)]*\))?\s+)*(signal|var|const|enum|func|static\s+func|class)\b")
 SIGNAL = re.compile(r"^\s*signal\s+(\w+)")
@@ -82,11 +92,31 @@ def check_paths() -> list[str]:
     return problems
 
 
+def check_net() -> list[str]:
+    net_root = ROOT / "scripts" / "net"
+    names = sorted({m.group(1) for f in net_root.rglob("*.gd") if net_root.exists()
+                    for m in [re.search(r"^class_name\s+(\w+)", f.read_text(encoding="utf-8"), re.M)] if m})
+    terms = [r"\b%s\b" % n for n in names] + [r"res://scripts/net/", r"res://scenes/net/"]
+    pattern = re.compile("|".join(terms))
+    problems = []
+    for top in ("scripts", "scenes"):
+        for f in sorted((ROOT / top).rglob("*")):
+            rel = f.relative_to(ROOT).as_posix()
+            if f.suffix not in (".gd", ".tscn") or rel.startswith(NET_DIRS) or rel in NET_ENTRY_POINTS:
+                continue
+            for n, line in enumerate(f.read_text(encoding="utf-8").splitlines(), 1):
+                m = pattern.search(line)
+                if m:
+                    problems.append(f"{rel}:{n}: game code uses network code '{m.group(0)}'; "
+                                    "go through an entry point (tools/docs_check.py NET_ENTRY_POINTS)")
+    return problems
+
+
 def main() -> int:
     which = sys.argv[1] if len(sys.argv) > 1 else "all"
-    checks = {"comments": check_comments, "paths": check_paths}
+    checks = {"comments": check_comments, "paths": check_paths, "net": check_net}
     if which != "all" and which not in checks:
-        sys.exit(f"unknown check '{which}'; use comments, paths or nothing for both")
+        sys.exit(f"unknown check '{which}'; use comments, paths, net or nothing for all")
     failed = False
     for name, check in checks.items():
         if which not in ("all", name):

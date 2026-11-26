@@ -10,7 +10,7 @@
 
 **Tech Stack:** Godot 4.7.2 (GDScript), `webrtc-native` 1.2.2 GDExtension (desktop), the browser's built-in WebRTC (Web), Python 3.11+ with `websockets` 17.4, coturn, Caddy.
 
-**Spec:** [ADR 0002](../decisions/0002-online-multiplayer-network-model.md), and review finding [MF-1](../reviews/multiplayer_must_fix.md#mf-1-no-network-model-or-transport-chosen-web-hosting-needs-webrtc).
+**Spec:** [ADR 0002](../../decisions/0002-online-multiplayer-network-model.md), and review finding [MF-1](../../reviews/multiplayer_must_fix.md#mf-1-no-network-model-or-transport-chosen-web-hosting-needs-webrtc).
 
 ## Global Constraints
 
@@ -25,6 +25,8 @@
 - Gameplay randomness rules (MF-9) don't apply to room codes; the server makes them with Python's `secrets`.
 - Don't write the owner's domain into any repo file. Use `net.example.com` in examples.
 - Web build: no-threads export. `rendering/renderer/rendering_method.web` is already `gl_compatibility`; don't change the desktop renderer here (MF-2 is separate).
+- Multiplayer stays separate (see [the multiplayer hub](../README.md)): network code lives in `scripts/net/`, `scenes/net/` and `tests/net/`, and game code never names it. `make docs-check` (its `net` check) fails otherwise; the few allowed entry points are listed in `NET_ENTRY_POINTS` in `tools/docs_check.py`, each with a reason. This prototype needs none.
+- Net tests are listed in `NET_TESTS` in the `Makefile` and run with `make test-net`; `make test` stays offline.
 - Desktop WebRTC needs the add-on imported once: `make webrtc` (fetch and import) before any net test.
 
 ## Review Focus
@@ -42,6 +44,7 @@
 | Path | Responsibility |
 |---|---|
 | `tools/fetch_webrtc.py` | Downloads `webrtc-native` 1.2.2, checks its SHA-256 and extracts the desktop x86_64 libraries into `addons/webrtc_native/`. |
+| `server/.gdignore` | Empty; tells Godot not to import the Python server. |
 | `server/signalling/signalling.py` | Room codes, peer ids, relaying offers/answers/candidates, TURN credentials. |
 | `server/signalling/test_signalling.py` | Unit tests for the server (stdlib `unittest`). |
 | `server/signalling/requirements.txt` | `websockets==17.4`. |
@@ -51,24 +54,26 @@
 | `scripts/net/net_session.gd` | `NetSession`: WebRTC multiplayer peer, version check, timeouts, events, packets. |
 | `scripts/net/net_probe.gd` | `NetProbe`: RTT, loss and rate over the unreliable stream. |
 | `scripts/net/net_lab.gd`, `scenes/net/net_lab.tscn` | The on-screen test bench. |
-| `tests/webrtc_available_test.gd` | The add-on loads and an in-process data channel opens. |
-| `tests/signalling_client_test.gd`, `tests/net_loopback_test.gd` | Headless tests against a local signalling server. |
+| `tests/net/webrtc_available_test.gd` | The add-on loads and an in-process data channel opens. |
+| `tests/net/signalling_client_test.gd`, `tests/net/net_loopback_test.gd` | Headless tests against a local signalling server. |
 | `export_presets.cfg` | Windows, Web (no-threads, feature `net_lab`) and Linux presets; committed. |
-| `docs/architecture/networking.md` | How the pieces fit, the signalling protocol, running locally, deploying. |
+| `docs/multiplayer/networking.md` | How the pieces fit, peer ids, packet kinds, running locally, known limits. |
+| `docs/multiplayer/protocol.md` | The signalling wire protocol (Task 2's table). |
+| `docs/multiplayer/deploy.md` | The owner's VPS steps: Python service, coturn, firewall, Caddy. |
 
 ---
 
 ### Task 1: WebRTC add-on, build version and export presets
 
 **Files:**
-- Create: `tools/fetch_webrtc.py`, `tests/webrtc_available_test.gd`, `export_presets.cfg`
+- Create: `tools/fetch_webrtc.py`, `tests/net/webrtc_available_test.gd`, `export_presets.cfg`
 - Modify: `.gitignore` (drop `export_presets.cfg`; add `addons/webrtc_native/` and `build/`), `project.godot` (`application/config/version="0.1.0"`), `Makefile` (`webrtc`, `export-web`, `export-windows`, `export-linux`, `serve-web`)
 
 **Interfaces:**
 - Produces: `make webrtc` leaves `addons/webrtc_native/webrtc_native.gdextension` plus `lib/libwebrtc_native.{linux,windows}.template_{debug,release}.x86_64.{so,dll}` and the `LICENSE.*` files, then runs `godot --headless --path . --import`.
 - Produces: export preset names `Windows Desktop`, `Web`, `Linux` (used by the Makefile).
 
-- [ ] **Step 1: Write `tests/webrtc_available_test.gd`** (`extends SceneTree`, header comment with its command). Checks:
+- [ ] **Step 1: Write `tests/net/webrtc_available_test.gd`** (`extends SceneTree`, header comment with its command). Checks:
   - `[ok] extension loaded`: `GDExtensionManager.is_extension_loaded("res://addons/webrtc_native/webrtc_native.gdextension")`.
   - `[ok] data channel opens`: two `WebRTCPeerConnection`s in one process, `initialize({"iceServers": []})`, each other's descriptions and candidates passed directly, a negotiated channel (`id 1`, unordered, `maxRetransmits 0`). Peer B receives `"ping"` within 5 s of wall-clock time.
   - Prints `webrtc_available_test PASSED` / `FAILED`.
@@ -92,7 +97,7 @@
 ### Task 2: Signalling server
 
 **Files:**
-- Create: `server/signalling/signalling.py`, `server/signalling/test_signalling.py`, `server/signalling/requirements.txt`
+- Create: `server/.gdignore` (empty), `server/signalling/signalling.py`, `server/signalling/test_signalling.py`, `server/signalling/requirements.txt`, `docs/multiplayer/protocol.md` (the protocol table and rules below, `*Current*` header; add it to the hub's table)
 - Modify: `Makefile` (`signalling`, `test-signalling`), `docs/decisions/0002-online-multiplayer-network-model.md` ("Servers" row: add "Signalling is a small Python program using `websockets`". The ADR is still `Proposed`, so it can be edited.)
 
 **Interfaces:**
@@ -131,8 +136,9 @@
 ### Task 3: NetProtocol and SignallingClient
 
 **Files:**
-- Create: `scripts/net/net_protocol.gd`, `scripts/net/signalling_client.gd`, `tests/signalling_client_test.gd`
-- Modify: `Makefile` (`test-net`: starts `signalling.py --port 9081` in the background, runs `test-signalling_client_test test-net_loopback_test`, then always stops the server, returning the tests' status)
+- Create: `scripts/net/net_protocol.gd`, `scripts/net/signalling_client.gd`, `tests/net/signalling_client_test.gd`
+- Delete: `scripts/net/.gitkeep` (the folder now has real files)
+- Modify: `Makefile` (add `signalling_client_test net_loopback_test` to `NET_TESTS`; `test-net` starts `signalling.py --port 9081` in the background, runs the net tests, then always stops the server, returning the tests' status)
 
 **Interfaces:**
 - Produces `class_name NetProtocol extends RefCounted`:
@@ -146,7 +152,7 @@
   - `func connect_to_url(url: String) -> Error`, `func poll() -> void`, `func host() -> void`, `func join(code: String) -> void` (both queue until the socket is open), `func send_offer(to: int, sdp: String) -> void`, `func send_answer(to: int, sdp: String) -> void`, `func send_candidate(to: int, mid: String, index: int, sdp: String) -> void`, `func close() -> void`, `func is_open() -> bool`.
   - Emits `disconnected` when the socket closes, or fails to open within 5 s of wall-clock time.
 
-- [ ] **Step 1: Write `tests/signalling_client_test.gd`** (needs the server on 9081; its header says to run it via `make test-net`). Two `SignallingClient`s:
+- [ ] **Step 1: Write `tests/net/signalling_client_test.gd`** (needs the server on 9081; its header says to run it via `make test-net`). Two `SignallingClient`s:
   - `[ok] host gets a valid code`
   - `[ok] lower-case join works`: join with `" " + code.to_lower() + " "`.
   - `[ok] offer reaches the client from 1`
@@ -163,7 +169,7 @@
 ### Task 4: NetSession
 
 **Files:**
-- Create: `scripts/net/net_session.gd`, `tests/net_loopback_test.gd`
+- Create: `scripts/net/net_session.gd`, `tests/net/net_loopback_test.gd`
 
 **Interfaces:**
 - Consumes: `SignallingClient` and `NetProtocol` (Task 3).
@@ -182,7 +188,7 @@ Behaviour the tests pin:
 - Both sides send `PACKET_HEARTBEAT` 10 times a second. A host drops a client silent for `PEER_TIMEOUT` (emits `peer_disconnected`). A client silent from its host for `PEER_TIMEOUT` emits `session_closed("host_timeout")`.
 - A signalling `closed` before or after the WebRTC connection is up emits `session_closed("host_left")` once.
 
-- [ ] **Step 1: Write `tests/net_loopback_test.gd`** (via `make test-net`). Sessions are added as children at different paths under one root:
+- [ ] **Step 1: Write `tests/net/net_loopback_test.gd`** (via `make test-net`). Sessions are added as children at different paths under one root:
   - `[ok] url_problem`: `("ws://x", true) == "insecure_url"`, `("wss://x", true) == ""`, `("ws://x", false) == ""`, `("http://x", false) == "bad_url"`.
   - `[ok] host gets code`
   - `[ok] client connected as id >= 2` within 10 s
@@ -202,7 +208,8 @@ Behaviour the tests pin:
 
 **Files:**
 - Create: `scripts/net/net_probe.gd`, `scripts/net/net_lab.gd`, `scenes/net/net_lab.tscn`
-- Modify: `project.godot` (`application/run/main_scene.net_lab="res://scenes/net/net_lab.tscn"`), `Makefile` (`net-lab:` runs `$(GODOT) --path . res://scenes/net/net_lab.tscn`), `tests/net_loopback_test.gd` (probe checks)
+- Delete: `scenes/net/.gitkeep`
+- Modify: `project.godot` (`application/run/main_scene.net_lab="res://scenes/net/net_lab.tscn"`), `Makefile` (`net-lab:` runs `$(GODOT) --path . res://scenes/net/net_lab.tscn`), `tests/net/net_loopback_test.gd` (probe checks)
 
 **Interfaces:**
 - Consumes: `NetSession.send_packet`, `packet_received`, `peers()`, and `NetProtocol.PACKET_PROBE` / `PACKET_PROBE_ECHO` (Task 4).
@@ -235,21 +242,17 @@ Behaviour the tests pin:
 The owner runs the VPS steps; the implementer writes the files and the instructions. Don't log into the VPS unless the owner asks.
 
 **Files:**
-- Create: `server/deploy/rrs-signalling.service`, `server/deploy/turnserver.conf.example`, `server/deploy/Caddyfile.example`, `docs/architecture/networking.md`
-- Modify: `docs/README.md` (architecture index row), `docs/architecture/directory_tree.md` (`server/`, `scenes/net/`, `scripts/net/`, `addons/webrtc_native/`, `build/`, `docs/plans/`), `CLAUDE.md` (Running and testing: `make webrtc`, `make signalling`, `make test-net`, `make net-lab`, the exports), `docs/reviews/multiplayer_must_fix.md` (MF-1 `✅ Fixed in #<PR>`)
+- Create: `server/deploy/rrs-signalling.service`, `server/deploy/turnserver.conf.example`, `server/deploy/Caddyfile.example`, `docs/multiplayer/networking.md`, `docs/multiplayer/deploy.md`
+- Modify: `docs/multiplayer/README.md` (rows for the new docs; status), `docs/architecture/directory_tree.md` (`server/`, `scenes/net/`, `scripts/net/`), `CLAUDE.md` (Running and testing: `make webrtc`, `make signalling`, `make test-net`, `make net-lab`, the exports), `docs/reviews/multiplayer_must_fix.md` (MF-1 `✅ Fixed in #<PR>`)
 
 - [ ] **Step 1: Write the deploy files:**
   - `Caddyfile.example`: `net.example.com { handle /signal* { reverse_proxy 127.0.0.1:9081 } }`.
   - `rrs-signalling.service`: runs `signalling.py --host 127.0.0.1 --port 9081 --stun stun:net.example.com:3478 --turn-url turn:net.example.com:3478?transport=udp --turn-url turn:net.example.com:3478?transport=tcp --turn-secret ${TURN_SECRET}`, with the secret from an `EnvironmentFile` that isn't in git.
   - `turnserver.conf.example`: `use-auth-secret`, `static-auth-secret=<same secret>`, `realm=net.example.com`, `listening-port=3478`, `min-port=49160`, `max-port=49200`, `no-cli`, `fingerprint`, and `denied-peer-ip` for private ranges, so the relay can't reach the VPS's own network.
-- [ ] **Step 2: Write `docs/architecture/networking.md`.** Header `*Current · updated <date>*`. Sections:
-  - How the parts fit (a small ASCII diagram: host ⇄ signalling ⇄ client, then host ⇄ client over WebRTC, TURN as fallback).
-  - The signalling protocol table from Task 2.
-  - Peer ids and packet kinds.
-  - Running it locally.
-  - Deploying it: the owner's steps, in order. Install Python 3.11+, the venv and `requirements.txt`; install coturn; the firewall opens 3478 udp/tcp and 49160–49200 udp; generate the secret into the env file; enable the service; add the Caddy block; reload Caddy.
-  - Known limits from ADR 0002.
+- [ ] **Step 2: Write the two docs,** each with a `*Current · updated <date>*` header.
+  - `docs/multiplayer/networking.md`: how the parts fit (a small ASCII diagram: host ⇄ signalling ⇄ client, then host ⇄ client over WebRTC, TURN as fallback); `SignallingClient`, `NetSession`, `NetProbe` and who owns what; peer ids and packet kinds; running it locally; known limits from ADR 0002. Link `protocol.md` rather than repeat it.
+  - `docs/multiplayer/deploy.md`: the owner's steps, in order. Install Python 3.11+, the venv and `requirements.txt`; install coturn; the firewall opens 3478 udp/tcp and 49160–49200 udp; generate the secret into the env file; enable the service; add the Caddy block; reload Caddy. Then how to check each part works.
 - [ ] **Step 3: Owner's VPS check, recorded in the PR.** Net Lab against `wss://net.<domain>/signal`. With **relay only** on, a browser on another network joins a desktop host, and rtt, loss and rate are written down. Repeat with relay only off. If the owner can't test from another network, write that down instead of claiming it worked.
   Optional: the original author runs the `Windows Desktop` export and repeats the join both ways with a Web host. If nobody tries it, write "not tried on Windows".
-- [ ] **Step 4: Update the docs.** Make the `docs/README.md`, `directory_tree.md` and `CLAUDE.md` changes, and mark MF-1 `✅ Fixed in #<PR>` with one line naming this PR's prototype and the export presets. Then `make docs-check` and `make test`.
+- [ ] **Step 4: Update the docs.** Make the hub, `directory_tree.md` and `CLAUDE.md` changes, and mark MF-1 `✅ Fixed in #<PR>` with one line naming this PR's prototype and the export presets. Then `make docs-check` and `make test`.
 - [ ] **Step 5: Commit.** `docs: add networking architecture and vps deploy steps #11`

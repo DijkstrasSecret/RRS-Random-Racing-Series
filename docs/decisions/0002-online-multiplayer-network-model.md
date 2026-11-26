@@ -38,6 +38,7 @@ We will run races **host-authoritative over WebRTC, with room codes**:
 | Disconnects | If the host leaves, the race ends for everyone, and a tournament in progress is lost. A client silent for 5 s is gone: AI takes over its car, and it can rejoin at the next race. |
 | Versions | On join, a client sends its build version. The host refuses any mismatch. |
 | Web build | Published on itch.io as the no-threads Web export. |
+| Code layout | Network code lives in `scripts/net/`, `scenes/net/` and `tests/net/`. Game code never depends on it, except through a few named entry points; `make docs-check` enforces this. Single-player never opens a connection. See the [multiplayer hub](../multiplayer/README.md). |
 
 ## Consequences
 - The design moves to a dedicated server with little change: the server takes the host's place.

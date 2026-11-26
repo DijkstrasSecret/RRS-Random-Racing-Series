@@ -13,6 +13,9 @@ LYCHEE  ?= lychee
 # Extra arguments for a single test, e.g. make test-race_test ARGS="--laps=2 --track=rx"
 ARGS    ?=
 
+# Network tests live in tests/net/ and run with `make test-net`, not `make test`.
+NET_TESTS := webrtc_available_test
+
 SMOKE_TESTS := race_test lap_test drive_test car_stats_test damage_test \
                tournament_test tournament_cards_test menu_test
 
@@ -20,14 +23,16 @@ SMOKE_TESTS := race_test lap_test drive_test car_stats_test damage_test \
 race_test_ARGS       := --laps=1 --scene=circuit_race --track=spa
 tournament_test_ARGS := --players=1 --tracks=rx
 
-# A test with a .tscn runs as a scene; otherwise its .gd runs as a script.
-test_target = $(if $(wildcard tests/$(1).tscn),res://tests/$(1).tscn,-s res://tests/$(1).gd)
+# A test is looked up in tests/, then tests/net/. One with a .tscn runs as a
+# scene; otherwise its .gd runs as a script.
+test_dir    = $(if $(wildcard tests/net/$(1).*),tests/net,tests)
+test_target = $(if $(wildcard $(call test_dir,$(1))/$(1).tscn),res://$(call test_dir,$(1))/$(1).tscn,-s res://$(call test_dir,$(1))/$(1).gd)
 
 # Hides the "missing MP3" errors (the soundtrack is not in git) and their backtraces.
 HIDE_MUSIC_ERRORS := awk '/ERROR:.*(mp3|soundtrack)/ {skip=1; next} skip && /^[[:space:]]/ {next} {skip=0; print}'
 
 .DEFAULT_GOAL := help
-.PHONY: help play editor import webrtc test hitbox docs-check car-configs sounds pdf export-web export-windows export-linux serve-web
+.PHONY: help play editor import webrtc test test-net hitbox docs-check car-configs sounds pdf export-web export-windows export-linux serve-web
 
 help: ## List the commands
 	@grep -hE '^[a-zA-Z_%-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-16s %s\n", $$1, $$2}'
@@ -47,6 +52,9 @@ webrtc: ## Download the desktop WebRTC add-on and import it (needed once, before
 
 test: $(addprefix test-,$(SMOKE_TESTS)) ## Run all main smoke tests
 	@echo "All smoke tests passed: $(SMOKE_TESTS)"
+
+test-net: $(addprefix test-,$(NET_TESTS)) ## Run the network tests (run make webrtc once first)
+	@echo "All network tests passed: $(NET_TESTS)"
 
 test-%: ## Run one test, e.g. make test-damage_test [ARGS="..."]
 	@echo "== $*"

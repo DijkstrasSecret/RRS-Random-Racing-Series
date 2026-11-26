@@ -11,9 +11,9 @@ This is the index for everything in `docs/` and the rulebook for writing it. It 
 | `decisions/` | **Why it works that way:** numbered decision records (ADRs). Never deleted. | [0000-template.md](decisions/0000-template.md), [0001-record-architecture-decisions.md](decisions/0001-record-architecture-decisions.md), [0002-online-multiplayer-network-model.md](decisions/0002-online-multiplayer-network-model.md) |
 | `research/` | **What we found out:** investigations, real-world data, engine experiments, comparisons. They can be out of date. | [damage_research.md](research/damage_research.md) |
 | `reviews/` | **Audits of the code at a point in time,** with numbered findings that get ticked off. | [multiplayer_must_fix.md](reviews/multiplayer_must_fix.md), [multiplayer_nice_to_have.md](reviews/multiplayer_nice_to_have.md) |
-| `plans/` | **How a piece of work will be built:** step-by-step implementation plans for one issue, written before the code. `Snapshot`. | [2026-11-26-webrtc-prototype.md](plans/2026-11-26-webrtc-prototype.md) |
+| `multiplayer/` | **Everything about online play:** how the network code works, the server protocol, deploy steps and implementation plans. Its README is the hub and links the multiplayer ADRs and reviews too. | [README.md](multiplayer/README.md), [plans/2026-11-26-webrtc-prototype.md](multiplayer/plans/2026-11-26-webrtc-prototype.md) |
 
-**Which folder?** A doc that says "the game should…" goes in `design/`. One that says "the code does…" goes in `architecture/`. "We chose X over Y because…" is a decision record. "We measured / compared…" goes in `research/`. "Here is what's wrong with the code right now" goes in `reviews/`. "Here is how we'll build issue #N, step by step" goes in `plans/`.
+**Which folder?** A doc that says "the game should…" goes in `design/`. One that says "the code does…" goes in `architecture/`. "We chose X over Y because…" is a decision record. "We measured / compared…" goes in `research/`. "Here is what's wrong with the code right now" goes in `reviews/`. A doc only about online multiplayer goes in `multiplayer/`, except ADRs and reviews, which stay in their own folders and are linked from `multiplayer/README.md`.
 
 ## When docs must change
 
@@ -85,7 +85,7 @@ Docs in `docs/` explain systems. Comments in code explain the code itself. Both 
   - Every `@export`: meaning, units and range, e.g. `## Spring rate per wheel, N/m. 20 000–80 000.`.
   - Every public `func` (no leading `_`): what it does, what it returns, and side effects such as scene changes, saving or teleporting.
   - Public `var`s that other scripts read: units and range.
-- **`make docs-check` enforces these rules** for scripts, signals, `@export`s and public `func`s; run it before opening a PR. It can't tell which public `var`s other scripts read, so those are on you. It also fails on broken links between docs (lychee, offline) and on repo paths in backticks that don't exist, e.g. after a move (docs in `plans/` are exempt, since they name files still to be written).
+- **`make docs-check` enforces these rules** for scripts, signals, `@export`s and public `func`s; run it before opening a PR. It can't tell which public `var`s other scripts read, so those are on you. It also fails on broken links between docs (lychee, offline) and on repo paths in backticks that don't exist, e.g. after a move (docs in a `plans/` folder are exempt, since they name files still to be written), and on game code that uses network code (see `multiplayer/README.md`).
 - **Optional on private `_helpers`:** add a `#` comment only when the *why* isn't obvious from the code.
 - **Comments describe the code as it is now.** History belongs in git ("used to be X" doesn't go in a comment). Delete a comment that no longer matches.
 - **Ranges and enums are spelled out:** `## -1 (left) … +1 (right)`, `## 0 Arcade, 1 Sport, 2 Sim`.
