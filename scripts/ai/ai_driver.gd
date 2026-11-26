@@ -15,9 +15,13 @@ extends VehicleInput
 ## 0 = cautious, 1 = right on the limit.
 @export_range(0.0, 1.0) var skill: float = 0.8
 @export_group("Character")
+## How soon it goes for a pass and how late it brakes into one (0 = never attacks, 1 = every gap).
 @export_range(0.0, 1.0) var aggression: float = 0.5
+## How readily it covers the inside when attacked (0 = never, 1 = always).
 @export_range(0.0, 1.0) var defence: float = 0.5
+## How well it copes with a car close behind (0 = many mistakes, 1 = none).
 @export_range(0.0, 1.0) var nerve: float = 0.7
+## How rarely it makes mistakes on its own (0 = often, 1 = never).
 @export_range(0.0, 1.0) var consistency: float = 0.8
 @export_group("Driving")
 ## Personal preference for one side of the road (metres, + = right).

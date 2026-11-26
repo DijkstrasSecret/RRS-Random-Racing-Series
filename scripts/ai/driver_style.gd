@@ -24,6 +24,7 @@ const STYLES := {
 const DEFAULT := {"label": "", "aggression": 0.5, "defence": 0.5, "nerve": 0.7, "consistency": 0.8}
 
 
+## The style for `driver_name` (aggression, defence, nerve, consistency 0..1 and a label); DEFAULT if it has none.
 static func of(driver_name: String) -> Dictionary:
 	return STYLES.get(driver_name, DEFAULT)
 
@@ -33,6 +34,7 @@ static func label(driver_name: String) -> String:
 	return of(driver_name).label
 
 
+## Gives `ai` the character of `driver_name` (see of()).
 static func apply(ai: AIDriver, driver_name: String) -> void:
 	var s := of(driver_name)
 	ai.aggression = s.aggression
